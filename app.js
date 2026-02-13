@@ -416,6 +416,8 @@ function renderLedgerList() {
   filtered.forEach(entry => {
     const row = document.createElement("div");
     row.className = "ledger-row";
+	if (getCroreMilestone(entry.date)) {
+  row.classList.add("milestone");
 	if (isSunday(entry.date)) {
   row.classList.add("sunday");
 }
