@@ -49,6 +49,13 @@ function getCroreMilestone(dateISO) {
   return null;
 }
 
+function isStandalonePWA() {
+  return (
+    window.matchMedia("(display-mode: standalone)").matches ||
+    window.navigator.standalone === true
+  );
+}
+
 
 // Check if Poornima is explicitly mentioned in notes
 function hasExplicitPoornima(notes) {
@@ -234,7 +241,28 @@ let poornimaDates = [];
     console.log("Poornima calendar loaded:", poornimaDates.length);
 
     // Load ledger ONLY from IndexedDB
-    ledgerData = await loadLedgerFromDB();
+    const existingLedger = await loadLedgerFromDB();
+
+if (!existingLedger || existingLedger.length === 0) {
+  console.log("No ledger found in this container");
+
+  if (isStandalonePWA()) {
+    console.log("First launch as Home Screen app — initializing ledger");
+
+    // ONE-TIME initialization ONLY if empty
+    const fallbackRes = await fetch("data.json");
+    const fallbackData = await fallbackRes.json();
+
+    ledgerData = fallbackData;
+    await saveLedger(ledgerData);
+    await saveAutomaticBackup(ledgerData);
+  } else {
+    ledgerData = existingLedger || [];
+  }
+} else {
+  ledgerData = existingLedger;
+}
+
 
     renderToday();
 
