@@ -1,0 +1,260 @@
+/* Base reset */
+* {
+  box-sizing: border-box;
+}
+
+/* Page */
+body {
+  margin: 0;
+  padding: 16px;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI",
+               Roboto, Helvetica, Arial, sans-serif;
+  background-color: #fbf6e8;
+  color: #2b2b2b;
+  line-height: 1.5;
+}
+
+/* App title */
+h1 {
+  font-size: 1.4rem;
+  font-weight: 600;
+  margin-bottom: 12px;
+}
+
+/* General text */
+p {
+  margin-top: 0;
+  margin-bottom: 16px;
+}
+/* Today Entry Card */
+#today-card {
+  background-color: #eef1fa; /* soft lavender-blue */
+  padding: 18px;
+  border-radius: 10px;
+  box-shadow: 0 3px 6px rgba(0, 0, 0, 0.12);
+  margin-bottom: 24px;
+}
+
+/* Today heading */
+#today-card h2 {
+  margin-top: 0;
+  margin-bottom: 12px;
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+/* Today text */
+#today-card p {
+  margin: 6px 0;
+}
+
+/* Buttons (Edit / Save later) */
+#today-card button {
+  margin-top: 12px;
+  padding: 6px 14px;
+  font-size: 0.9rem;
+  border-radius: 6px;
+  border: 1px solid #ccc;
+  background-color: #f3f0e6;
+  color: #2b2b2b;
+  cursor: pointer;
+}
+
+/* Disabled button */
+#today-card button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+/* Ledger list */
+#ledger-list {
+  margin-top: 16px;
+}
+
+/* Ledger row */
+.ledger-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 8px 4px;
+  border-bottom: 1px solid #e0dccf;
+  font-size: 0.95rem;
+}
+
+/* Ledger date */
+.ledger-date {
+  color: #444;
+}
+
+/* Ledger jaap */
+.ledger-jaap {
+  font-weight: 500;
+}
+
+/* Poornima moon */
+.ledger-date {
+  white-space: nowrap;
+}
+
+.ledger-date span,
+.ledger-date {
+  line-height: 1.2;
+}
+/* Ledger row container */
+.ledger-row {
+  cursor: pointer;
+}
+
+/* Main row (date + jaap) */
+.ledger-main {
+  display: grid;
+  grid-template-columns: 20px 140px 1fr;
+  align-items: center;
+  column-gap: 12px;
+}
+
+.ledger-jaap {
+  text-align: right;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+}
+.ledger-date {
+  font-weight: 500;
+  color: #444;
+  letter-spacing: 0.2px;
+}
+
+/* Sunday date only */
+.ledger-row.sunday .ledger-date {
+  color: #b00020;
+  font-weight: 600;
+}
+
+/* Notes (hidden by default) */
+.ledger-notes {
+  display: none;
+  margin-top: 6px;
+  padding: 6px 4px;
+  font-size: 0.9rem;
+  color: #555;
+  line-height: 1.4;
+}
+
+/* Expanded state */
+.ledger-row.expanded .ledger-notes {
+  display: block;
+}
+
+/* Chevron indicator */
+.ledger-chevron {
+  font-size: 0.9rem;
+  color: #999;
+  transition: transform 0.15s ease, color 0.15s ease;
+  cursor: pointer;
+  user-select: none;
+}
+
+/* Expanded state chevron */
+.ledger-row.expanded .ledger-chevron {
+  transform: rotate(90deg); /* ▸ → ▾ */
+  color: #555;
+}
+/* Milestone (Crore Jaap) */
+.milestone {
+  margin-bottom: 6px;
+  padding: 4px 8px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #5a4a00;
+  background-color: #f6f1d5; /* soft golden parchment */
+  border-left: 4px solid #c9b458;
+  border-radius: 4px;
+}
+/* Reflection Summary */
+#reflection-summary {
+  margin-bottom: 24px;
+}
+
+.reflection-box {
+  background-color: #f7f3dd; /* warm parchment */
+  padding: 14px 16px;
+  border-radius: 10px;
+  border-left: 5px solid #c9b458;
+  font-size: 0.95rem;
+}
+
+.reflection-line {
+  margin-bottom: 6px;
+}
+
+.yearly-totals {
+  margin-top: 8px;
+  font-size: 0.9rem;
+  color: #555;
+}
+
+.year-line {
+  margin-top: 2px;
+}
+.legend {
+  margin-top: 8px;
+  font-size: 0.8rem;
+  color: #777;
+}
+/* Inline edit focus */
+.edit-jaap,
+.edit-notes {
+  width: 100%;
+  padding: 6px 8px;
+  border-radius: 6px;
+  border: 1px solid #ccc;
+  font-size: 0.95rem;
+  background-color: #fffef9;
+}
+
+.edit-jaap:focus,
+.edit-notes:focus {
+  outline: none;
+  border-color: #c9b458;      /* soft gold */
+  box-shadow: 0 0 0 2px rgba(201, 180, 88, 0.25);
+}
+.save-entry,
+#update-today {
+  padding: 6px 14px;
+  border-radius: 8px;
+  border: 1px solid #d6cfa5;
+  background-color: #f7f2dc;
+  color: #4a3f18;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+.save-entry:hover,
+#update-today:hover {
+  background-color: #efe7c3;
+}
+
+.save-entry:active,
+#update-today:active {
+  background-color: #e5dbac;
+}
+.restore-btn {
+  margin-top: 12px;
+  padding: 8px 14px;
+  border-radius: 6px;
+  border: 1px solid #c9bfa8;
+  background-color: #f8f1df;
+  color: #4b3f2f;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+.restore-btn:hover {
+  background-color: #f2e6c9;
+}
+body {
+  overscroll-behavior-y: contain;
+}
+button {
+  min-height: 44px;
+  padding: 10px 16px;
+}
+

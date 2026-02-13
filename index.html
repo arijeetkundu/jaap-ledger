@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+
+  <title>Jaap Ledger</title>
+
+  <!-- Mobile-friendly -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <!-- App styling -->
+  <link rel="stylesheet" href="styles.css">
+
+  <!-- PWA manifest -->
+  <link rel="manifest" href="manifest.json">
+</head>
+
+<body>
+
+  <h1>Jaap Ledger</h1>
+
+  <!-- Today Entry Card -->
+  <section id="today-card">
+    <!-- Filled by app.js -->
+  </section>
+
+  <!-- Reflection Summary -->
+  <div id="reflection-summary"></div>
+<button id="restore-backup-btn" class="restore-btn">
+  Restore from Last Backup
+</button>
+
+  <hr>
+
+  <!-- Ledger List -->
+  <section id="ledger-list">
+    <!-- Ledger rows rendered here -->
+  </section>
+
+  <!-- App logic -->
+  <script src="app.js"></script>
+
+</body>
+</html>
+
