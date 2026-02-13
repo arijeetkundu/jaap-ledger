@@ -1,0 +1,5182 @@
+[
+  {
+    "date": "2023-04-14",
+    "jaap": 20000,
+    "notes": ""
+  },
+  {
+    "date": "2023-04-15",
+    "jaap": 20000,
+    "notes": ""
+  },
+  {
+    "date": "2023-04-16",
+    "jaap": 20000,
+    "notes": "*"
+  },
+  {
+    "date": "2023-04-17",
+    "jaap": 20000,
+    "notes": ""
+  },
+  {
+    "date": "2023-04-18",
+    "jaap": 28000,
+    "notes": ""
+  },
+  {
+    "date": "2023-04-19",
+    "jaap": 16300,
+    "notes": ""
+  },
+  {
+    "date": "2023-04-20",
+    "jaap": null,
+    "notes": "Surya Grahan"
+  },
+  {
+    "date": "2023-04-21",
+    "jaap": 28000,
+    "notes": ""
+  },
+  {
+    "date": "2023-04-22",
+    "jaap": 15700,
+    "notes": ""
+  },
+  {
+    "date": "2023-04-23",
+    "jaap": 25000,
+    "notes": "*"
+  },
+  {
+    "date": "2023-04-24",
+    "jaap": 30000,
+    "notes": "Aura Shielding"
+  },
+  {
+    "date": "2023-04-25",
+    "jaap": 30000,
+    "notes": "Aura Shielding"
+  },
+  {
+    "date": "2023-04-26",
+    "jaap": 30000,
+    "notes": ""
+  },
+  {
+    "date": "2023-04-27",
+    "jaap": 30000,
+    "notes": ""
+  },
+  {
+    "date": "2023-04-28",
+    "jaap": 5000,
+    "notes": ""
+  },
+  {
+    "date": "2023-04-29",
+    "jaap": null,
+    "notes": "Kamakhya"
+  },
+  {
+    "date": "2023-04-30",
+    "jaap": null,
+    "notes": "*, Kamakhya"
+  },
+  {
+    "date": "2023-05-01",
+    "jaap": null,
+    "notes": "Kamakhya"
+  },
+  {
+    "date": "2023-05-02",
+    "jaap": null,
+    "notes": "Kamakhya"
+  },
+  {
+    "date": "2023-05-03",
+    "jaap": 25000,
+    "notes": ""
+  },
+  {
+    "date": "2023-05-04",
+    "jaap": 30000,
+    "notes": ""
+  },
+  {
+    "date": "2023-05-05",
+    "jaap": 35000,
+    "notes": "Poornima"
+  },
+  {
+    "date": "2023-05-06",
+    "jaap": 20000,
+    "notes": ""
+  },
+  {
+    "date": "2023-05-07",
+    "jaap": 30000,
+    "notes": "*"
+  },
+  {
+    "date": "2023-05-08",
+    "jaap": 15000,
+    "notes": ""
+  },
+  {
+    "date": "2023-05-09",
+    "jaap": 50000,
+    "notes": ""
+  },
+  {
+    "date": "2023-05-10",
+    "jaap": 56000,
+    "notes": ""
+  },
+  {
+    "date": "2023-05-11",
+    "jaap": 44000,
+    "notes": ""
+  },
+  {
+    "date": "2023-05-12",
+    "jaap": 40000,
+    "notes": ""
+  },
+  {
+    "date": "2023-05-13",
+    "jaap": 10000,
+    "notes": ""
+  },
+  {
+    "date": "2023-05-14",
+    "jaap": 20000,
+    "notes": "*"
+  },
+  {
+    "date": "2023-05-15",
+    "jaap": 50000,
+    "notes": ""
+  },
+  {
+    "date": "2023-05-16",
+    "jaap": 45000,
+    "notes": ""
+  },
+  {
+    "date": "2023-05-17",
+    "jaap": 55000,
+    "notes": ""
+  },
+  {
+    "date": "2023-05-18",
+    "jaap": 50000,
+    "notes": ""
+  },
+  {
+    "date": "2023-05-19",
+    "jaap": 45000,
+    "notes": ""
+  },
+  {
+    "date": "2023-05-20",
+    "jaap": 30000,
+    "notes": ""
+  },
+  {
+    "date": "2023-05-21",
+    "jaap": 30000,
+    "notes": "*, 1st Chakra Hawan"
+  },
+  {
+    "date": "2023-05-22",
+    "jaap": 46000,
+    "notes": ""
+  },
+  {
+    "date": "2023-05-23",
+    "jaap": 54000,
+    "notes": ""
+  },
+  {
+    "date": "2023-05-24",
+    "jaap": 45000,
+    "notes": ""
+  },
+  {
+    "date": "2023-05-25",
+    "jaap": 55000,
+    "notes": ""
+  },
+  {
+    "date": "2023-05-26",
+    "jaap": 50000,
+    "notes": ""
+  },
+  {
+    "date": "2023-05-27",
+    "jaap": 30000,
+    "notes": "Laddoo for Gurudev"
+  },
+  {
+    "date": "2023-05-28",
+    "jaap": 30000,
+    "notes": "*, 2nd Chakra Hawan"
+  },
+  {
+    "date": "2023-05-29",
+    "jaap": 50000,
+    "notes": ""
+  },
+  {
+    "date": "2023-05-30",
+    "jaap": 50000,
+    "notes": ""
+  },
+  {
+    "date": "2023-05-31",
+    "jaap": 55000,
+    "notes": ""
+  },
+  {
+    "date": "2023-06-01",
+    "jaap": 45000,
+    "notes": ""
+  },
+  {
+    "date": "2023-06-02",
+    "jaap": 50000,
+    "notes": ""
+  },
+  {
+    "date": "2023-06-03",
+    "jaap": 42000,
+    "notes": ""
+  },
+  {
+    "date": "2023-06-04",
+    "jaap": null,
+    "notes": "*, Poornima, Jammu"
+  },
+  {
+    "date": "2023-06-05",
+    "jaap": null,
+    "notes": "Jammu"
+  },
+  {
+    "date": "2023-06-06",
+    "jaap": null,
+    "notes": "Jammu"
+  },
+  {
+    "date": "2023-06-07",
+    "jaap": null,
+    "notes": "Jammu"
+  },
+  {
+    "date": "2023-06-08",
+    "jaap": 40000,
+    "notes": ""
+  },
+  {
+    "date": "2023-06-09",
+    "jaap": 65000,
+    "notes": ""
+  },
+  {
+    "date": "2023-06-10",
+    "jaap": 30000,
+    "notes": ""
+  },
+  {
+    "date": "2023-06-11",
+    "jaap": 30000,
+    "notes": "*, 3rd Chakra Hawan, 40 Day Sadhana Completed"
+  },
+  {
+    "date": "2023-06-12",
+    "jaap": 50000,
+    "notes": ""
+  },
+  {
+    "date": "2023-06-13",
+    "jaap": 50000,
+    "notes": ""
+  },
+  {
+    "date": "2023-06-14",
+    "jaap": 50000,
+    "notes": ""
+  },
+  {
+    "date": "2023-06-15",
+    "jaap": 50000,
+    "notes": ""
+  },
+  {
+    "date": "2023-06-16",
+    "jaap": 35000,
+    "notes": ""
+  },
+  {
+    "date": "2023-06-17",
+    "jaap": 30000,
+    "notes": ""
+  },
+  {
+    "date": "2023-06-18",
+    "jaap": 50000,
+    "notes": "*, 4th Chakra Hawan"
+  },
+  {
+    "date": "2023-06-19",
+    "jaap": 50000,
+    "notes": ""
+  },
+  {
+    "date": "2023-06-20",
+    "jaap": 50000,
+    "notes": ""
+  },
+  {
+    "date": "2023-06-21",
+    "jaap": 50000,
+    "notes": ""
+  },
+  {
+    "date": "2023-06-22",
+    "jaap": 50000,
+    "notes": ""
+  },
+  {
+    "date": "2023-06-23",
+    "jaap": 50000,
+    "notes": ""
+  },
+  {
+    "date": "2023-06-24",
+    "jaap": 40000,
+    "notes": "Laddoo for Gurudev"
+  },
+  {
+    "date": "2023-06-25",
+    "jaap": 40000,
+    "notes": "*, 5th Chakra Hawan"
+  },
+  {
+    "date": "2023-06-26",
+    "jaap": 50000,
+    "notes": ""
+  },
+  {
+    "date": "2023-06-27",
+    "jaap": 50000,
+    "notes": ""
+  },
+  {
+    "date": "2023-06-28",
+    "jaap": 50000,
+    "notes": ""
+  },
+  {
+    "date": "2023-06-29",
+    "jaap": 50000,
+    "notes": ""
+  },
+  {
+    "date": "2023-06-30",
+    "jaap": 52000,
+    "notes": ""
+  },
+  {
+    "date": "2023-07-01",
+    "jaap": 48000,
+    "notes": ""
+  },
+  {
+    "date": "2023-07-02",
+    "jaap": 40000,
+    "notes": "*, 6th Chakra Hawan"
+  },
+  {
+    "date": "2023-07-03",
+    "jaap": 58000,
+    "notes": "Poornima, Guru Poornima (RS+JAG)"
+  },
+  {
+    "date": "2023-07-04",
+    "jaap": 42000,
+    "notes": ""
+  },
+  {
+    "date": "2023-07-05",
+    "jaap": 55000,
+    "notes": ""
+  },
+  {
+    "date": "2023-07-06",
+    "jaap": 60000,
+    "notes": ""
+  },
+  {
+    "date": "2023-07-07",
+    "jaap": 40000,
+    "notes": ""
+  },
+  {
+    "date": "2023-07-08",
+    "jaap": 45000,
+    "notes": ""
+  },
+  {
+    "date": "2023-07-09",
+    "jaap": 50000,
+    "notes": "*, 7th Chakra Hawan"
+  },
+  {
+    "date": "2023-07-10",
+    "jaap": 50000,
+    "notes": ""
+  },
+  {
+    "date": "2023-07-11",
+    "jaap": 50000,
+    "notes": ""
+  },
+  {
+    "date": "2023-07-12",
+    "jaap": 50000,
+    "notes": ""
+  },
+  {
+    "date": "2023-07-13",
+    "jaap": 50000,
+    "notes": ""
+  },
+  {
+    "date": "2023-07-14",
+    "jaap": 50000,
+    "notes": ""
+  },
+  {
+    "date": "2023-07-15",
+    "jaap": 50000,
+    "notes": ""
+  },
+  {
+    "date": "2023-07-16",
+    "jaap": 50000,
+    "notes": ""
+  },
+  {
+    "date": "2023-07-17",
+    "jaap": 50000,
+    "notes": ""
+  },
+  {
+    "date": "2023-07-18",
+    "jaap": 50000,
+    "notes": ""
+  },
+  {
+    "date": "2023-07-19",
+    "jaap": 50000,
+    "notes": ""
+  },
+  {
+    "date": "2023-07-20",
+    "jaap": 50000,
+    "notes": ""
+  },
+  {
+    "date": "2023-07-21",
+    "jaap": 50000,
+    "notes": ""
+  },
+  {
+    "date": "2023-07-22",
+    "jaap": 50000,
+    "notes": "Laddoo for Gurudev"
+  },
+  {
+    "date": "2023-07-23",
+    "jaap": 50000,
+    "notes": "*"
+  },
+  {
+    "date": "2023-07-24",
+    "jaap": 25500,
+    "notes": ""
+  },
+  {
+    "date": "2023-07-25",
+    "jaap": 49500,
+    "notes": ""
+  },
+  {
+    "date": "2023-07-26",
+    "jaap": 45000,
+    "notes": ""
+  },
+  {
+    "date": "2023-07-27",
+    "jaap": 80000,
+    "notes": ""
+  },
+  {
+    "date": "2023-07-28",
+    "jaap": 100000,
+    "notes": ""
+  },
+  {
+    "date": "2023-07-29",
+    "jaap": 100000,
+    "notes": ""
+  },
+  {
+    "date": "2023-07-30",
+    "jaap": 85000,
+    "notes": "*"
+  },
+  {
+    "date": "2023-07-31",
+    "jaap": 115000,
+    "notes": ""
+  },
+  {
+    "date": "2023-08-01",
+    "jaap": 65000,
+    "notes": "Poornima, JAG"
+  },
+  {
+    "date": "2023-08-02",
+    "jaap": 50000,
+    "notes": ""
+  },
+  {
+    "date": "2023-08-03",
+    "jaap": 65000,
+    "notes": ""
+  },
+  {
+    "date": "2023-08-04",
+    "jaap": 120000,
+    "notes": ""
+  },
+  {
+    "date": "2023-08-05",
+    "jaap": 100000,
+    "notes": ""
+  },
+  {
+    "date": "2023-08-06",
+    "jaap": 100000,
+    "notes": "*"
+  },
+  {
+    "date": "2023-08-07",
+    "jaap": 40000,
+    "notes": ""
+  },
+  {
+    "date": "2023-08-08",
+    "jaap": 40000,
+    "notes": ""
+  },
+  {
+    "date": "2023-08-09",
+    "jaap": 40000,
+    "notes": ""
+  },
+  {
+    "date": "2023-08-10",
+    "jaap": 40000,
+    "notes": ""
+  },
+  {
+    "date": "2023-08-11",
+    "jaap": 40000,
+    "notes": ""
+  },
+  {
+    "date": "2023-08-12",
+    "jaap": 20000,
+    "notes": "Hisar 0.5"
+  },
+  {
+    "date": "2023-08-13",
+    "jaap": 100000,
+    "notes": "*, Hisar"
+  },
+  {
+    "date": "2023-08-14",
+    "jaap": 60000,
+    "notes": "Hisar"
+  },
+  {
+    "date": "2023-08-15",
+    "jaap": 20000,
+    "notes": "Hisar 0.5"
+  },
+  {
+    "date": "2023-08-16",
+    "jaap": 50000,
+    "notes": ""
+  },
+  {
+    "date": "2023-08-17",
+    "jaap": 50000,
+    "notes": ""
+  },
+  {
+    "date": "2023-08-18",
+    "jaap": 50000,
+    "notes": ""
+  },
+  {
+    "date": "2023-08-19",
+    "jaap": 90000,
+    "notes": "Laddoo for Gurudev"
+  },
+  {
+    "date": "2023-08-20",
+    "jaap": 60000,
+    "notes": "*"
+  },
+  {
+    "date": "2023-08-21",
+    "jaap": 50000,
+    "notes": ""
+  },
+  {
+    "date": "2023-08-22",
+    "jaap": 50000,
+    "notes": ""
+  },
+  {
+    "date": "2023-08-23",
+    "jaap": 50000,
+    "notes": ""
+  },
+  {
+    "date": "2023-08-24",
+    "jaap": 50000,
+    "notes": ""
+  },
+  {
+    "date": "2023-08-25",
+    "jaap": 50000,
+    "notes": ""
+  },
+  {
+    "date": "2023-08-26",
+    "jaap": 75000,
+    "notes": ""
+  },
+  {
+    "date": "2023-08-27",
+    "jaap": 45000,
+    "notes": "*"
+  },
+  {
+    "date": "2023-08-28",
+    "jaap": 80000,
+    "notes": ""
+  },
+  {
+    "date": "2023-08-29",
+    "jaap": 50000,
+    "notes": ""
+  },
+  {
+    "date": "2023-08-30",
+    "jaap": 50000,
+    "notes": ""
+  },
+  {
+    "date": "2023-08-31",
+    "jaap": 75000,
+    "notes": "Poornima, RS+JAG"
+  },
+  {
+    "date": "2023-09-01",
+    "jaap": 50000,
+    "notes": ""
+  },
+  {
+    "date": "2023-09-02",
+    "jaap": 40000,
+    "notes": ""
+  },
+  {
+    "date": "2023-09-03",
+    "jaap": 60000,
+    "notes": "*"
+  },
+  {
+    "date": "2023-09-04",
+    "jaap": 50000,
+    "notes": ""
+  },
+  {
+    "date": "2023-09-05",
+    "jaap": 50000,
+    "notes": "Aura Check: 20-30% Siddhi, 1-2% Drishti, Devta dikhate hain"
+  },
+  {
+    "date": "2023-09-06",
+    "jaap": 65000,
+    "notes": ""
+  },
+  {
+    "date": "2023-09-07",
+    "jaap": 60000,
+    "notes": ""
+  },
+  {
+    "date": "2023-09-08",
+    "jaap": 50000,
+    "notes": ""
+  },
+  {
+    "date": "2023-09-09",
+    "jaap": 50000,
+    "notes": ""
+  },
+  {
+    "date": "2023-09-10",
+    "jaap": 50000,
+    "notes": "*"
+  },
+  {
+    "date": "2023-09-11",
+    "jaap": 50000,
+    "notes": ""
+  },
+  {
+    "date": "2023-09-12",
+    "jaap": 50000,
+    "notes": ""
+  },
+  {
+    "date": "2023-09-13",
+    "jaap": 50000,
+    "notes": ""
+  },
+  {
+    "date": "2023-09-14",
+    "jaap": 50000,
+    "notes": ""
+  },
+  {
+    "date": "2023-09-15",
+    "jaap": 50000,
+    "notes": ""
+  },
+  {
+    "date": "2023-09-16",
+    "jaap": 50000,
+    "notes": ""
+  },
+  {
+    "date": "2023-09-17",
+    "jaap": 50000,
+    "notes": "*"
+  },
+  {
+    "date": "2023-09-18",
+    "jaap": 50000,
+    "notes": ""
+  },
+  {
+    "date": "2023-09-19",
+    "jaap": 50000,
+    "notes": ""
+  },
+  {
+    "date": "2023-09-20",
+    "jaap": 50000,
+    "notes": ""
+  },
+  {
+    "date": "2023-09-21",
+    "jaap": 50000,
+    "notes": ""
+  },
+  {
+    "date": "2023-09-22",
+    "jaap": 50000,
+    "notes": ""
+  },
+  {
+    "date": "2023-09-23",
+    "jaap": 40000,
+    "notes": ""
+  },
+  {
+    "date": "2023-09-24",
+    "jaap": 60000,
+    "notes": "*"
+  },
+  {
+    "date": "2023-09-25",
+    "jaap": 50000,
+    "notes": ""
+  },
+  {
+    "date": "2023-09-26",
+    "jaap": 50000,
+    "notes": ""
+  },
+  {
+    "date": "2023-09-27",
+    "jaap": 50000,
+    "notes": ""
+  },
+  {
+    "date": "2023-09-28",
+    "jaap": 100000,
+    "notes": "Hisar 0.5"
+  },
+  {
+    "date": "2023-09-29",
+    "jaap": 100000,
+    "notes": "Poornima, Hisar"
+  },
+  {
+    "date": "2023-09-30",
+    "jaap": 50000,
+    "notes": "Hisar 0.5"
+  },
+  {
+    "date": "2023-10-01",
+    "jaap": 50000,
+    "notes": "*"
+  },
+  {
+    "date": "2023-10-02",
+    "jaap": 40000,
+    "notes": "Midnapore"
+  },
+  {
+    "date": "2023-10-03",
+    "jaap": 55000,
+    "notes": "Midnapore"
+  },
+  {
+    "date": "2023-10-04",
+    "jaap": 50000,
+    "notes": "Midnapore"
+  },
+  {
+    "date": "2023-10-05",
+    "jaap": 55000,
+    "notes": "Midnapore"
+  },
+  {
+    "date": "2023-10-06",
+    "jaap": 50000,
+    "notes": "Midnapore"
+  },
+  {
+    "date": "2023-10-07",
+    "jaap": 25000,
+    "notes": "Midnapore"
+  },
+  {
+    "date": "2023-10-08",
+    "jaap": 25000,
+    "notes": "*, MDP-Kol"
+  },
+  {
+    "date": "2023-10-09",
+    "jaap": 50000,
+    "notes": "Kolkata"
+  },
+  {
+    "date": "2023-10-10",
+    "jaap": 50000,
+    "notes": "Kolkata"
+  },
+  {
+    "date": "2023-10-11",
+    "jaap": 40000,
+    "notes": "Kolkata-Pune"
+  },
+  {
+    "date": "2023-10-12",
+    "jaap": 60000,
+    "notes": ""
+  },
+  {
+    "date": "2023-10-13",
+    "jaap": 50000,
+    "notes": ""
+  },
+  {
+    "date": "2023-10-14",
+    "jaap": 50000,
+    "notes": "Mahalaya"
+  },
+  {
+    "date": "2023-10-15",
+    "jaap": 50000,
+    "notes": "*, Navaratri Start"
+  },
+  {
+    "date": "2023-10-16",
+    "jaap": 50000,
+    "notes": ""
+  },
+  {
+    "date": "2023-10-17",
+    "jaap": 45000,
+    "notes": ""
+  },
+  {
+    "date": "2023-10-18",
+    "jaap": 55000,
+    "notes": "Third Eye Class - 1"
+  },
+  {
+    "date": "2023-10-19",
+    "jaap": 50000,
+    "notes": ""
+  },
+  {
+    "date": "2023-10-20",
+    "jaap": 50000,
+    "notes": ""
+  },
+  {
+    "date": "2023-10-21",
+    "jaap": 12500,
+    "notes": "Saptami; PNQ-BBSR"
+  },
+  {
+    "date": "2023-10-22",
+    "jaap": 12500,
+    "notes": "*, Ashtami, Puri"
+  },
+  {
+    "date": "2023-10-23",
+    "jaap": 12500,
+    "notes": "Navami, Puri"
+  },
+  {
+    "date": "2023-10-24",
+    "jaap": 4000,
+    "notes": "Dusherah Mahahawan; JAG; Puri"
+  },
+  {
+    "date": "2023-10-25",
+    "jaap": 8500,
+    "notes": "BBSR-PNQ"
+  },
+  {
+    "date": "2023-10-26",
+    "jaap": 45000,
+    "notes": ""
+  },
+  {
+    "date": "2023-10-27",
+    "jaap": 45000,
+    "notes": "Third Eye Class - 2"
+  },
+  {
+    "date": "2023-10-28",
+    "jaap": 5000,
+    "notes": "Lunar Eclipse"
+  },
+  {
+    "date": "2023-10-29",
+    "jaap": 55000,
+    "notes": "*, Poornima"
+  },
+  {
+    "date": "2023-10-30",
+    "jaap": 45000,
+    "notes": ""
+  },
+  {
+    "date": "2023-10-31",
+    "jaap": 50000,
+    "notes": ""
+  },
+  {
+    "date": "2023-11-01",
+    "jaap": 55000,
+    "notes": ""
+  },
+  {
+    "date": "2023-11-02",
+    "jaap": 56000,
+    "notes": ""
+  },
+  {
+    "date": "2023-11-03",
+    "jaap": 44000,
+    "notes": ""
+  },
+  {
+    "date": "2023-11-04",
+    "jaap": 50000,
+    "notes": ""
+  },
+  {
+    "date": "2023-11-05",
+    "jaap": 50000,
+    "notes": "*"
+  },
+  {
+    "date": "2023-11-06",
+    "jaap": 50000,
+    "notes": ""
+  },
+  {
+    "date": "2023-11-07",
+    "jaap": 50000,
+    "notes": ""
+  },
+  {
+    "date": "2023-11-08",
+    "jaap": 50000,
+    "notes": ""
+  },
+  {
+    "date": "2023-11-09",
+    "jaap": 50000,
+    "notes": ""
+  },
+  {
+    "date": "2023-11-10",
+    "jaap": 25000,
+    "notes": ""
+  },
+  {
+    "date": "2023-11-11",
+    "jaap": 50000,
+    "notes": ""
+  },
+  {
+    "date": "2023-11-12",
+    "jaap": 35000,
+    "notes": "*, Diwali"
+  },
+  {
+    "date": "2023-11-13",
+    "jaap": 50000,
+    "notes": ""
+  },
+  {
+    "date": "2023-11-14",
+    "jaap": 50000,
+    "notes": "Kuldevi - Kali Mata - 2 Hawan"
+  },
+  {
+    "date": "2023-11-15",
+    "jaap": 40000,
+    "notes": ""
+  },
+  {
+    "date": "2023-11-16",
+    "jaap": 50000,
+    "notes": ""
+  },
+  {
+    "date": "2023-11-17",
+    "jaap": 50000,
+    "notes": ""
+  },
+  {
+    "date": "2023-11-18",
+    "jaap": 50000,
+    "notes": ""
+  },
+  {
+    "date": "2023-11-19",
+    "jaap": 50000,
+    "notes": "*"
+  },
+  {
+    "date": "2023-11-20",
+    "jaap": 50000,
+    "notes": ""
+  },
+  {
+    "date": "2023-11-21",
+    "jaap": 50000,
+    "notes": ""
+  },
+  {
+    "date": "2023-11-22",
+    "jaap": 50000,
+    "notes": ""
+  },
+  {
+    "date": "2023-11-23",
+    "jaap": 50000,
+    "notes": ""
+  },
+  {
+    "date": "2023-11-24",
+    "jaap": 50000,
+    "notes": ""
+  },
+  {
+    "date": "2023-11-25",
+    "jaap": 50000,
+    "notes": ""
+  },
+  {
+    "date": "2023-11-26",
+    "jaap": 45000,
+    "notes": "*"
+  },
+  {
+    "date": "2023-11-27",
+    "jaap": 50000,
+    "notes": "Poornima"
+  },
+  {
+    "date": "2023-11-28",
+    "jaap": 55000,
+    "notes": "11 Deepak"
+  },
+  {
+    "date": "2023-11-29",
+    "jaap": 50000,
+    "notes": "11 Deepak"
+  },
+  {
+    "date": "2023-11-30",
+    "jaap": 50000,
+    "notes": "11 Deepak"
+  },
+  {
+    "date": "2023-12-01",
+    "jaap": 30000,
+    "notes": "Kuldevi Hawan 1 - First Day"
+  },
+  {
+    "date": "2023-12-02",
+    "jaap": 50000,
+    "notes": "Kuldevi Hawan 1 - Second Day"
+  },
+  {
+    "date": "2023-12-03",
+    "jaap": 35000,
+    "notes": "*, Kuldevi Hawan 1 - Third Day"
+  },
+  {
+    "date": "2023-12-04",
+    "jaap": 35000,
+    "notes": ""
+  },
+  {
+    "date": "2023-12-05",
+    "jaap": 50000,
+    "notes": ""
+  },
+  {
+    "date": "2023-12-06",
+    "jaap": 50000,
+    "notes": ""
+  },
+  {
+    "date": "2023-12-07",
+    "jaap": 50000,
+    "notes": ""
+  },
+  {
+    "date": "2023-12-08",
+    "jaap": 50000,
+    "notes": ""
+  },
+  {
+    "date": "2023-12-09",
+    "jaap": 50000,
+    "notes": ""
+  },
+  {
+    "date": "2023-12-10",
+    "jaap": 50000,
+    "notes": "*"
+  },
+  {
+    "date": "2023-12-11",
+    "jaap": 50000,
+    "notes": ""
+  },
+  {
+    "date": "2023-12-12",
+    "jaap": 50000,
+    "notes": ""
+  },
+  {
+    "date": "2023-12-13",
+    "jaap": 50000,
+    "notes": ""
+  },
+  {
+    "date": "2023-12-14",
+    "jaap": 30000,
+    "notes": ""
+  },
+  {
+    "date": "2023-12-15",
+    "jaap": 70000,
+    "notes": ""
+  },
+  {
+    "date": "2023-12-16",
+    "jaap": 50000,
+    "notes": ""
+  },
+  {
+    "date": "2023-12-17",
+    "jaap": 35000,
+    "notes": "*"
+  },
+  {
+    "date": "2023-12-18",
+    "jaap": 50000,
+    "notes": ""
+  },
+  {
+    "date": "2023-12-19",
+    "jaap": 50000,
+    "notes": ""
+  },
+  {
+    "date": "2023-12-20",
+    "jaap": 45000,
+    "notes": ""
+  },
+  {
+    "date": "2023-12-21",
+    "jaap": 1600,
+    "notes": ""
+  },
+  {
+    "date": "2023-12-22",
+    "jaap": 18400,
+    "notes": "Hardwar"
+  },
+  {
+    "date": "2023-12-23",
+    "jaap": 10000,
+    "notes": "Hardwar"
+  },
+  {
+    "date": "2023-12-24",
+    "jaap": 20000,
+    "notes": "*, Rishikesh"
+  },
+  {
+    "date": "2023-12-25",
+    "jaap": 20000,
+    "notes": "Rishikesh"
+  },
+  {
+    "date": "2023-12-26",
+    "jaap": 20000,
+    "notes": "Rishikesh"
+  },
+  {
+    "date": "2023-12-27",
+    "jaap": 20000,
+    "notes": "Poornima, RS"
+  },
+  {
+    "date": "2023-12-28",
+    "jaap": 45000,
+    "notes": "Aura Check: No Negativity, No Pitra, Jaap going on fine"
+  },
+  {
+    "date": "2023-12-29",
+    "jaap": 50000,
+    "notes": ""
+  },
+  {
+    "date": "2023-12-30",
+    "jaap": 50000,
+    "notes": "Kuldevi Hawan 2 - First Day"
+  },
+  {
+    "date": "2023-12-31",
+    "jaap": 50000,
+    "notes": "Kuldevi Hawan 2 - Second Day"
+  },
+  {
+    "date": "2024-01-01",
+    "jaap": 50000,
+    "notes": "*, Kuldevi Hawan 2 - Third Day"
+  },
+  {
+    "date": "2024-01-02",
+    "jaap": 50000,
+    "notes": ""
+  },
+  {
+    "date": "2024-01-03",
+    "jaap": 50000,
+    "notes": ""
+  },
+  {
+    "date": "2024-01-04",
+    "jaap": 50000,
+    "notes": ""
+  },
+  {
+    "date": "2024-01-05",
+    "jaap": 50000,
+    "notes": ""
+  },
+  {
+    "date": "2024-01-06",
+    "jaap": 25000,
+    "notes": ""
+  },
+  {
+    "date": "2024-01-07",
+    "jaap": 25000,
+    "notes": "*"
+  },
+  {
+    "date": "2024-01-08",
+    "jaap": 75000,
+    "notes": ""
+  },
+  {
+    "date": "2024-01-09",
+    "jaap": 28000,
+    "notes": ""
+  },
+  {
+    "date": "2024-01-10",
+    "jaap": 60000,
+    "notes": ""
+  },
+  {
+    "date": "2024-01-11",
+    "jaap": 32000,
+    "notes": ""
+  },
+  {
+    "date": "2024-01-12",
+    "jaap": 45000,
+    "notes": ""
+  },
+  {
+    "date": "2024-01-13",
+    "jaap": 25000,
+    "notes": ""
+  },
+  {
+    "date": "2024-01-14",
+    "jaap": 45000,
+    "notes": "*"
+  },
+  {
+    "date": "2024-01-15",
+    "jaap": 55000,
+    "notes": ""
+  },
+  {
+    "date": "2024-01-16",
+    "jaap": 55000,
+    "notes": ""
+  },
+  {
+    "date": "2024-01-17",
+    "jaap": 40000,
+    "notes": ""
+  },
+  {
+    "date": "2024-01-18",
+    "jaap": 65000,
+    "notes": ""
+  },
+  {
+    "date": "2024-01-19",
+    "jaap": 35000,
+    "notes": ""
+  },
+  {
+    "date": "2024-01-20",
+    "jaap": 25000,
+    "notes": ""
+  },
+  {
+    "date": "2024-01-21",
+    "jaap": 50000,
+    "notes": "*"
+  },
+  {
+    "date": "2024-01-22",
+    "jaap": 50000,
+    "notes": ""
+  },
+  {
+    "date": "2024-01-23",
+    "jaap": 50000,
+    "notes": ""
+  },
+  {
+    "date": "2024-01-24",
+    "jaap": 45000,
+    "notes": ""
+  },
+  {
+    "date": "2024-01-25",
+    "jaap": 45000,
+    "notes": "Poornima"
+  },
+  {
+    "date": "2024-01-26",
+    "jaap": 30000,
+    "notes": "Mumbai"
+  },
+  {
+    "date": "2024-01-27",
+    "jaap": 25000,
+    "notes": "Dwarka"
+  },
+  {
+    "date": "2024-01-28",
+    "jaap": 30000,
+    "notes": "*, Dwarka"
+  },
+  {
+    "date": "2024-01-29",
+    "jaap": 30000,
+    "notes": "Somnath"
+  },
+  {
+    "date": "2024-01-30",
+    "jaap": null,
+    "notes": "In Train; Unwell"
+  },
+  {
+    "date": "2024-01-31",
+    "jaap": 10000,
+    "notes": "Unwell"
+  },
+  {
+    "date": "2024-02-01",
+    "jaap": 30000,
+    "notes": "Unwell"
+  },
+  {
+    "date": "2024-02-02",
+    "jaap": 40000,
+    "notes": "Unwell"
+  },
+  {
+    "date": "2024-02-03",
+    "jaap": 40000,
+    "notes": "Unwell, Third Eye Mantra Chanting - 1"
+  },
+  {
+    "date": "2024-02-04",
+    "jaap": 25000,
+    "notes": "*"
+  },
+  {
+    "date": "2024-02-05",
+    "jaap": 45000,
+    "notes": ""
+  },
+  {
+    "date": "2024-02-06",
+    "jaap": 50000,
+    "notes": ""
+  },
+  {
+    "date": "2024-02-07",
+    "jaap": 50000,
+    "notes": ""
+  },
+  {
+    "date": "2024-02-08",
+    "jaap": 50000,
+    "notes": ""
+  },
+  {
+    "date": "2024-02-09",
+    "jaap": 50000,
+    "notes": ""
+  },
+  {
+    "date": "2024-02-10",
+    "jaap": 30000,
+    "notes": "Third Eye Mantra Chanting - 2"
+  },
+  {
+    "date": "2024-02-11",
+    "jaap": 20000,
+    "notes": "*"
+  },
+  {
+    "date": "2024-02-12",
+    "jaap": 50000,
+    "notes": ""
+  },
+  {
+    "date": "2024-02-13",
+    "jaap": 50000,
+    "notes": ""
+  },
+  {
+    "date": "2024-02-14",
+    "jaap": 45000,
+    "notes": ""
+  },
+  {
+    "date": "2024-02-15",
+    "jaap": 45000,
+    "notes": ""
+  },
+  {
+    "date": "2024-02-16",
+    "jaap": 60000,
+    "notes": ""
+  },
+  {
+    "date": "2024-02-17",
+    "jaap": 42000,
+    "notes": "Third Eye Mantra Chanting - 3"
+  },
+  {
+    "date": "2024-02-18",
+    "jaap": 18000,
+    "notes": "*"
+  },
+  {
+    "date": "2024-02-19",
+    "jaap": 50000,
+    "notes": ""
+  },
+  {
+    "date": "2024-02-20",
+    "jaap": 50000,
+    "notes": ""
+  },
+  {
+    "date": "2024-02-21",
+    "jaap": 55000,
+    "notes": ""
+  },
+  {
+    "date": "2024-02-22",
+    "jaap": 45000,
+    "notes": ""
+  },
+  {
+    "date": "2024-02-23",
+    "jaap": 50000,
+    "notes": ""
+  },
+  {
+    "date": "2024-02-24",
+    "jaap": 45000,
+    "notes": "Poornima, JAG"
+  },
+  {
+    "date": "2024-02-25",
+    "jaap": 25000,
+    "notes": "*"
+  },
+  {
+    "date": "2024-02-26",
+    "jaap": 50000,
+    "notes": ""
+  },
+  {
+    "date": "2024-02-27",
+    "jaap": 50000,
+    "notes": ""
+  },
+  {
+    "date": "2024-02-28",
+    "jaap": 50000,
+    "notes": ""
+  },
+  {
+    "date": "2024-02-29",
+    "jaap": 50000,
+    "notes": ""
+  },
+  {
+    "date": "2024-03-01",
+    "jaap": 25000,
+    "notes": ""
+  },
+  {
+    "date": "2024-03-02",
+    "jaap": 30000,
+    "notes": "Third Eye Mantra Chanting - 4"
+  },
+  {
+    "date": "2024-03-03",
+    "jaap": 45000,
+    "notes": "*"
+  },
+  {
+    "date": "2024-03-04",
+    "jaap": 40000,
+    "notes": ""
+  },
+  {
+    "date": "2024-03-05",
+    "jaap": 50000,
+    "notes": ""
+  },
+  {
+    "date": "2024-03-06",
+    "jaap": 50000,
+    "notes": ""
+  },
+  {
+    "date": "2024-03-07",
+    "jaap": 50000,
+    "notes": ""
+  },
+  {
+    "date": "2024-03-08",
+    "jaap": 80000,
+    "notes": "Shivaratri, Third Eye Mantra Chanting - 5"
+  },
+  {
+    "date": "2024-03-09",
+    "jaap": 10000,
+    "notes": ""
+  },
+  {
+    "date": "2024-03-10",
+    "jaap": null,
+    "notes": "*"
+  },
+  {
+    "date": "2024-03-11",
+    "jaap": 33000,
+    "notes": ""
+  },
+  {
+    "date": "2024-03-12",
+    "jaap": 67000,
+    "notes": ""
+  },
+  {
+    "date": "2024-03-13",
+    "jaap": 55000,
+    "notes": ""
+  },
+  {
+    "date": "2024-03-14",
+    "jaap": 45000,
+    "notes": ""
+  },
+  {
+    "date": "2024-03-15",
+    "jaap": 50000,
+    "notes": ""
+  },
+  {
+    "date": "2024-03-16",
+    "jaap": 50000,
+    "notes": "Third Eye Mantra Chanting - 6"
+  },
+  {
+    "date": "2024-03-17",
+    "jaap": 45000,
+    "notes": "*"
+  },
+  {
+    "date": "2024-03-18",
+    "jaap": 55000,
+    "notes": "Aura Check: No Negativity, No Pitra, Baba ki krupa ha; frequent attacks"
+  },
+  {
+    "date": "2024-03-19",
+    "jaap": 50000,
+    "notes": ""
+  },
+  {
+    "date": "2024-03-20",
+    "jaap": 50000,
+    "notes": ""
+  },
+  {
+    "date": "2024-03-21",
+    "jaap": 50000,
+    "notes": ""
+  },
+  {
+    "date": "2024-03-22",
+    "jaap": 45000,
+    "notes": "1 YEAR completed at Ashaeiynn"
+  },
+  {
+    "date": "2024-03-23",
+    "jaap": 25000,
+    "notes": ""
+  },
+  {
+    "date": "2024-03-24",
+    "jaap": 35000,
+    "notes": "*"
+  },
+  {
+    "date": "2024-03-25",
+    "jaap": 25000,
+    "notes": "Poornima, Holi"
+  },
+  {
+    "date": "2024-03-26",
+    "jaap": 55000,
+    "notes": ""
+  },
+  {
+    "date": "2024-03-27",
+    "jaap": 35000,
+    "notes": ""
+  },
+  {
+    "date": "2024-03-28",
+    "jaap": 50000,
+    "notes": ""
+  },
+  {
+    "date": "2024-03-29",
+    "jaap": 50000,
+    "notes": ""
+  },
+  {
+    "date": "2024-03-30",
+    "jaap": 40000,
+    "notes": "Third Eye Mantra Chanting - 7"
+  },
+  {
+    "date": "2024-03-31",
+    "jaap": 35000,
+    "notes": "*"
+  },
+  {
+    "date": "2024-04-01",
+    "jaap": 15000,
+    "notes": "Unwell"
+  },
+  {
+    "date": "2024-04-02",
+    "jaap": 25000,
+    "notes": ""
+  },
+  {
+    "date": "2024-04-03",
+    "jaap": 50000,
+    "notes": ""
+  },
+  {
+    "date": "2024-04-04",
+    "jaap": 50000,
+    "notes": ""
+  },
+  {
+    "date": "2024-04-05",
+    "jaap": 50000,
+    "notes": ""
+  },
+  {
+    "date": "2024-04-06",
+    "jaap": 22000,
+    "notes": "Isha, CBE; Third Eye Mantra Chanting - 8"
+  },
+  {
+    "date": "2024-04-07",
+    "jaap": 28000,
+    "notes": "*"
+  },
+  {
+    "date": "2024-04-08",
+    "jaap": 25000,
+    "notes": ""
+  },
+  {
+    "date": "2024-04-09",
+    "jaap": 55000,
+    "notes": "Gudi Padwa; Navratri Started "
+  },
+  {
+    "date": "2024-04-10",
+    "jaap": 50000,
+    "notes": ""
+  },
+  {
+    "date": "2024-04-11",
+    "jaap": 50000,
+    "notes": ""
+  },
+  {
+    "date": "2024-04-12",
+    "jaap": 45000,
+    "notes": ""
+  },
+  {
+    "date": "2024-04-13",
+    "jaap": 50000,
+    "notes": ""
+  },
+  {
+    "date": "2024-04-14",
+    "jaap": 45000,
+    "notes": "*, 1431 Begins"
+  },
+  {
+    "date": "2024-04-15",
+    "jaap": 50000,
+    "notes": ""
+  },
+  {
+    "date": "2024-04-16",
+    "jaap": 45000,
+    "notes": ""
+  },
+  {
+    "date": "2024-04-17",
+    "jaap": 40000,
+    "notes": "Ram Navami;  Third Eye Mantra Chanting - 9"
+  },
+  {
+    "date": "2024-04-18",
+    "jaap": 40000,
+    "notes": ""
+  },
+  {
+    "date": "2024-04-19",
+    "jaap": 30000,
+    "notes": "General Election 2024 Starts"
+  },
+  {
+    "date": "2024-04-20",
+    "jaap": 30000,
+    "notes": ""
+  },
+  {
+    "date": "2024-04-21",
+    "jaap": 30000,
+    "notes": "*"
+  },
+  {
+    "date": "2024-04-22",
+    "jaap": 50000,
+    "notes": ""
+  },
+  {
+    "date": "2024-04-23",
+    "jaap": 60000,
+    "notes": "Poornima, Hanuman Jayanti"
+  },
+  {
+    "date": "2024-04-24",
+    "jaap": 50000,
+    "notes": ""
+  },
+  {
+    "date": "2024-04-25",
+    "jaap": 50000,
+    "notes": ""
+  },
+  {
+    "date": "2024-04-26",
+    "jaap": 50000,
+    "notes": ""
+  },
+  {
+    "date": "2024-04-27",
+    "jaap": 55000,
+    "notes": " Third Eye Mantra Chanting - 10"
+  },
+  {
+    "date": "2024-04-28",
+    "jaap": 40000,
+    "notes": "*"
+  },
+  {
+    "date": "2024-04-29",
+    "jaap": 50000,
+    "notes": ""
+  },
+  {
+    "date": "2024-04-30",
+    "jaap": 50000,
+    "notes": ""
+  },
+  {
+    "date": "2024-05-01",
+    "jaap": 50000,
+    "notes": ""
+  },
+  {
+    "date": "2024-05-02",
+    "jaap": 50000,
+    "notes": ""
+  },
+  {
+    "date": "2024-05-03",
+    "jaap": 50000,
+    "notes": ""
+  },
+  {
+    "date": "2024-05-04",
+    "jaap": 32000,
+    "notes": "Third Eye Mantra Chanting - 11"
+  },
+  {
+    "date": "2024-05-05",
+    "jaap": 28000,
+    "notes": "*"
+  },
+  {
+    "date": "2024-05-06",
+    "jaap": 40000,
+    "notes": ""
+  },
+  {
+    "date": "2024-05-07",
+    "jaap": 50000,
+    "notes": ""
+  },
+  {
+    "date": "2024-05-08",
+    "jaap": 50000,
+    "notes": ""
+  },
+  {
+    "date": "2024-05-09",
+    "jaap": 50000,
+    "notes": ""
+  },
+  {
+    "date": "2024-05-10",
+    "jaap": 50000,
+    "notes": ""
+  },
+  {
+    "date": "2024-05-11",
+    "jaap": 50000,
+    "notes": "Third Eye Mantra Chanting - 12"
+  },
+  {
+    "date": "2024-05-12",
+    "jaap": 45000,
+    "notes": "*"
+  },
+  {
+    "date": "2024-05-13",
+    "jaap": 25000,
+    "notes": "Geneal Election 2024 4th Phase, Cast Vote"
+  },
+  {
+    "date": "2024-05-14",
+    "jaap": 50000,
+    "notes": ""
+  },
+  {
+    "date": "2024-05-15",
+    "jaap": 50000,
+    "notes": ""
+  },
+  {
+    "date": "2024-05-16",
+    "jaap": 50000,
+    "notes": ""
+  },
+  {
+    "date": "2024-05-17",
+    "jaap": 50000,
+    "notes": ""
+  },
+  {
+    "date": "2024-05-18",
+    "jaap": 50000,
+    "notes": "Third Eye Mantra Chanting - 13"
+  },
+  {
+    "date": "2024-05-19",
+    "jaap": 25000,
+    "notes": "*"
+  },
+  {
+    "date": "2024-05-20",
+    "jaap": 40000,
+    "notes": ""
+  },
+  {
+    "date": "2024-05-21",
+    "jaap": 50000,
+    "notes": ""
+  },
+  {
+    "date": "2024-05-22",
+    "jaap": 50000,
+    "notes": ""
+  },
+  {
+    "date": "2024-05-23",
+    "jaap": 45000,
+    "notes": "Poornima"
+  },
+  {
+    "date": "2024-05-24",
+    "jaap": 25000,
+    "notes": ""
+  },
+  {
+    "date": "2024-05-25",
+    "jaap": 30000,
+    "notes": "Third Eye Mantra Chanting - 14"
+  },
+  {
+    "date": "2024-05-26",
+    "jaap": 25000,
+    "notes": "*"
+  },
+  {
+    "date": "2024-05-27",
+    "jaap": 50000,
+    "notes": ""
+  },
+  {
+    "date": "2024-05-28",
+    "jaap": 50000,
+    "notes": ""
+  },
+  {
+    "date": "2024-05-29",
+    "jaap": 50000,
+    "notes": ""
+  },
+  {
+    "date": "2024-05-30",
+    "jaap": 35000,
+    "notes": ""
+  },
+  {
+    "date": "2024-05-31",
+    "jaap": 50000,
+    "notes": ""
+  },
+  {
+    "date": "2024-06-01",
+    "jaap": 40000,
+    "notes": "Third Eye Mantra Chanting - 15"
+  },
+  {
+    "date": "2024-06-02",
+    "jaap": 25000,
+    "notes": "*"
+  },
+  {
+    "date": "2024-06-03",
+    "jaap": 45000,
+    "notes": ""
+  },
+  {
+    "date": "2024-06-04",
+    "jaap": 40000,
+    "notes": "Election Result"
+  },
+  {
+    "date": "2024-06-05",
+    "jaap": 40000,
+    "notes": ""
+  },
+  {
+    "date": "2024-06-06",
+    "jaap": 40000,
+    "notes": ""
+  },
+  {
+    "date": "2024-06-07",
+    "jaap": 30000,
+    "notes": "Third Eye Mantra Chanting - 16"
+  },
+  {
+    "date": "2024-06-08",
+    "jaap": 25000,
+    "notes": ""
+  },
+  {
+    "date": "2024-06-09",
+    "jaap": 30000,
+    "notes": "*"
+  },
+  {
+    "date": "2024-06-10",
+    "jaap": 50000,
+    "notes": ""
+  },
+  {
+    "date": "2024-06-11",
+    "jaap": 50000,
+    "notes": ""
+  },
+  {
+    "date": "2024-06-12",
+    "jaap": 50000,
+    "notes": ""
+  },
+  {
+    "date": "2024-06-13",
+    "jaap": 40000,
+    "notes": ""
+  },
+  {
+    "date": "2024-06-14",
+    "jaap": 50000,
+    "notes": ""
+  },
+  {
+    "date": "2024-06-15",
+    "jaap": 45000,
+    "notes": "Third Eye Mantra Chanting - 17; Tryambakeshwar, Nashik"
+  },
+  {
+    "date": "2024-06-16",
+    "jaap": 15000,
+    "notes": "*"
+  },
+  {
+    "date": "2024-06-17",
+    "jaap": 50000,
+    "notes": ""
+  },
+  {
+    "date": "2024-06-18",
+    "jaap": 40000,
+    "notes": ""
+  },
+  {
+    "date": "2024-06-19",
+    "jaap": 50000,
+    "notes": ""
+  },
+  {
+    "date": "2024-06-20",
+    "jaap": 45000,
+    "notes": ""
+  },
+  {
+    "date": "2024-06-21",
+    "jaap": 50000,
+    "notes": "Poornima"
+  },
+  {
+    "date": "2024-06-22",
+    "jaap": 20000,
+    "notes": ""
+  },
+  {
+    "date": "2024-06-23",
+    "jaap": 20000,
+    "notes": "*"
+  },
+  {
+    "date": "2024-06-24",
+    "jaap": 45000,
+    "notes": ""
+  },
+  {
+    "date": "2024-06-25",
+    "jaap": 50000,
+    "notes": "11 Deepak"
+  },
+  {
+    "date": "2024-06-26",
+    "jaap": 35000,
+    "notes": "11 Deepak"
+  },
+  {
+    "date": "2024-06-27",
+    "jaap": 65000,
+    "notes": "11 Deepak"
+  },
+  {
+    "date": "2024-06-28",
+    "jaap": 45000,
+    "notes": "Kalashtami"
+  },
+  {
+    "date": "2024-06-29",
+    "jaap": 50000,
+    "notes": "Third Eye Mantra Chanting - 18"
+  },
+  {
+    "date": "2024-06-30",
+    "jaap": 25000,
+    "notes": "*"
+  },
+  {
+    "date": "2024-07-01",
+    "jaap": 50000,
+    "notes": ""
+  },
+  {
+    "date": "2024-07-02",
+    "jaap": 50000,
+    "notes": ""
+  },
+  {
+    "date": "2024-07-03",
+    "jaap": 50000,
+    "notes": ""
+  },
+  {
+    "date": "2024-07-04",
+    "jaap": 50000,
+    "notes": "Aura Check: No Negativity, No Pitra, Baba ki siddhi hai; Baba laal vesh mein dikhte hain."
+  },
+  {
+    "date": "2024-07-05",
+    "jaap": 50000,
+    "notes": ""
+  },
+  {
+    "date": "2024-07-06",
+    "jaap": 50000,
+    "notes": "Third Eye Mantra Chanting - 19"
+  },
+  {
+    "date": "2024-07-07",
+    "jaap": 25000,
+    "notes": "*"
+  },
+  {
+    "date": "2024-07-08",
+    "jaap": 50000,
+    "notes": ""
+  },
+  {
+    "date": "2024-07-09",
+    "jaap": 50000,
+    "notes": ""
+  },
+  {
+    "date": "2024-07-10",
+    "jaap": 50000,
+    "notes": ""
+  },
+  {
+    "date": "2024-07-11",
+    "jaap": 50000,
+    "notes": ""
+  },
+  {
+    "date": "2024-07-12",
+    "jaap": 40000,
+    "notes": "Grishneshwar"
+  },
+  {
+    "date": "2024-07-13",
+    "jaap": 40000,
+    "notes": "Third Eye Mantra Chanting - 20"
+  },
+  {
+    "date": "2024-07-14",
+    "jaap": 20000,
+    "notes": "*"
+  },
+  {
+    "date": "2024-07-15",
+    "jaap": 50000,
+    "notes": ""
+  },
+  {
+    "date": "2024-07-16",
+    "jaap": 50000,
+    "notes": ""
+  },
+  {
+    "date": "2024-07-17",
+    "jaap": 40000,
+    "notes": ""
+  },
+  {
+    "date": "2024-07-18",
+    "jaap": 55000,
+    "notes": ""
+  },
+  {
+    "date": "2024-07-19",
+    "jaap": 40000,
+    "notes": ""
+  },
+  {
+    "date": "2024-07-20",
+    "jaap": 40000,
+    "notes": ""
+  },
+  {
+    "date": "2024-07-21",
+    "jaap": 35000,
+    "notes": "*, Poornima, Guru Poornima; RS+JAG(Self); RS (DKK, AS, AS)"
+  },
+  {
+    "date": "2024-07-22",
+    "jaap": 45000,
+    "notes": ""
+  },
+  {
+    "date": "2024-07-23",
+    "jaap": 50000,
+    "notes": ""
+  },
+  {
+    "date": "2024-07-24",
+    "jaap": 45000,
+    "notes": ""
+  },
+  {
+    "date": "2024-07-25",
+    "jaap": 50000,
+    "notes": ""
+  },
+  {
+    "date": "2024-07-26",
+    "jaap": 50000,
+    "notes": ""
+  },
+  {
+    "date": "2024-07-27",
+    "jaap": 45000,
+    "notes": "Third Eye Mantra Chanting - 21"
+  },
+  {
+    "date": "2024-07-28",
+    "jaap": 20000,
+    "notes": "*"
+  },
+  {
+    "date": "2024-07-29",
+    "jaap": 50000,
+    "notes": ""
+  },
+  {
+    "date": "2024-07-30",
+    "jaap": 40000,
+    "notes": ""
+  },
+  {
+    "date": "2024-07-31",
+    "jaap": 40000,
+    "notes": "Started taking Rosuvas"
+  },
+  {
+    "date": "2024-08-01",
+    "jaap": 45000,
+    "notes": ""
+  },
+  {
+    "date": "2024-08-02",
+    "jaap": 40000,
+    "notes": "Third Eye Mantra Chanting - 22"
+  },
+  {
+    "date": "2024-08-03",
+    "jaap": 10000,
+    "notes": ""
+  },
+  {
+    "date": "2024-08-04",
+    "jaap": 25000,
+    "notes": "*"
+  },
+  {
+    "date": "2024-08-05",
+    "jaap": 45000,
+    "notes": ""
+  },
+  {
+    "date": "2024-08-06",
+    "jaap": 50000,
+    "notes": ""
+  },
+  {
+    "date": "2024-08-07",
+    "jaap": 50000,
+    "notes": ""
+  },
+  {
+    "date": "2024-08-08",
+    "jaap": 50000,
+    "notes": ""
+  },
+  {
+    "date": "2024-08-09",
+    "jaap": 50000,
+    "notes": ""
+  },
+  {
+    "date": "2024-08-10",
+    "jaap": 50000,
+    "notes": "Third Eye Mantra Chanting - 23"
+  },
+  {
+    "date": "2024-08-11",
+    "jaap": 25000,
+    "notes": "*"
+  },
+  {
+    "date": "2024-08-12",
+    "jaap": 50000,
+    "notes": ""
+  },
+  {
+    "date": "2024-08-13",
+    "jaap": 50000,
+    "notes": ""
+  },
+  {
+    "date": "2024-08-14",
+    "jaap": 50000,
+    "notes": ""
+  },
+  {
+    "date": "2024-08-15",
+    "jaap": 25000,
+    "notes": ""
+  },
+  {
+    "date": "2024-08-16",
+    "jaap": 25000,
+    "notes": ""
+  },
+  {
+    "date": "2024-08-17",
+    "jaap": 40000,
+    "notes": "Third Eye Mantra Chanting - 24"
+  },
+  {
+    "date": "2024-08-18",
+    "jaap": 21000,
+    "notes": "*"
+  },
+  {
+    "date": "2024-08-19",
+    "jaap": 55000,
+    "notes": "Poornima, RS"
+  },
+  {
+    "date": "2024-08-20",
+    "jaap": 45000,
+    "notes": "Deep Prajwalan for Baba"
+  },
+  {
+    "date": "2024-08-21",
+    "jaap": 50000,
+    "notes": ""
+  },
+  {
+    "date": "2024-08-22",
+    "jaap": 55000,
+    "notes": ""
+  },
+  {
+    "date": "2024-08-23",
+    "jaap": 40000,
+    "notes": ""
+  },
+  {
+    "date": "2024-08-24",
+    "jaap": 35000,
+    "notes": "Third Eye Mantra Chanting - 25"
+  },
+  {
+    "date": "2024-08-25",
+    "jaap": 25000,
+    "notes": "*"
+  },
+  {
+    "date": "2024-08-26",
+    "jaap": 50000,
+    "notes": ""
+  },
+  {
+    "date": "2024-08-27",
+    "jaap": 50000,
+    "notes": ""
+  },
+  {
+    "date": "2024-08-28",
+    "jaap": 40000,
+    "notes": ""
+  },
+  {
+    "date": "2024-08-29",
+    "jaap": 40000,
+    "notes": ""
+  },
+  {
+    "date": "2024-08-30",
+    "jaap": 40000,
+    "notes": ""
+  },
+  {
+    "date": "2024-08-31",
+    "jaap": 30000,
+    "notes": "Third Eye Mantra Chanting - 26"
+  },
+  {
+    "date": "2024-09-01",
+    "jaap": 35000,
+    "notes": "*"
+  },
+  {
+    "date": "2024-09-02",
+    "jaap": 40000,
+    "notes": ""
+  },
+  {
+    "date": "2024-09-03",
+    "jaap": 50000,
+    "notes": ""
+  },
+  {
+    "date": "2024-09-04",
+    "jaap": 40000,
+    "notes": ""
+  },
+  {
+    "date": "2024-09-05",
+    "jaap": 40000,
+    "notes": ""
+  },
+  {
+    "date": "2024-09-06",
+    "jaap": 40000,
+    "notes": ""
+  },
+  {
+    "date": "2024-09-07",
+    "jaap": 20000,
+    "notes": ""
+  },
+  {
+    "date": "2024-09-08",
+    "jaap": 25000,
+    "notes": "*"
+  },
+  {
+    "date": "2024-09-09",
+    "jaap": 40000,
+    "notes": ""
+  },
+  {
+    "date": "2024-09-10",
+    "jaap": 40000,
+    "notes": ""
+  },
+  {
+    "date": "2024-09-11",
+    "jaap": 40000,
+    "notes": ""
+  },
+  {
+    "date": "2024-09-12",
+    "jaap": 40000,
+    "notes": ""
+  },
+  {
+    "date": "2024-09-13",
+    "jaap": 45000,
+    "notes": ""
+  },
+  {
+    "date": "2024-09-14",
+    "jaap": 20000,
+    "notes": ""
+  },
+  {
+    "date": "2024-09-15",
+    "jaap": 25000,
+    "notes": "*, Intense depression, anxiety"
+  },
+  {
+    "date": "2024-09-16",
+    "jaap": 40000,
+    "notes": ""
+  },
+  {
+    "date": "2024-09-17",
+    "jaap": 50000,
+    "notes": "Hisar 0.5"
+  },
+  {
+    "date": "2024-09-18",
+    "jaap": 100000,
+    "notes": "Poornima, Hisar"
+  },
+  {
+    "date": "2024-09-19",
+    "jaap": 93000,
+    "notes": "Two Negativity Hawan suggested"
+  },
+  {
+    "date": "2024-09-20",
+    "jaap": 115000,
+    "notes": "Negativity Hawan 1; Maa Kali Tarang 47%; One Kuldevta Hawan suggested"
+  },
+  {
+    "date": "2024-09-21",
+    "jaap": 33975,
+    "notes": "Negativity Hawan 2; Hisar 0.5; Daily 11 Deepak + 1 Kuldevata Deepak"
+  },
+  {
+    "date": "2024-09-22",
+    "jaap": 52550,
+    "notes": "*"
+  },
+  {
+    "date": "2024-09-23",
+    "jaap": 75000,
+    "notes": ""
+  },
+  {
+    "date": "2024-09-24",
+    "jaap": 70000,
+    "notes": ""
+  },
+  {
+    "date": "2024-09-25",
+    "jaap": 65000,
+    "notes": ""
+  },
+  {
+    "date": "2024-09-26",
+    "jaap": 75000,
+    "notes": ""
+  },
+  {
+    "date": "2024-09-27",
+    "jaap": 75000,
+    "notes": ""
+  },
+  {
+    "date": "2024-09-28",
+    "jaap": 60000,
+    "notes": ""
+  },
+  {
+    "date": "2024-09-29",
+    "jaap": 65000,
+    "notes": "*"
+  },
+  {
+    "date": "2024-09-30",
+    "jaap": 65000,
+    "notes": ""
+  },
+  {
+    "date": "2024-10-01",
+    "jaap": 65000,
+    "notes": ""
+  },
+  {
+    "date": "2024-10-02",
+    "jaap": 80000,
+    "notes": "Mahalaya"
+  },
+  {
+    "date": "2024-10-03",
+    "jaap": 65000,
+    "notes": ""
+  },
+  {
+    "date": "2024-10-04",
+    "jaap": 70000,
+    "notes": ""
+  },
+  {
+    "date": "2024-10-05",
+    "jaap": 85000,
+    "notes": "Third Eye Mantra Chanting - 27"
+  },
+  {
+    "date": "2024-10-06",
+    "jaap": 65000,
+    "notes": "*"
+  },
+  {
+    "date": "2024-10-07",
+    "jaap": 75000,
+    "notes": ""
+  },
+  {
+    "date": "2024-10-08",
+    "jaap": 75000,
+    "notes": ""
+  },
+  {
+    "date": "2024-10-09",
+    "jaap": 75000,
+    "notes": "Aura Check: Negativity 20-25% Remaining; "
+  },
+  {
+    "date": "2024-10-10",
+    "jaap": 80000,
+    "notes": "Negativity Hawan 3"
+  },
+  {
+    "date": "2024-10-11",
+    "jaap": 35000,
+    "notes": "2 Peti Golay for Kuldevi"
+  },
+  {
+    "date": "2024-10-12",
+    "jaap": 80000,
+    "notes": "Third Eye Mantra Chanting - 28"
+  },
+  {
+    "date": "2024-10-13",
+    "jaap": 65000,
+    "notes": "*"
+  },
+  {
+    "date": "2024-10-14",
+    "jaap": 75000,
+    "notes": ""
+  },
+  {
+    "date": "2024-10-15",
+    "jaap": 80000,
+    "notes": ""
+  },
+  {
+    "date": "2024-10-16",
+    "jaap": 90000,
+    "notes": "Poornima, RS"
+  },
+  {
+    "date": "2024-10-17",
+    "jaap": 70000,
+    "notes": ""
+  },
+  {
+    "date": "2024-10-18",
+    "jaap": 80000,
+    "notes": ""
+  },
+  {
+    "date": "2024-10-19",
+    "jaap": 90000,
+    "notes": "Third Eye Mantra Chanting - 29"
+  },
+  {
+    "date": "2024-10-20",
+    "jaap": 35000,
+    "notes": "*"
+  },
+  {
+    "date": "2024-10-21",
+    "jaap": null,
+    "notes": "Bangalore"
+  },
+  {
+    "date": "2024-10-22",
+    "jaap": null,
+    "notes": "Bangalore"
+  },
+  {
+    "date": "2024-10-23",
+    "jaap": 35000,
+    "notes": "BLR-PNQ"
+  },
+  {
+    "date": "2024-10-24",
+    "jaap": 75000,
+    "notes": ""
+  },
+  {
+    "date": "2024-10-25",
+    "jaap": 90000,
+    "notes": ""
+  },
+  {
+    "date": "2024-10-26",
+    "jaap": 88000,
+    "notes": "Third Eye Mantra Chanting - 30"
+  },
+  {
+    "date": "2024-10-27",
+    "jaap": 65000,
+    "notes": "*"
+  },
+  {
+    "date": "2024-10-28",
+    "jaap": 60000,
+    "notes": "Akhand Deep Daan"
+  },
+  {
+    "date": "2024-10-29",
+    "jaap": 110000,
+    "notes": "Mantra Jaap"
+  },
+  {
+    "date": "2024-10-30",
+    "jaap": 70000,
+    "notes": ""
+  },
+  {
+    "date": "2024-10-31",
+    "jaap": 70000,
+    "notes": "1 Peti Golay for Kuldevi"
+  },
+  {
+    "date": "2024-11-01",
+    "jaap": 60000,
+    "notes": "Diwali"
+  },
+  {
+    "date": "2024-11-02",
+    "jaap": 55000,
+    "notes": ""
+  },
+  {
+    "date": "2024-11-03",
+    "jaap": 65000,
+    "notes": "*"
+  },
+  {
+    "date": "2024-11-04",
+    "jaap": 76000,
+    "notes": ""
+  },
+  {
+    "date": "2024-11-05",
+    "jaap": 76000,
+    "notes": ""
+  },
+  {
+    "date": "2024-11-06",
+    "jaap": 75000,
+    "notes": ""
+  },
+  {
+    "date": "2024-11-07",
+    "jaap": 70000,
+    "notes": ""
+  },
+  {
+    "date": "2024-11-08",
+    "jaap": 55000,
+    "notes": ""
+  },
+  {
+    "date": "2024-11-09",
+    "jaap": 90000,
+    "notes": "Third Eye Mantra Chanting - 31"
+  },
+  {
+    "date": "2024-11-10",
+    "jaap": 70000,
+    "notes": "*"
+  },
+  {
+    "date": "2024-11-11",
+    "jaap": 73000,
+    "notes": ""
+  },
+  {
+    "date": "2024-11-12",
+    "jaap": 60000,
+    "notes": ""
+  },
+  {
+    "date": "2024-11-13",
+    "jaap": null,
+    "notes": "Pune-Kolkata"
+  },
+  {
+    "date": "2024-11-14",
+    "jaap": null,
+    "notes": "Kolkata - Deogahr"
+  },
+  {
+    "date": "2024-11-15",
+    "jaap": null,
+    "notes": "Poornima, Deogahr"
+  },
+  {
+    "date": "2024-11-16",
+    "jaap": null,
+    "notes": "Deogahr-Kolkata"
+  },
+  {
+    "date": "2024-11-17",
+    "jaap": null,
+    "notes": "*, Kolkata"
+  },
+  {
+    "date": "2024-11-18",
+    "jaap": null,
+    "notes": "Kolkata"
+  },
+  {
+    "date": "2024-11-19",
+    "jaap": null,
+    "notes": "Kolkata"
+  },
+  {
+    "date": "2024-11-20",
+    "jaap": 70000,
+    "notes": "Kolkata-Pune, MH Election"
+  },
+  {
+    "date": "2024-11-21",
+    "jaap": 65000,
+    "notes": ""
+  },
+  {
+    "date": "2024-11-22",
+    "jaap": 65000,
+    "notes": ""
+  },
+  {
+    "date": "2024-11-23",
+    "jaap": 65000,
+    "notes": ""
+  },
+  {
+    "date": "2024-11-24",
+    "jaap": 65000,
+    "notes": "*"
+  },
+  {
+    "date": "2024-11-25",
+    "jaap": 65000,
+    "notes": ""
+  },
+  {
+    "date": "2024-11-26",
+    "jaap": 80000,
+    "notes": ""
+  },
+  {
+    "date": "2024-11-27",
+    "jaap": 65000,
+    "notes": ""
+  },
+  {
+    "date": "2024-11-28",
+    "jaap": 80000,
+    "notes": ""
+  },
+  {
+    "date": "2024-11-29",
+    "jaap": 65000,
+    "notes": ""
+  },
+  {
+    "date": "2024-11-30",
+    "jaap": 40000,
+    "notes": ""
+  },
+  {
+    "date": "2024-12-01",
+    "jaap": 75000,
+    "notes": "*"
+  },
+  {
+    "date": "2024-12-02",
+    "jaap": 70000,
+    "notes": ""
+  },
+  {
+    "date": "2024-12-03",
+    "jaap": 85000,
+    "notes": "Third Eye Mantra Chanting - 32"
+  },
+  {
+    "date": "2024-12-04",
+    "jaap": 70000,
+    "notes": ""
+  },
+  {
+    "date": "2024-12-05",
+    "jaap": 70000,
+    "notes": ""
+  },
+  {
+    "date": "2024-12-06",
+    "jaap": 60000,
+    "notes": ""
+  },
+  {
+    "date": "2024-12-07",
+    "jaap": 65000,
+    "notes": ""
+  },
+  {
+    "date": "2024-12-08",
+    "jaap": 75000,
+    "notes": "*"
+  },
+  {
+    "date": "2024-12-09",
+    "jaap": 70000,
+    "notes": ""
+  },
+  {
+    "date": "2024-12-10",
+    "jaap": 76000,
+    "notes": "Third Eye Mantra Chanting - 33"
+  },
+  {
+    "date": "2024-12-11",
+    "jaap": 75000,
+    "notes": ""
+  },
+  {
+    "date": "2024-12-12",
+    "jaap": 70000,
+    "notes": ""
+  },
+  {
+    "date": "2024-12-13",
+    "jaap": 75000,
+    "notes": ""
+  },
+  {
+    "date": "2024-12-14",
+    "jaap": 70200,
+    "notes": "Poornima, RS; Cold + Vibrations felt"
+  },
+  {
+    "date": "2024-12-15",
+    "jaap": 45000,
+    "notes": "*"
+  },
+  {
+    "date": "2024-12-16",
+    "jaap": 72000,
+    "notes": ""
+  },
+  {
+    "date": "2024-12-17",
+    "jaap": 77000,
+    "notes": ""
+  },
+  {
+    "date": "2024-12-18",
+    "jaap": 60000,
+    "notes": ""
+  },
+  {
+    "date": "2024-12-19",
+    "jaap": 60000,
+    "notes": ""
+  },
+  {
+    "date": "2024-12-20",
+    "jaap": null,
+    "notes": "Pune-Secunderabad"
+  },
+  {
+    "date": "2024-12-21",
+    "jaap": null,
+    "notes": "Srisailam"
+  },
+  {
+    "date": "2024-12-22",
+    "jaap": null,
+    "notes": "*, Secunderabad-Pune"
+  },
+  {
+    "date": "2024-12-23",
+    "jaap": 65000,
+    "notes": ""
+  },
+  {
+    "date": "2024-12-24",
+    "jaap": 70000,
+    "notes": ""
+  },
+  {
+    "date": "2024-12-25",
+    "jaap": 65000,
+    "notes": ""
+  },
+  {
+    "date": "2024-12-26",
+    "jaap": 70000,
+    "notes": ""
+  },
+  {
+    "date": "2024-12-27",
+    "jaap": 65000,
+    "notes": ""
+  },
+  {
+    "date": "2024-12-28",
+    "jaap": 70200,
+    "notes": ""
+  },
+  {
+    "date": "2024-12-29",
+    "jaap": 40000,
+    "notes": "*"
+  },
+  {
+    "date": "2024-12-30",
+    "jaap": 70200,
+    "notes": ""
+  },
+  {
+    "date": "2024-12-31",
+    "jaap": 80000,
+    "notes": "Third Eye Mantra Chanting - 34"
+  },
+  {
+    "date": "2025-01-01",
+    "jaap": 65000,
+    "notes": ""
+  },
+  {
+    "date": "2025-01-02",
+    "jaap": 65000,
+    "notes": ""
+  },
+  {
+    "date": "2025-01-03",
+    "jaap": 80000,
+    "notes": ""
+  },
+  {
+    "date": "2025-01-04",
+    "jaap": 65000,
+    "notes": "Third Eye Mantra Chanting - 35"
+  },
+  {
+    "date": "2025-01-05",
+    "jaap": 70200,
+    "notes": "*"
+  },
+  {
+    "date": "2025-01-06",
+    "jaap": 75000,
+    "notes": ""
+  },
+  {
+    "date": "2025-01-07",
+    "jaap": 60000,
+    "notes": ""
+  },
+  {
+    "date": "2025-01-08",
+    "jaap": 60804,
+    "notes": ""
+  },
+  {
+    "date": "2025-01-09",
+    "jaap": 50000,
+    "notes": ""
+  },
+  {
+    "date": "2025-01-10",
+    "jaap": 65000,
+    "notes": ""
+  },
+  {
+    "date": "2025-01-11",
+    "jaap": 82000,
+    "notes": "Third Eye Mantra Chanting - 36"
+  },
+  {
+    "date": "2025-01-12",
+    "jaap": 60000,
+    "notes": "*"
+  },
+  {
+    "date": "2025-01-13",
+    "jaap": 86400,
+    "notes": "Poornima; JAG"
+  },
+  {
+    "date": "2025-01-14",
+    "jaap": 70000,
+    "notes": ""
+  },
+  {
+    "date": "2025-01-15",
+    "jaap": 65000,
+    "notes": ""
+  },
+  {
+    "date": "2025-01-16",
+    "jaap": 62000,
+    "notes": ""
+  },
+  {
+    "date": "2025-01-17",
+    "jaap": 70000,
+    "notes": ""
+  },
+  {
+    "date": "2025-01-18",
+    "jaap": 81000,
+    "notes": "Third Eye Mantra Chanting - 37"
+  },
+  {
+    "date": "2025-01-19",
+    "jaap": 50004,
+    "notes": "*"
+  },
+  {
+    "date": "2025-01-20",
+    "jaap": 52500,
+    "notes": ""
+  },
+  {
+    "date": "2025-01-21",
+    "jaap": 65000,
+    "notes": ""
+  },
+  {
+    "date": "2025-01-22",
+    "jaap": 80000,
+    "notes": ""
+  },
+  {
+    "date": "2025-01-23",
+    "jaap": 56412,
+    "notes": ""
+  },
+  {
+    "date": "2025-01-24",
+    "jaap": 80000,
+    "notes": ""
+  },
+  {
+    "date": "2025-01-25",
+    "jaap": 60000,
+    "notes": "Third Eye Mantra Chanting - 38"
+  },
+  {
+    "date": "2025-01-26",
+    "jaap": 45036,
+    "notes": "*"
+  },
+  {
+    "date": "2025-01-27",
+    "jaap": 85000,
+    "notes": ""
+  },
+  {
+    "date": "2025-01-28",
+    "jaap": 65000,
+    "notes": ""
+  },
+  {
+    "date": "2025-01-29",
+    "jaap": 75000,
+    "notes": ""
+  },
+  {
+    "date": "2025-01-30",
+    "jaap": 65000,
+    "notes": ""
+  },
+  {
+    "date": "2025-01-31",
+    "jaap": 65000,
+    "notes": ""
+  },
+  {
+    "date": "2025-02-01",
+    "jaap": 75600,
+    "notes": "Third Eye Mantra Chanting - 39"
+  },
+  {
+    "date": "2025-02-02",
+    "jaap": 32400,
+    "notes": "*"
+  },
+  {
+    "date": "2025-02-03",
+    "jaap": 93125,
+    "notes": "Aura Check: Jaap going on fine; Siddhi banegi, Baba krupa karenge"
+  },
+  {
+    "date": "2025-02-04",
+    "jaap": 50000,
+    "notes": ""
+  },
+  {
+    "date": "2025-02-05",
+    "jaap": 75000,
+    "notes": ""
+  },
+  {
+    "date": "2025-02-06",
+    "jaap": 86400,
+    "notes": ""
+  },
+  {
+    "date": "2025-02-07",
+    "jaap": 70000,
+    "notes": ""
+  },
+  {
+    "date": "2025-02-08",
+    "jaap": 65000,
+    "notes": "Third Eye Mantra Chanting - 40"
+  },
+  {
+    "date": "2025-02-09",
+    "jaap": 43200,
+    "notes": "*"
+  },
+  {
+    "date": "2025-02-10",
+    "jaap": 65555,
+    "notes": ""
+  },
+  {
+    "date": "2025-02-11",
+    "jaap": 82080,
+    "notes": "Poornima; RS"
+  },
+  {
+    "date": "2025-02-12",
+    "jaap": 65000,
+    "notes": ""
+  },
+  {
+    "date": "2025-02-13",
+    "jaap": 70304,
+    "notes": ""
+  },
+  {
+    "date": "2025-02-14",
+    "jaap": 65000,
+    "notes": ""
+  },
+  {
+    "date": "2025-02-15",
+    "jaap": 43960,
+    "notes": ""
+  },
+  {
+    "date": "2025-02-16",
+    "jaap": 43200,
+    "notes": "*"
+  },
+  {
+    "date": "2025-02-17",
+    "jaap": 65000,
+    "notes": ""
+  },
+  {
+    "date": "2025-02-18",
+    "jaap": 65000,
+    "notes": ""
+  },
+  {
+    "date": "2025-02-19",
+    "jaap": 65000,
+    "notes": ""
+  },
+  {
+    "date": "2025-02-20",
+    "jaap": 45000,
+    "notes": ""
+  },
+  {
+    "date": "2025-02-21",
+    "jaap": 65000,
+    "notes": ""
+  },
+  {
+    "date": "2025-02-22",
+    "jaap": 65000,
+    "notes": ""
+  },
+  {
+    "date": "2025-02-23",
+    "jaap": 65000,
+    "notes": "*"
+  },
+  {
+    "date": "2025-02-24",
+    "jaap": 65000,
+    "notes": ""
+  },
+  {
+    "date": "2025-02-25",
+    "jaap": 65000,
+    "notes": ""
+  },
+  {
+    "date": "2025-02-26",
+    "jaap": 75060,
+    "notes": "Mahashivratri; 1 Peti Golay + Rudrabhishek Sadhana"
+  },
+  {
+    "date": "2025-02-27",
+    "jaap": 65000,
+    "notes": ""
+  },
+  {
+    "date": "2025-02-28",
+    "jaap": 65000,
+    "notes": ""
+  },
+  {
+    "date": "2025-03-01",
+    "jaap": 66000,
+    "notes": "Third Eye Mantra Chanting - 41"
+  },
+  {
+    "date": "2025-03-02",
+    "jaap": 43200,
+    "notes": "*"
+  },
+  {
+    "date": "2025-03-03",
+    "jaap": 65000,
+    "notes": ""
+  },
+  {
+    "date": "2025-03-04",
+    "jaap": 82000,
+    "notes": ""
+  },
+  {
+    "date": "2025-03-05",
+    "jaap": 60000,
+    "notes": ""
+  },
+  {
+    "date": "2025-03-06",
+    "jaap": 70000,
+    "notes": ""
+  },
+  {
+    "date": "2025-03-07",
+    "jaap": 65000,
+    "notes": ""
+  },
+  {
+    "date": "2025-03-08",
+    "jaap": 80000,
+    "notes": "Third Eye Mantra Chanting - 42"
+  },
+  {
+    "date": "2025-03-09",
+    "jaap": 32400,
+    "notes": "*"
+  },
+  {
+    "date": "2025-03-10",
+    "jaap": 70350,
+    "notes": ""
+  },
+  {
+    "date": "2025-03-11",
+    "jaap": 65065,
+    "notes": ""
+  },
+  {
+    "date": "2025-03-12",
+    "jaap": 70000,
+    "notes": ""
+  },
+  {
+    "date": "2025-03-13",
+    "jaap": 75000,
+    "notes": "Poornima, Negativity Hawan"
+  },
+  {
+    "date": "2025-03-14",
+    "jaap": 50000,
+    "notes": ""
+  },
+  {
+    "date": "2025-03-15",
+    "jaap": 30000,
+    "notes": ""
+  },
+  {
+    "date": "2025-03-16",
+    "jaap": 45000,
+    "notes": "*"
+  },
+  {
+    "date": "2025-03-17",
+    "jaap": 65250,
+    "notes": ""
+  },
+  {
+    "date": "2025-03-18",
+    "jaap": 65000,
+    "notes": ""
+  },
+  {
+    "date": "2025-03-19",
+    "jaap": 65000,
+    "notes": ""
+  },
+  {
+    "date": "2025-03-20",
+    "jaap": 65000,
+    "notes": ""
+  },
+  {
+    "date": "2025-03-21",
+    "jaap": 65000,
+    "notes": ""
+  },
+  {
+    "date": "2025-03-22",
+    "jaap": 65880,
+    "notes": "Third Eye Mantra Chanting - 43"
+  },
+  {
+    "date": "2025-03-23",
+    "jaap": 32400,
+    "notes": "*"
+  },
+  {
+    "date": "2025-03-24",
+    "jaap": 80000,
+    "notes": ""
+  },
+  {
+    "date": "2025-03-25",
+    "jaap": 65000,
+    "notes": ""
+  },
+  {
+    "date": "2025-03-26",
+    "jaap": 75000,
+    "notes": ""
+  },
+  {
+    "date": "2025-03-27",
+    "jaap": 60000,
+    "notes": ""
+  },
+  {
+    "date": "2025-03-28",
+    "jaap": 65000,
+    "notes": ""
+  },
+  {
+    "date": "2025-03-29",
+    "jaap": 43200,
+    "notes": ""
+  },
+  {
+    "date": "2025-03-30",
+    "jaap": 75000,
+    "notes": "*; Navratri Begins"
+  },
+  {
+    "date": "2025-03-31",
+    "jaap": 60000,
+    "notes": ""
+  },
+  {
+    "date": "2025-04-01",
+    "jaap": 65000,
+    "notes": ""
+  },
+  {
+    "date": "2025-04-02",
+    "jaap": 65000,
+    "notes": ""
+  },
+  {
+    "date": "2025-04-03",
+    "jaap": 70000,
+    "notes": ""
+  },
+  {
+    "date": "2025-04-04",
+    "jaap": 55000,
+    "notes": ""
+  },
+  {
+    "date": "2025-04-05",
+    "jaap": 40000,
+    "notes": ""
+  },
+  {
+    "date": "2025-04-06",
+    "jaap": 70000,
+    "notes": "*; Ram Navami"
+  },
+  {
+    "date": "2025-04-07",
+    "jaap": 65000,
+    "notes": ""
+  },
+  {
+    "date": "2025-04-08",
+    "jaap": 65000,
+    "notes": ""
+  },
+  {
+    "date": "2025-04-09",
+    "jaap": 65000,
+    "notes": ""
+  },
+  {
+    "date": "2025-04-10",
+    "jaap": 65000,
+    "notes": ""
+  },
+  {
+    "date": "2025-04-11",
+    "jaap": 65000,
+    "notes": ""
+  },
+  {
+    "date": "2025-04-12",
+    "jaap": 71000,
+    "notes": "Poornima; Hanuman Jayanti"
+  },
+  {
+    "date": "2025-04-13",
+    "jaap": 40404,
+    "notes": "*"
+  },
+  {
+    "date": "2025-04-14",
+    "jaap": 65075,
+    "notes": ""
+  },
+  {
+    "date": "2025-04-15",
+    "jaap": 45000,
+    "notes": "1432 Begins"
+  },
+  {
+    "date": "2025-04-16",
+    "jaap": 65000,
+    "notes": ""
+  },
+  {
+    "date": "2025-04-17",
+    "jaap": 40000,
+    "notes": "Booked flat at Rohan Anand"
+  },
+  {
+    "date": "2025-04-18",
+    "jaap": 65000,
+    "notes": ""
+  },
+  {
+    "date": "2025-04-19",
+    "jaap": 40000,
+    "notes": ""
+  },
+  {
+    "date": "2025-04-20",
+    "jaap": 65000,
+    "notes": "*"
+  },
+  {
+    "date": "2025-04-21",
+    "jaap": 72000,
+    "notes": ""
+  },
+  {
+    "date": "2025-04-22",
+    "jaap": 65000,
+    "notes": ""
+  },
+  {
+    "date": "2025-04-23",
+    "jaap": 60510,
+    "notes": ""
+  },
+  {
+    "date": "2025-04-24",
+    "jaap": 70000,
+    "notes": ""
+  },
+  {
+    "date": "2025-04-25",
+    "jaap": 65000,
+    "notes": "Kuldevi Tarang 60%"
+  },
+  {
+    "date": "2025-04-26",
+    "jaap": 65000,
+    "notes": "Third Eye Mantra Chanting - 44"
+  },
+  {
+    "date": "2025-04-27",
+    "jaap": 65000,
+    "notes": "*"
+  },
+  {
+    "date": "2025-04-28",
+    "jaap": 70000,
+    "notes": ""
+  },
+  {
+    "date": "2025-04-29",
+    "jaap": 60000,
+    "notes": ""
+  },
+  {
+    "date": "2025-04-30",
+    "jaap": 70000,
+    "notes": ""
+  },
+  {
+    "date": "2025-05-01",
+    "jaap": 65000,
+    "notes": ""
+  },
+  {
+    "date": "2025-05-02",
+    "jaap": 65000,
+    "notes": ""
+  },
+  {
+    "date": "2025-05-03",
+    "jaap": 65000,
+    "notes": "Third Eye Mantra Chanting - 45"
+  },
+  {
+    "date": "2025-05-04",
+    "jaap": 55000,
+    "notes": "*"
+  },
+  {
+    "date": "2025-05-05",
+    "jaap": 65000,
+    "notes": ""
+  },
+  {
+    "date": "2025-05-06",
+    "jaap": 65000,
+    "notes": ""
+  },
+  {
+    "date": "2025-05-07",
+    "jaap": 60000,
+    "notes": ""
+  },
+  {
+    "date": "2025-05-08",
+    "jaap": 50000,
+    "notes": ""
+  },
+  {
+    "date": "2025-05-09",
+    "jaap": 53514,
+    "notes": ""
+  },
+  {
+    "date": "2025-05-10",
+    "jaap": 70000,
+    "notes": ""
+  },
+  {
+    "date": "2025-05-11",
+    "jaap": 15000,
+    "notes": "*"
+  },
+  {
+    "date": "2025-05-12",
+    "jaap": null,
+    "notes": "Poornima, Pune-Goa"
+  },
+  {
+    "date": "2025-05-13",
+    "jaap": null,
+    "notes": "Goa"
+  },
+  {
+    "date": "2025-05-14",
+    "jaap": null,
+    "notes": "Goa"
+  },
+  {
+    "date": "2025-05-15",
+    "jaap": null,
+    "notes": "Goa-Pune"
+  },
+  {
+    "date": "2025-05-16",
+    "jaap": 65000,
+    "notes": ""
+  },
+  {
+    "date": "2025-05-17",
+    "jaap": 65000,
+    "notes": "Third Eye Mantra Chanting - 46"
+  },
+  {
+    "date": "2025-05-18",
+    "jaap": 30000,
+    "notes": "*"
+  },
+  {
+    "date": "2025-05-19",
+    "jaap": 60000,
+    "notes": ""
+  },
+  {
+    "date": "2025-05-20",
+    "jaap": 65000,
+    "notes": ""
+  },
+  {
+    "date": "2025-05-21",
+    "jaap": 62000,
+    "notes": ""
+  },
+  {
+    "date": "2025-05-22",
+    "jaap": 70000,
+    "notes": ""
+  },
+  {
+    "date": "2025-05-23",
+    "jaap": 65000,
+    "notes": ""
+  },
+  {
+    "date": "2025-05-24",
+    "jaap": 70000,
+    "notes": "Third Eye Mantra Chanting - 47"
+  },
+  {
+    "date": "2025-05-25",
+    "jaap": 35000,
+    "notes": "*"
+  },
+  {
+    "date": "2025-05-26",
+    "jaap": 80000,
+    "notes": ""
+  },
+  {
+    "date": "2025-05-27",
+    "jaap": 65000,
+    "notes": ""
+  },
+  {
+    "date": "2025-05-28",
+    "jaap": 70000,
+    "notes": ""
+  },
+  {
+    "date": "2025-05-29",
+    "jaap": 60000,
+    "notes": "Third Eye Session - 1"
+  },
+  {
+    "date": "2025-05-30",
+    "jaap": 36000,
+    "notes": "Third Eye Session - 2"
+  },
+  {
+    "date": "2025-05-31",
+    "jaap": 55800,
+    "notes": "Third Eye Session - 3; Third Eye Mantra Chanting - 48; Negativity Hawan 1"
+  },
+  {
+    "date": "2025-06-01",
+    "jaap": 43200,
+    "notes": "*; Third Eye Session - 4; Negativity Hawan 2"
+  },
+  {
+    "date": "2025-06-02",
+    "jaap": 57600,
+    "notes": "Third Eye Session - 5"
+  },
+  {
+    "date": "2025-06-03",
+    "jaap": 36000,
+    "notes": "Third Eye Session - 6"
+  },
+  {
+    "date": "2025-06-04",
+    "jaap": 50400,
+    "notes": "Third Eye Session - 7"
+  },
+  {
+    "date": "2025-06-05",
+    "jaap": 43200,
+    "notes": "Third Eye Session - 8"
+  },
+  {
+    "date": "2025-06-06",
+    "jaap": 50400,
+    "notes": "Third Eye Session - 9"
+  },
+  {
+    "date": "2025-06-07",
+    "jaap": 50400,
+    "notes": "Third Eye Session - 10; Negativity Hawan 3; Third Eye Mantra Chanting - 49; 40 Day Third Eye Sadhana Starts -Day 1; Eyes Open"
+  },
+  {
+    "date": "2025-06-08",
+    "jaap": 43200,
+    "notes": "*; Third Eye Session - 11; Negativity Hawan 4; Sadhana Day 2; Eyes Open"
+  },
+  {
+    "date": "2025-06-09",
+    "jaap": 40000,
+    "notes": "Sadhana Day 3; Eyes Open"
+  },
+  {
+    "date": "2025-06-10",
+    "jaap": 45000,
+    "notes": "Poornima, Sadhana Day 4; Eyes Closed"
+  },
+  {
+    "date": "2025-06-11",
+    "jaap": 50000,
+    "notes": "Sadhana Day 5; Eyes Closed"
+  },
+  {
+    "date": "2025-06-12",
+    "jaap": 40000,
+    "notes": "Sadhana Day 6; Eyes Closed"
+  },
+  {
+    "date": "2025-06-13",
+    "jaap": 40000,
+    "notes": "Sadhana Day 7; Eyes Open"
+  },
+  {
+    "date": "2025-06-14",
+    "jaap": 54000,
+    "notes": "Sadhana Day 8; Eyes Open"
+  },
+  {
+    "date": "2025-06-15",
+    "jaap": 30000,
+    "notes": "*; Sadhana Day 9; Eyes Open"
+  },
+  {
+    "date": "2025-06-16",
+    "jaap": 46000,
+    "notes": "Sadhana Day 10; Eyes Closed"
+  },
+  {
+    "date": "2025-06-17",
+    "jaap": 40000,
+    "notes": "Sadhana Day 11; Eyes Closed"
+  },
+  {
+    "date": "2025-06-18",
+    "jaap": 40000,
+    "notes": "Sadhana Day 12; Eyes Closed"
+  },
+  {
+    "date": "2025-06-19",
+    "jaap": 40000,
+    "notes": "Sadhana Day 13; Eyes Open"
+  },
+  {
+    "date": "2025-06-20",
+    "jaap": 50000,
+    "notes": "Sadhana Day 14; Eyes Open"
+  },
+  {
+    "date": "2025-06-21",
+    "jaap": 60000,
+    "notes": "Sadhana Day 15; Eyes Open"
+  },
+  {
+    "date": "2025-06-22",
+    "jaap": 40000,
+    "notes": "*; Sadhana Day 16; Eyes Closed; Third Eye Mantra Chanting - 50"
+  },
+  {
+    "date": "2025-06-23",
+    "jaap": 40000,
+    "notes": "Sadhana Day 17; Eyes Closed"
+  },
+  {
+    "date": "2025-06-24",
+    "jaap": 43200,
+    "notes": "Sadhana Day 18; Eyes Closed"
+  },
+  {
+    "date": "2025-06-25",
+    "jaap": 50000,
+    "notes": "Sadhana Day 19; Eyes Open"
+  },
+  {
+    "date": "2025-06-26",
+    "jaap": 45684,
+    "notes": "Sadhana Day 20; Eyes Open"
+  },
+  {
+    "date": "2025-06-27",
+    "jaap": 50000,
+    "notes": "Sadhana Day 21; Eyes Open"
+  },
+  {
+    "date": "2025-06-28",
+    "jaap": 54000,
+    "notes": "Sadhana Day 22; Eyes Closed; Third Eye Mantra Chanting - 51"
+  },
+  {
+    "date": "2025-06-29",
+    "jaap": 43200,
+    "notes": "*; Sadhana Day 23; Eyes Closed"
+  },
+  {
+    "date": "2025-06-30",
+    "jaap": 43200,
+    "notes": "Sadhana Day 24; Eyes Closed"
+  },
+  {
+    "date": "2025-07-01",
+    "jaap": 54000,
+    "notes": "Sadhana Day 25; Eyes Open; Kept Gola in front of Baba; prayed to him for making me able"
+  },
+  {
+    "date": "2025-07-02",
+    "jaap": 54000,
+    "notes": "Sadhana Day 26; Eyes Open"
+  },
+  {
+    "date": "2025-07-03",
+    "jaap": 54000,
+    "notes": "Sadhana Day 27; Eyes Open"
+  },
+  {
+    "date": "2025-07-04",
+    "jaap": 54000,
+    "notes": "Sadhana Day 28; Eyes Closed"
+  },
+  {
+    "date": "2025-07-05",
+    "jaap": 39000,
+    "notes": "Sadhana Day 29; Eyes Closed"
+  },
+  {
+    "date": "2025-07-06",
+    "jaap": 50000,
+    "notes": "*; Sadhana Day 30; Eyes Closed"
+  },
+  {
+    "date": "2025-07-07",
+    "jaap": 54000,
+    "notes": "Sadhana Day 31; Eyes Open"
+  },
+  {
+    "date": "2025-07-08",
+    "jaap": 54000,
+    "notes": "Sadhana Day 32; Eyes Open"
+  },
+  {
+    "date": "2025-07-09",
+    "jaap": 54000,
+    "notes": "Sadhana Day 33; Eyes Open"
+  },
+  {
+    "date": "2025-07-10",
+    "jaap": 86400,
+    "notes": "Poornima; Guru Poornima; RS+JAG+GuruKrupa; Sadhana Day 34; Eyes Closed"
+  },
+  {
+    "date": "2025-07-11",
+    "jaap": 54000,
+    "notes": "Sadhana Day 35; Eyes Closed"
+  },
+  {
+    "date": "2025-07-12",
+    "jaap": 54000,
+    "notes": "Sadhana Day 36; Eyes Closed"
+  },
+  {
+    "date": "2025-07-13",
+    "jaap": 32400,
+    "notes": "*; Sadhana Day 37; Eyes Open"
+  },
+  {
+    "date": "2025-07-14",
+    "jaap": 43200,
+    "notes": "Sadhana Day 38; Eyes Open"
+  },
+  {
+    "date": "2025-07-15",
+    "jaap": 54000,
+    "notes": "Sadhana Day 39; Eyes Open"
+  },
+  {
+    "date": "2025-07-16",
+    "jaap": 246000,
+    "notes": "Sadhana Day 40; Eyes Closed"
+  },
+  {
+    "date": "2025-07-17",
+    "jaap": 54000,
+    "notes": ""
+  },
+  {
+    "date": "2025-07-18",
+    "jaap": 65000,
+    "notes": ""
+  },
+  {
+    "date": "2025-07-19",
+    "jaap": 54000,
+    "notes": ""
+  },
+  {
+    "date": "2025-07-20",
+    "jaap": 32400,
+    "notes": "*"
+  },
+  {
+    "date": "2025-07-21",
+    "jaap": 60000,
+    "notes": ""
+  },
+  {
+    "date": "2025-07-22",
+    "jaap": 60000,
+    "notes": ""
+  },
+  {
+    "date": "2025-07-23",
+    "jaap": 75060,
+    "notes": "Sravan Shivratri Rudrabhishek"
+  },
+  {
+    "date": "2025-07-24",
+    "jaap": 64800,
+    "notes": ""
+  },
+  {
+    "date": "2025-07-25",
+    "jaap": 64800,
+    "notes": ""
+  },
+  {
+    "date": "2025-07-26",
+    "jaap": 70200,
+    "notes": "Third Eye Mantra Chanting - 52"
+  },
+  {
+    "date": "2025-07-27",
+    "jaap": 32400,
+    "notes": "*"
+  },
+  {
+    "date": "2025-07-28",
+    "jaap": 64800,
+    "notes": ""
+  },
+  {
+    "date": "2025-07-29",
+    "jaap": 54000,
+    "notes": ""
+  },
+  {
+    "date": "2025-07-30",
+    "jaap": 64800,
+    "notes": ""
+  },
+  {
+    "date": "2025-07-31",
+    "jaap": 64800,
+    "notes": ""
+  },
+  {
+    "date": "2025-08-01",
+    "jaap": 64800,
+    "notes": ""
+  },
+  {
+    "date": "2025-08-02",
+    "jaap": 75600,
+    "notes": "Third Eye Mantra Chanting - 53"
+  },
+  {
+    "date": "2025-08-03",
+    "jaap": 32400,
+    "notes": "*"
+  },
+  {
+    "date": "2025-08-04",
+    "jaap": 64800,
+    "notes": ""
+  },
+  {
+    "date": "2025-08-05",
+    "jaap": 64800,
+    "notes": ""
+  },
+  {
+    "date": "2025-08-06",
+    "jaap": 64800,
+    "notes": ""
+  },
+  {
+    "date": "2025-08-07",
+    "jaap": 64800,
+    "notes": ""
+  },
+  {
+    "date": "2025-08-08",
+    "jaap": 54000,
+    "notes": ""
+  },
+  {
+    "date": "2025-08-09",
+    "jaap": 70200,
+    "notes": "Poornima; Third Eye Mantra Chanting - 54"
+  },
+  {
+    "date": "2025-08-10",
+    "jaap": 32400,
+    "notes": "*"
+  },
+  {
+    "date": "2025-08-11",
+    "jaap": 64800,
+    "notes": ""
+  },
+  {
+    "date": "2025-08-12",
+    "jaap": 75600,
+    "notes": ""
+  },
+  {
+    "date": "2025-08-13",
+    "jaap": 64800,
+    "notes": ""
+  },
+  {
+    "date": "2025-08-14",
+    "jaap": 60000,
+    "notes": ""
+  },
+  {
+    "date": "2025-08-15",
+    "jaap": 64800,
+    "notes": ""
+  },
+  {
+    "date": "2025-08-16",
+    "jaap": 45360,
+    "notes": "Third Eye Mantra Chanting - 55"
+  },
+  {
+    "date": "2025-08-17",
+    "jaap": 43200,
+    "notes": "*"
+  },
+  {
+    "date": "2025-08-18",
+    "jaap": 64800,
+    "notes": ""
+  },
+  {
+    "date": "2025-08-19",
+    "jaap": 64800,
+    "notes": ""
+  },
+  {
+    "date": "2025-08-20",
+    "jaap": 64800,
+    "notes": ""
+  },
+  {
+    "date": "2025-08-21",
+    "jaap": 60000,
+    "notes": ""
+  },
+  {
+    "date": "2025-08-22",
+    "jaap": 32400,
+    "notes": ""
+  },
+  {
+    "date": "2025-08-23",
+    "jaap": 43200,
+    "notes": ""
+  },
+  {
+    "date": "2025-08-24",
+    "jaap": 54000,
+    "notes": "*"
+  },
+  {
+    "date": "2025-08-25",
+    "jaap": 64800,
+    "notes": ""
+  },
+  {
+    "date": "2025-08-26",
+    "jaap": 65016,
+    "notes": ""
+  },
+  {
+    "date": "2025-08-27",
+    "jaap": 54000,
+    "notes": ""
+  },
+  {
+    "date": "2025-08-28",
+    "jaap": 65124,
+    "notes": ""
+  },
+  {
+    "date": "2025-08-29",
+    "jaap": 64800,
+    "notes": ""
+  },
+  {
+    "date": "2025-08-30",
+    "jaap": 32400,
+    "notes": ""
+  },
+  {
+    "date": "2025-08-31",
+    "jaap": 54000,
+    "notes": "*"
+  },
+  {
+    "date": "2025-09-01",
+    "jaap": 64800,
+    "notes": ""
+  },
+  {
+    "date": "2025-09-02",
+    "jaap": 64800,
+    "notes": ""
+  },
+  {
+    "date": "2025-09-03",
+    "jaap": 64800,
+    "notes": ""
+  },
+  {
+    "date": "2025-09-04",
+    "jaap": 64800,
+    "notes": ""
+  },
+  {
+    "date": "2025-09-05",
+    "jaap": 100008,
+    "notes": "Pune-Hisar"
+  },
+  {
+    "date": "2025-09-06",
+    "jaap": 100008,
+    "notes": "Hisar"
+  },
+  {
+    "date": "2025-09-07",
+    "jaap": 124200,
+    "notes": "*; Poornima; Hisar"
+  },
+  {
+    "date": "2025-09-08",
+    "jaap": 11664,
+    "notes": "Hisar 0.5-Pune"
+  },
+  {
+    "date": "2025-09-09",
+    "jaap": 32400,
+    "notes": ""
+  },
+  {
+    "date": "2025-09-10",
+    "jaap": 64800,
+    "notes": ""
+  },
+  {
+    "date": "2025-09-11",
+    "jaap": 64800,
+    "notes": ""
+  },
+  {
+    "date": "2025-09-12",
+    "jaap": 54000,
+    "notes": ""
+  },
+  {
+    "date": "2025-09-13",
+    "jaap": 64800,
+    "notes": ""
+  },
+  {
+    "date": "2025-09-14",
+    "jaap": 60000,
+    "notes": "*"
+  },
+  {
+    "date": "2025-09-15",
+    "jaap": 64800,
+    "notes": ""
+  },
+  {
+    "date": "2025-09-16",
+    "jaap": 60000,
+    "notes": ""
+  },
+  {
+    "date": "2025-09-17",
+    "jaap": 65000,
+    "notes": ""
+  },
+  {
+    "date": "2025-09-18",
+    "jaap": 64800,
+    "notes": ""
+  },
+  {
+    "date": "2025-09-19",
+    "jaap": 64800,
+    "notes": ""
+  },
+  {
+    "date": "2025-09-20",
+    "jaap": 43200,
+    "notes": ""
+  },
+  {
+    "date": "2025-09-21",
+    "jaap": 21600,
+    "notes": "*; Akhand Deepak Kuldevi"
+  },
+  {
+    "date": "2025-09-22",
+    "jaap": 54000,
+    "notes": "Navratri Begins;  Ram Tattwa Sadhana Day 1"
+  },
+  {
+    "date": "2025-09-23",
+    "jaap": 76140,
+    "notes": "Ram Tattwa Sadhana Day 2"
+  },
+  {
+    "date": "2025-09-24",
+    "jaap": 64800,
+    "notes": "Ram Tattwa Sadhana Day 3"
+  },
+  {
+    "date": "2025-09-25",
+    "jaap": 69336,
+    "notes": "Ram Tattwa Sadhana Day 4; 108x21x2; Verbal Jai Siya Ram, Mental Ram"
+  },
+  {
+    "date": "2025-09-26",
+    "jaap": 75600,
+    "notes": "Ram Tattwa Sadhana Day 5; 108x41x2"
+  },
+  {
+    "date": "2025-09-27",
+    "jaap": 78300,
+    "notes": "Ram Tattwa Sadhana Day 6; 108x51x2"
+  },
+  {
+    "date": "2025-09-28",
+    "jaap": 64800,
+    "notes": "*; Ram Tattwa Sadhana Day 7; 108x22x2"
+  },
+  {
+    "date": "2025-09-29",
+    "jaap": 61128,
+    "notes": "Ram Tattwa Sadhana Day 8; 108x33x2"
+  },
+  {
+    "date": "2025-09-30",
+    "jaap": 70308,
+    "notes": "Ram Tattwa Sadhana Day 9; 45 mins x 2"
+  },
+  {
+    "date": "2025-10-01",
+    "jaap": 60048,
+    "notes": ""
+  },
+  {
+    "date": "2025-10-02",
+    "jaap": 43200,
+    "notes": "Dusherah Mahamantra Jaap"
+  },
+  {
+    "date": "2025-10-03",
+    "jaap": 64800,
+    "notes": ""
+  },
+  {
+    "date": "2025-10-04",
+    "jaap": 64800,
+    "notes": ""
+  },
+  {
+    "date": "2025-10-05",
+    "jaap": 43200,
+    "notes": "*"
+  },
+  {
+    "date": "2025-10-06",
+    "jaap": 65124,
+    "notes": "Poornima"
+  },
+  {
+    "date": "2025-10-07",
+    "jaap": 50004,
+    "notes": "Maha Hawan ; JAG"
+  },
+  {
+    "date": "2025-10-08",
+    "jaap": 75600,
+    "notes": ""
+  },
+  {
+    "date": "2025-10-09",
+    "jaap": 64800,
+    "notes": ""
+  },
+  {
+    "date": "2025-10-10",
+    "jaap": 54000,
+    "notes": ""
+  },
+  {
+    "date": "2025-10-11",
+    "jaap": 81000,
+    "notes": "Third Eye Mantra Chanting - 56"
+  },
+  {
+    "date": "2025-10-12",
+    "jaap": 32400,
+    "notes": "*"
+  },
+  {
+    "date": "2025-10-13",
+    "jaap": 64800,
+    "notes": ""
+  },
+  {
+    "date": "2025-10-14",
+    "jaap": 64908,
+    "notes": ""
+  },
+  {
+    "date": "2025-10-15",
+    "jaap": 65016,
+    "notes": ""
+  },
+  {
+    "date": "2025-10-16",
+    "jaap": 65016,
+    "notes": ""
+  },
+  {
+    "date": "2025-10-17",
+    "jaap": 70200,
+    "notes": ""
+  },
+  {
+    "date": "2025-10-18",
+    "jaap": 65016,
+    "notes": "Diwali Mahahawan"
+  },
+  {
+    "date": "2025-10-19",
+    "jaap": 43200,
+    "notes": "*"
+  },
+  {
+    "date": "2025-10-20",
+    "jaap": 7344,
+    "notes": "Kali Puja"
+  },
+  {
+    "date": "2025-10-21",
+    "jaap": 64800,
+    "notes": "Diwali"
+  },
+  {
+    "date": "2025-10-22",
+    "jaap": 64800,
+    "notes": ""
+  },
+  {
+    "date": "2025-10-23",
+    "jaap": 64800,
+    "notes": ""
+  },
+  {
+    "date": "2025-10-24",
+    "jaap": 64800,
+    "notes": ""
+  },
+  {
+    "date": "2025-10-25",
+    "jaap": 54000,
+    "notes": ""
+  },
+  {
+    "date": "2025-10-26",
+    "jaap": 54000,
+    "notes": "*"
+  },
+  {
+    "date": "2025-10-27",
+    "jaap": 75708,
+    "notes": ""
+  },
+  {
+    "date": "2025-10-28",
+    "jaap": 64800,
+    "notes": ""
+  },
+  {
+    "date": "2025-10-29",
+    "jaap": 65016,
+    "notes": ""
+  },
+  {
+    "date": "2025-10-30",
+    "jaap": 70200,
+    "notes": ""
+  },
+  {
+    "date": "2025-10-31",
+    "jaap": 70308,
+    "notes": ""
+  },
+  {
+    "date": "2025-11-01",
+    "jaap": 65016,
+    "notes": "Third Eye Mantra Chanting - 57"
+  },
+  {
+    "date": "2025-11-02",
+    "jaap": 54000,
+    "notes": "*"
+  },
+  {
+    "date": "2025-11-03",
+    "jaap": 64800,
+    "notes": ""
+  },
+  {
+    "date": "2025-11-04",
+    "jaap": 70200,
+    "notes": ""
+  },
+  {
+    "date": "2025-11-05",
+    "jaap": 65880,
+    "notes": "Poornima"
+  },
+  {
+    "date": "2025-11-06",
+    "jaap": 66960,
+    "notes": ""
+  },
+  {
+    "date": "2025-11-07",
+    "jaap": 64800,
+    "notes": ""
+  },
+  {
+    "date": "2025-11-08",
+    "jaap": 75600,
+    "notes": "Third Eye Mantra Chanting - 58"
+  },
+  {
+    "date": "2025-11-09",
+    "jaap": 43200,
+    "notes": "*"
+  },
+  {
+    "date": "2025-11-10",
+    "jaap": 64800,
+    "notes": ""
+  },
+  {
+    "date": "2025-11-11",
+    "jaap": 64800,
+    "notes": ""
+  },
+  {
+    "date": "2025-11-12",
+    "jaap": 64800,
+    "notes": ""
+  },
+  {
+    "date": "2025-11-13",
+    "jaap": 60000,
+    "notes": ""
+  },
+  {
+    "date": "2025-11-14",
+    "jaap": 70200,
+    "notes": ""
+  },
+  {
+    "date": "2025-11-15",
+    "jaap": 82080,
+    "notes": "Third Eye Mantra Chanting - 59"
+  },
+  {
+    "date": "2025-11-16",
+    "jaap": 43200,
+    "notes": "*"
+  },
+  {
+    "date": "2025-11-17",
+    "jaap": 64800,
+    "notes": ""
+  },
+  {
+    "date": "2025-11-18",
+    "jaap": 64800,
+    "notes": "Siya Tattwa Sadhana Day 1; 108x11X2"
+  },
+  {
+    "date": "2025-11-19",
+    "jaap": 66096,
+    "notes": "Siya Tattwa Sadhana Day 2; 72x21X2"
+  },
+  {
+    "date": "2025-11-20",
+    "jaap": 65340,
+    "notes": "Siya Tattwa Sadhana Day 3; 64x11X2"
+  },
+  {
+    "date": "2025-11-21",
+    "jaap": 65016,
+    "notes": "Siya Tattwa Sadhana Day 4; 40 mins; 2nd Charan Jaap"
+  },
+  {
+    "date": "2025-11-22",
+    "jaap": 67500,
+    "notes": "Siya Tattwa Sadhana Day 5; 10x108x2; 2nd Charan Jaap"
+  },
+  {
+    "date": "2025-11-23",
+    "jaap": 70200,
+    "notes": "Siya Tattwa Sadhana Day 6; 10x108x2; 2nd Charan Jaap; Ashwini Mudra x 3 x JSR (M)"
+  },
+  {
+    "date": "2025-11-24",
+    "jaap": 81000,
+    "notes": "Siya Tattwa Sadhana Day 7; Rameshwar Sarkar Rudrabhishek"
+  },
+  {
+    "date": "2025-11-25",
+    "jaap": 71604,
+    "notes": "Siya Tattwa Sadhana Day 8; Rameshwar Sarkar Rudrabhishek"
+  },
+  {
+    "date": "2025-11-26",
+    "jaap": 75600,
+    "notes": "Siya Tattwa Sadhana Day 9; Rameshwar Sarkar Rudrabhishek"
+  },
+  {
+    "date": "2025-11-27",
+    "jaap": 64800,
+    "notes": "Siya Tattwa Sadhana Day 10; Astral Travel - Sutala Lok (Bali Maharaj)"
+  },
+  {
+    "date": "2025-11-28",
+    "jaap": 65016,
+    "notes": ""
+  },
+  {
+    "date": "2025-11-29",
+    "jaap": 81000,
+    "notes": "Third Eye Mantra Chanting - 60"
+  },
+  {
+    "date": "2025-11-30",
+    "jaap": 54000,
+    "notes": "*"
+  },
+  {
+    "date": "2025-12-01",
+    "jaap": 70200,
+    "notes": ""
+  },
+  {
+    "date": "2025-12-02",
+    "jaap": 64800,
+    "notes": ""
+  },
+  {
+    "date": "2025-12-03",
+    "jaap": 65880,
+    "notes": ""
+  },
+  {
+    "date": "2025-12-04",
+    "jaap": 75708,
+    "notes": "Poornima; RS (Sini); Gehen Tattwa (Self) - Day 1"
+  },
+  {
+    "date": "2025-12-05",
+    "jaap": 70200,
+    "notes": "Gehen Tattwa - Day 2"
+  },
+  {
+    "date": "2025-12-06",
+    "jaap": 65016,
+    "notes": "Gehen Tattwa - Day 3"
+  },
+  {
+    "date": "2025-12-07",
+    "jaap": 70416,
+    "notes": "*; Gehen Tattwa - Day 4"
+  },
+  {
+    "date": "2025-12-08",
+    "jaap": 64800,
+    "notes": "Gehen Tattwa - Day 5"
+  },
+  {
+    "date": "2025-12-09",
+    "jaap": 64908,
+    "notes": "Gehen Tattwa - Day 6"
+  },
+  {
+    "date": "2025-12-10",
+    "jaap": 64800,
+    "notes": "Gehen Tattwa - Day 7"
+  },
+  {
+    "date": "2025-12-11",
+    "jaap": 64800,
+    "notes": "Gehen Tattwa - Day 8"
+  },
+  {
+    "date": "2025-12-12",
+    "jaap": 77220,
+    "notes": "Gehen Tattwa - Day 9"
+  },
+  {
+    "date": "2025-12-13",
+    "jaap": 75600,
+    "notes": "Gehen Tattwa - Day 10; Third Eye Mantra Chanting - 61"
+  },
+  {
+    "date": "2025-12-14",
+    "jaap": 70308,
+    "notes": "*; Gehen Tattwa - Day 11"
+  },
+  {
+    "date": "2025-12-15",
+    "jaap": 75600,
+    "notes": ""
+  },
+  {
+    "date": "2025-12-16",
+    "jaap": 64800,
+    "notes": ""
+  },
+  {
+    "date": "2025-12-17",
+    "jaap": 64800,
+    "notes": ""
+  },
+  {
+    "date": "2025-12-18",
+    "jaap": 64800,
+    "notes": ""
+  },
+  {
+    "date": "2025-12-19",
+    "jaap": 66636,
+    "notes": ""
+  },
+  {
+    "date": "2025-12-20",
+    "jaap": 75600,
+    "notes": "Third Eye Mantra Chanting - 62"
+  },
+  {
+    "date": "2025-12-21",
+    "jaap": 65016,
+    "notes": "*"
+  },
+  {
+    "date": "2025-12-22",
+    "jaap": 43200,
+    "notes": ""
+  },
+  {
+    "date": "2025-12-23",
+    "jaap": 43500,
+    "notes": ""
+  },
+  {
+    "date": "2025-12-24",
+    "jaap": 43308,
+    "notes": "Pune-Kolkata 0.5"
+  },
+  {
+    "date": "2025-12-25",
+    "jaap": 64800,
+    "notes": "Kolkata"
+  },
+  {
+    "date": "2025-12-26",
+    "jaap": 43308,
+    "notes": "Kolkata"
+  },
+  {
+    "date": "2025-12-27",
+    "jaap": 81000,
+    "notes": "Kolkata; Third Eye Mantra Chanting - 63"
+  },
+  {
+    "date": "2025-12-28",
+    "jaap": 54000,
+    "notes": "*; Kolkata"
+  },
+  {
+    "date": "2025-12-29",
+    "jaap": 57456,
+    "notes": "Kolkata"
+  },
+  {
+    "date": "2025-12-30",
+    "jaap": 54000,
+    "notes": "Kolkata"
+  },
+  {
+    "date": "2025-12-31",
+    "jaap": 70200,
+    "notes": "Kolkata"
+  },
+  {
+    "date": "2026-01-01",
+    "jaap": 81000,
+    "notes": "Kolkata 0.5 - Pune"
+  },
+  {
+    "date": "2026-01-02",
+    "jaap": 64800,
+    "notes": ""
+  },
+  {
+    "date": "2026-01-03",
+    "jaap": 64800,
+    "notes": "Poornima; RS"
+  },
+  {
+    "date": "2026-01-04",
+    "jaap": 43200,
+    "notes": "*"
+  },
+  {
+    "date": "2026-01-05",
+    "jaap": 81000,
+    "notes": ""
+  },
+  {
+    "date": "2026-01-06",
+    "jaap": 64800,
+    "notes": ""
+  },
+  {
+    "date": "2026-01-07",
+    "jaap": 64800,
+    "notes": ""
+  },
+  {
+    "date": "2026-01-08",
+    "jaap": 64800,
+    "notes": ""
+  },
+  {
+    "date": "2026-01-09",
+    "jaap": 64800,
+    "notes": ""
+  },
+  {
+    "date": "2026-01-10",
+    "jaap": 64800,
+    "notes": ""
+  },
+  {
+    "date": "2026-01-11",
+    "jaap": 43200,
+    "notes": "*"
+  },
+  {
+    "date": "2026-01-12",
+    "jaap": 64800,
+    "notes": ""
+  },
+  {
+    "date": "2026-01-13",
+    "jaap": 64800,
+    "notes": ""
+  },
+  {
+    "date": "2026-01-14",
+    "jaap": 81000,
+    "notes": "Makar Sankranti; 2 Parata for Hanuman Ji & Kuldevi; 1 Parata for Sini"
+  },
+  {
+    "date": "2026-01-15",
+    "jaap": 43308,
+    "notes": ""
+  },
+  {
+    "date": "2026-01-16",
+    "jaap": 64800,
+    "notes": ""
+  },
+  {
+    "date": "2026-01-17",
+    "jaap": 82080,
+    "notes": "Third Eye Mantra Chanting - 64"
+  },
+  {
+    "date": "2026-01-18",
+    "jaap": 54000,
+    "notes": "*"
+  },
+  {
+    "date": "2026-01-19",
+    "jaap": 64800,
+    "notes": ""
+  },
+  {
+    "date": "2026-01-20",
+    "jaap": 70200,
+    "notes": ""
+  },
+  {
+    "date": "2026-01-21",
+    "jaap": 58320,
+    "notes": ""
+  },
+  {
+    "date": "2026-01-22",
+    "jaap": 71280,
+    "notes": ""
+  },
+  {
+    "date": "2026-01-23",
+    "jaap": 81000,
+    "notes": ""
+  },
+  {
+    "date": "2026-01-24",
+    "jaap": 64800,
+    "notes": "Third Eye Mantra Chanting - 65"
+  },
+  {
+    "date": "2026-01-25",
+    "jaap": 60048,
+    "notes": "*"
+  },
+  {
+    "date": "2026-01-26",
+    "jaap": 57240,
+    "notes": ""
+  },
+  {
+    "date": "2026-01-27",
+    "jaap": 64800,
+    "notes": ""
+  },
+  {
+    "date": "2026-01-28",
+    "jaap": 77760,
+    "notes": ""
+  },
+  {
+    "date": "2026-01-29",
+    "jaap": 70200,
+    "notes": ""
+  },
+  {
+    "date": "2026-01-30",
+    "jaap": 71280,
+    "notes": ""
+  },
+  {
+    "date": "2026-01-31",
+    "jaap": 64800,
+    "notes": ""
+  },
+  {
+    "date": "2026-02-01",
+    "jaap": 65016,
+    "notes": "*; Poornima; RS"
+  },
+  {
+    "date": "2026-02-02",
+    "jaap": 64800,
+    "notes": "Siya Tattwa Sadhana Day 1; 108x11x2"
+  },
+  {
+    "date": "2026-02-03",
+    "jaap": 67824,
+    "notes": "Siya Tattwa Sadhana Day 2; 72x21X2"
+  },
+  {
+    "date": "2026-02-04",
+    "jaap": 64908,
+    "notes": "Siya Tattwa Sadhana Day 3; 64x11X2; Ashwini Mudra"
+  },
+  {
+    "date": "2026-02-05",
+    "jaap": 67500,
+    "notes": "Siya Tattwa Sadhana Day 4; 40 mins; 2nd Charan Jaap; 21x108x2"
+  },
+  {
+    "date": "2026-02-06",
+    "jaap": 73764,
+    "notes": "Siya Tattwa Sadhana Day 5; 41x108x2; 2nd Charan Jaap; Ashwini Mudra"
+  },
+  {
+    "date": "2026-02-07",
+    "jaap": 75816,
+    "notes": "Siya Tattwa Sadhana Day 6; 51x108x2; 2nd Charan Jaap; No Ashwini Mudra"
+  },
+  {
+    "date": "2026-02-08",
+    "jaap": 64800,
+    "notes": "Siya Tattwa Sadhana Day 7; Rameshwar Sarkar Rudrabhishek"
+  },
+  {
+    "date": "2026-02-09",
+    "jaap": 76680,
+    "notes": "Siya Tattwa Sadhana Day 8; Rameshwar Sarkar Rudrabhishek"
+  },
+  {
+    "date": "2026-02-10",
+    "jaap": 71388,
+    "notes": "Siya Tattwa Sadhana Day 9; Rameshwar Sarkar Rudrabhishek"
+  },
+  {
+    "date": "2026-02-11",
+    "jaap": 75600,
+    "notes": "Siya Tattwa Sadhana Day 10; Gurudev ki pratima ko dekhkar Upanshu Jaap; 45 minutes"
+  },
+  {
+    "date": "2026-02-12",
+    "jaap": null,
+    "notes": "Siya Tattwa Sadhana Day 11; "
+  }
+]
