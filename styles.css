@@ -257,4 +257,10 @@ button {
   min-height: 44px;
   padding: 10px 16px;
 }
+body {
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
 

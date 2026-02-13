@@ -1,10 +1,12 @@
 {
   "name": "Jaap Ledger",
   "short_name": "Jaap",
-  "start_url": ".",
+  "description": "Offline Jaap Sadhana Ledger",
+  "start_url": "./index.html",
   "display": "standalone",
-  "background_color": "#fbf6e8",
-  "theme_color": "#d4af37",
+  "background_color": "#f9f4e8",
+  "theme_color": "#d8cfa8",
+  "orientation": "portrait",
   "icons": [
     {
       "src": "icons/icon-192.png",
@@ -18,4 +20,5 @@
     }
   ]
 }
+
 
