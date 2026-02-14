@@ -1,7 +1,7 @@
 console.log("Jaap Ledger app.js loaded successfully");
 
 // ---------- Utilities ----------
-const ENABLE_ONE_TIME_DATA_RECOVERY = true; // ⚠️ TEMP — REMOVE BEFORE MERGE
+
 // Get today's date in YYYY-MM-DD (local)
 function getTodayISO() {
   const today = new Date();
@@ -94,6 +94,26 @@ function isStandalonePWA() {
     window.matchMedia("(display-mode: standalone)").matches ||
     window.navigator.standalone === true
   );
+}
+
+async function hasEverSeededLedger() {
+  const db = await openDB();
+  const tx = db.transaction(META_STORE, "readonly");
+  const store = tx.objectStore(META_STORE);
+
+  return new Promise(resolve => {
+    const req = store.get("ledgerSeeded");
+    req.onsuccess = () => resolve(!!req.result);
+    req.onerror = () => resolve(false);
+  });
+}
+
+async function markLedgerSeeded() {
+  const db = await openDB();
+  const tx = db.transaction(META_STORE, "readwrite");
+  const store = tx.objectStore(META_STORE);
+
+  store.put(true, "ledgerSeeded");
 }
 
 
@@ -247,7 +267,9 @@ console.log("Today (ISO):", todayISO);
 const DB_NAME = "jaap-ledger-db";
 const STORE_NAME = "ledger";
 const BACKUP_STORE = "ledger-backups";
-const DB_VERSION = 2; // bump version ONCE
+const META_STORE = "meta";            // 👈 ADD
+const DB_VERSION = 3;                 // 👈 BUMP version
+
 
 function openDB() {
   return new Promise((resolve, reject) => {
@@ -263,6 +285,10 @@ function openDB() {
       if (!db.objectStoreNames.contains(BACKUP_STORE)) {
         db.createObjectStore(BACKUP_STORE);
       }
+	  if (!db.objectStoreNames.contains(META_STORE)) {
+		db.createObjectStore(META_STORE);
+	}
+
     };
 
     request.onsuccess = () => resolve(request.result);
@@ -305,44 +331,30 @@ let poornimaDates = [];
 
     // Load ledger ONLY from IndexedDB
     const existingLedger = await loadLedgerFromDB();
-	if (
-  ENABLE_ONE_TIME_DATA_RECOVERY &&
-  (!existingLedger || existingLedger.length === 0)
-) {
-  console.warn("One-time recovery: loading ledger from data.json");
 
-  const fallbackRes = await fetch("data.json");
-  const fallbackData = await fallbackRes.json();
-
-  ledgerData = fallbackData;
-
-  await saveLedger(ledgerData);
-  await saveAutomaticBackup(ledgerData);
-} else {
-  ledgerData = existingLedger || [];
-}
-
+const everSeeded = await hasEverSeededLedger();
 
 if (!existingLedger || existingLedger.length === 0) {
-  console.log("No ledger found in this container");
+  console.log("Ledger empty");
 
-  if (isStandalonePWA()) {
-    console.log("First launch as Home Screen app — initializing ledger");
+  if (isStandalonePWA() && !everSeeded) {
+    console.log("First-ever install — seeding from data.json");
 
-    // ONE-TIME initialization ONLY if empty
     const fallbackRes = await fetch("data.json");
     const fallbackData = await fallbackRes.json();
 
     ledgerData = fallbackData;
+
     await saveLedger(ledgerData);
     await saveAutomaticBackup(ledgerData);
+    await markLedgerSeeded();   // 👈 CRITICAL LINE
   } else {
-    ledgerData = existingLedger || [];
+    console.warn("Ledger empty but seeding not allowed");
+    ledgerData = [];
   }
 } else {
   ledgerData = existingLedger;
 }
-
 
     renderToday();
 
