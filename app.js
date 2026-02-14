@@ -1,7 +1,7 @@
 console.log("Jaap Ledger app.js loaded successfully");
 
 // ---------- Utilities ----------
-
+const ENABLE_ONE_TIME_DATA_RECOVERY = true; // ⚠️ TEMP — REMOVE BEFORE MERGE
 // Get today's date in YYYY-MM-DD (local)
 function getTodayISO() {
   const today = new Date();
@@ -305,6 +305,23 @@ let poornimaDates = [];
 
     // Load ledger ONLY from IndexedDB
     const existingLedger = await loadLedgerFromDB();
+	if (
+  ENABLE_ONE_TIME_DATA_RECOVERY &&
+  (!existingLedger || existingLedger.length === 0)
+) {
+  console.warn("One-time recovery: loading ledger from data.json");
+
+  const fallbackRes = await fetch("data.json");
+  const fallbackData = await fallbackRes.json();
+
+  ledgerData = fallbackData;
+
+  await saveLedger(ledgerData);
+  await saveAutomaticBackup(ledgerData);
+} else {
+  ledgerData = existingLedger || [];
+}
+
 
 if (!existingLedger || existingLedger.length === 0) {
   console.log("No ledger found in this container");

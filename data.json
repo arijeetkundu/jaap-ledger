@@ -5171,12 +5171,17 @@
   },
   {
     "date": "2026-02-11",
-    "jaap": 75600,
+    "jaap": 75708,
     "notes": "Siya Tattwa Sadhana Day 10; Gurudev ki pratima ko dekhkar Upanshu Jaap; 45 minutes"
   },
   {
     "date": "2026-02-12",
-    "jaap": null,
-    "notes": "Siya Tattwa Sadhana Day 11; "
+    "jaap": 75600,
+    "notes": "Siya Tattwa Sadhana Completed; "
+  },
+  {
+    "date": "2026-02-13",
+    "jaap": 75708,
+    "notes": "First update on app; "
   }
 ]
