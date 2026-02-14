@@ -337,8 +337,8 @@ const everSeeded = await hasEverSeededLedger();
 if (!existingLedger || existingLedger.length === 0) {
   console.log("Ledger empty");
 
-  if (isStandalonePWA() && !everSeeded) {
-    console.log("First-ever install — seeding from data.json");
+  if (!everSeeded) {
+    console.log("First-ever seed — loading data.json");
 
     const fallbackRes = await fetch("data.json");
     const fallbackData = await fallbackRes.json();
@@ -347,9 +347,9 @@ if (!existingLedger || existingLedger.length === 0) {
 
     await saveLedger(ledgerData);
     await saveAutomaticBackup(ledgerData);
-    await markLedgerSeeded();   // 👈 CRITICAL LINE
+    await markLedgerSeeded();
   } else {
-    console.warn("Ledger empty but seeding not allowed");
+    console.log("Ledger empty but already seeded earlier — starting empty");
     ledgerData = [];
   }
 } else {
