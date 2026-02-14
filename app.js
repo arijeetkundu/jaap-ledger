@@ -49,6 +49,46 @@ function getCroreMilestone(dateISO) {
   return null;
 }
 
+function getCroreMilestoneHistory() {
+  const milestones = [];
+
+  // Sort entries chronologically
+  const sorted = [...ledgerData].sort((a, b) =>
+    a.date.localeCompare(b.date)
+  );
+
+  let lastCrore = 0;
+  let lastMilestoneDate = null;
+
+  sorted.forEach(entry => {
+    const total = getCumulativeJaapUpTo(entry.date);
+    const currentCrore = Math.floor(total / 10000000);
+
+    if (currentCrore > lastCrore) {
+      let daysTaken = null;
+
+      if (lastMilestoneDate) {
+        const prev = new Date(lastMilestoneDate);
+        const curr = new Date(entry.date);
+        const diffMs = curr - prev;
+        daysTaken = Math.round(diffMs / (1000 * 60 * 60 * 24));
+      }
+
+      milestones.push({
+        crore: currentCrore,
+        date: entry.date,
+        daysTaken
+      });
+
+      lastCrore = currentCrore;
+      lastMilestoneDate = entry.date;
+    }
+  });
+
+  return milestones;
+}
+
+
 function isStandalonePWA() {
   return (
     window.matchMedia("(display-mode: standalone)").matches ||
@@ -174,6 +214,29 @@ async function loadLedgerFromDB() {
   return [];
 }
 
+function groupEntriesByYear(entries) {
+  const grouped = {};
+
+  entries.forEach(entry => {
+    const year = entry.date.slice(0, 4);
+    if (!grouped[year]) {
+      grouped[year] = [];
+    }
+    grouped[year].push(entry);
+  });
+
+  // Sort years descending
+  Object.keys(grouped).forEach(year => {
+    grouped[year].sort((a, b) => b.date.localeCompare(a.date));
+  });
+
+  return Object.keys(grouped)
+    .sort((a, b) => b - a)
+    .reduce((acc, year) => {
+      acc[year] = grouped[year];
+      return acc;
+    }, {});
+}
 
 
 const todayISO = getTodayISO();
@@ -366,13 +429,22 @@ function renderReflectionSummary() {
   const container = document.getElementById("reflection-summary");
 
   const yearlyTotals = getYearlyTotals();
+  const CURRENT_YEAR = getTodayISO().slice(0, 4);
+  const currentYearTotal = yearlyTotals[CURRENT_YEAR] || 0;
   const cumulative = getCumulativeTotal();
   const progress = getNextCroreProgress();
 
   const years = Object.keys(yearlyTotals).sort((a, b) => b - a);
+  const milestoneHistory = getCroreMilestoneHistory();
 
   container.innerHTML = `
     <div class="reflection-box">
+	
+	<div class="reflection-line">
+  <strong>${CURRENT_YEAR} Total:</strong>
+  ${currentYearTotal.toLocaleString()}
+</div>
+
       <div class="reflection-line">
         <strong>Total Jaap:</strong>
         ${cumulative.toLocaleString()}
@@ -383,20 +455,25 @@ function renderReflectionSummary() {
         ${progress.currentCrore + 1} Crore
         (${progress.percent}%)
       </div>
-
-      <div class="yearly-totals">
-        ${years.map(year => `
-          <div class="year-line">
-            ${year}: ${yearlyTotals[year].toLocaleString()}
-          </div>
-        `).join("")}
-      </div>
 	  
+	  ${milestoneHistory.length > 0 ? `
+  <div class="reflection-milestones">
+    <div class="reflection-subtitle">Milestones</div>
+    ${milestoneHistory.map(m => `
+      <div class="milestone-line">
+        ${m.crore} Crore — ${m.date}
+        ${m.daysTaken !== null
+          ? `<span class="milestone-gap">(+${m.daysTaken} days)</span>`
+          : ""}
+      </div>
+    `).join("")}
+  </div>
+` : ""}
+
 	  <div class="legend">
   🏵️ Crore Milestone &nbsp;&nbsp; 🌕 Poornima &nbsp;&nbsp; 🔴 Sunday &nbsp;&nbsp; ▸ Notes
 </div>
-
-	  
+  
     </div>
   `;
 }
@@ -404,113 +481,150 @@ function renderReflectionSummary() {
 
 function renderLedgerList() {
   const container = document.getElementById("ledger-list");
-
   const todayISO = getTodayISO();
+  const CURRENT_YEAR = todayISO.slice(0, 4);
 
-  const filtered = ledgerData
-    .filter(entry => entry.date <= todayISO)
-    .sort((a, b) => b.date.localeCompare(a.date));
+  const filtered = ledgerData.filter(entry => entry.date <= todayISO);
+  const groupedByYear = groupEntriesByYear(filtered);
 
   container.innerHTML = "";
 
-  filtered.forEach(entry => {
-    const row = document.createElement("div");
-    row.className = "ledger-row";
-	if (isSunday(entry.date)) {
-  row.classList.add("sunday");
-}
+  Object.keys(groupedByYear)
+  .sort((a, b) => b - a)
+  .forEach(year => {
+    // Year header
+    const isCurrentYear = year === CURRENT_YEAR;
 
-    row.innerHTML = `
-  <div class="ledger-main">
-    <span class="ledger-chevron">▸</span>
+// Year header
+const yearHeader = document.createElement("div");
+yearHeader.className = "ledger-year-header";
 
-    <span class="ledger-date">
-  ${entry.date}
-  ${getCroreMilestone(entry.date) ? " 🏵️" : ""}
-  ${hasExplicitPoornima(entry.notes) ? " 🌕" : ""}
-</span>
+const yearTotal = groupedByYear[year]
+  .reduce((sum, e) => sum + (e.jaap || 0), 0)
+  .toLocaleString();
 
-    <span class="ledger-jaap">${entry.jaap ?? "—"}</span>
-  </div>
-  <div class="ledger-notes">
-  ${getCroreMilestone(entry.date)
-    ? `<div class="milestone">
-         ◈ ${getCroreMilestone(entry.date)} Crore Jaap Completed
-       </div>`
-    : ""
-  }
-  ${
-    isEditableEntry(entry.date)
-      ? `
-        <label>
-          Jaap<br>
-          <input
-            type="number"
-            class="edit-jaap"
-            value="${entry.jaap ?? ""}"
-          >
-        </label>
-
-        <br><br>
-
-        <label>
-          Notes<br>
-          <textarea class="edit-notes" rows="3">${entry.notes || ""}</textarea>
-        </label>
-
-        <br>
-
-        <button class="save-entry">Update</button>
-      `
-      : `
-        ${entry.notes ? entry.notes : "<em>No notes</em>"}
-        <div class="locked-note">🔒 Entry locked</div>
-      `
-  }
-</div>
-
+yearHeader.innerHTML = `
+  <span class="year-chevron">${isCurrentYear ? "▾" : "▸"}</span>
+  <span class="year-label">${year}</span>
+  <span class="year-total">${yearTotal}</span>
 `;
-const saveBtn = row.querySelector(".save-entry");
-if (saveBtn) {
-  saveBtn.addEventListener("click", async (e) => {
-    e.stopPropagation();
 
-    const jaapInput = row.querySelector(".edit-jaap").value;
-    const notesInput = row.querySelector(".edit-notes").value;
+container.appendChild(yearHeader);
 
-    entry.jaap = jaapInput === "" ? null : Number(jaapInput);
-    entry.notes = notesInput;
+const yearContainer = document.createElement("div");
+yearContainer.className = "ledger-year-container";
 
-    await saveLedger(ledgerData);
-await saveAutomaticBackup(ledgerData);
-renderToday();
-
-  });
+if (!isCurrentYear) {
+  yearContainer.style.display = "none";
 }
-const chevron = row.querySelector(".ledger-chevron");
 
-chevron.addEventListener("click", (e) => {
-  e.stopPropagation();
+container.appendChild(yearContainer);
 
-  const expanded = row.classList.contains("expanded");
+yearHeader.addEventListener("click", () => {
+  const isHidden = yearContainer.style.display === "none";
+  yearContainer.style.display = isHidden ? "block" : "none";
 
-  // Collapse all rows and reset chevrons
-  document.querySelectorAll(".ledger-row").forEach(r => {
-    r.classList.remove("expanded");
-    const ch = r.querySelector(".ledger-chevron");
-    if (ch) ch.textContent = "▸";
-  });
-
-  // Expand this row if it was not already expanded
-  if (!expanded) {
-    row.classList.add("expanded");
-    chevron.textContent = "▾";
-  }
+  const chevron = yearHeader.querySelector(".year-chevron");
+  chevron.textContent = isHidden ? "▾" : "▸";
 });
 
-    container.appendChild(row);
+    groupedByYear[year].forEach(entry => {
+      const row = document.createElement("div");
+      row.className = "ledger-row";
+
+      if (isSunday(entry.date)) {
+        row.classList.add("sunday");
+      }
+
+      row.innerHTML = `
+        <div class="ledger-main">
+          <span class="ledger-chevron">▸</span>
+
+          <span class="ledger-date">
+            ${entry.date}
+            ${getCroreMilestone(entry.date) ? " 🏵️" : ""}
+            ${hasExplicitPoornima(entry.notes) ? " 🌕" : ""}
+          </span>
+
+          <span class="ledger-jaap">${entry.jaap ?? "—"}</span>
+        </div>
+
+        <div class="ledger-notes">
+          ${
+            getCroreMilestone(entry.date)
+              ? `<div class="milestone">
+                   ◈ ${getCroreMilestone(entry.date)} Crore Jaap Completed
+                 </div>`
+              : ""
+          }
+
+          ${
+            isEditableEntry(entry.date)
+              ? `
+                <label>
+                  Jaap<br>
+                  <input type="number" class="edit-jaap" value="${entry.jaap ?? ""}">
+                </label>
+
+                <br><br>
+
+                <label>
+                  Notes<br>
+                  <textarea class="edit-notes" rows="3">${entry.notes || ""}</textarea>
+                </label>
+
+                <br>
+
+                <button class="save-entry">Update</button>
+              `
+              : `
+                ${entry.notes ? entry.notes : "<em>No notes</em>"}
+                <div class="locked-note">🔒 Entry locked</div>
+              `
+          }
+        </div>
+      `;
+
+      const saveBtn = row.querySelector(".save-entry");
+      if (saveBtn) {
+        saveBtn.addEventListener("click", async (e) => {
+          e.stopPropagation();
+
+          const jaapInput = row.querySelector(".edit-jaap").value;
+          const notesInput = row.querySelector(".edit-notes").value;
+
+          entry.jaap = jaapInput === "" ? null : Number(jaapInput);
+          entry.notes = notesInput;
+
+          await saveLedger(ledgerData);
+          await saveAutomaticBackup(ledgerData);
+          renderToday();
+        });
+      }
+
+      const chevron = row.querySelector(".ledger-chevron");
+      chevron.addEventListener("click", (e) => {
+        e.stopPropagation();
+
+        const expanded = row.classList.contains("expanded");
+
+        document.querySelectorAll(".ledger-row").forEach(r => {
+          r.classList.remove("expanded");
+          const ch = r.querySelector(".ledger-chevron");
+          if (ch) ch.textContent = "▸";
+        });
+
+        if (!expanded) {
+          row.classList.add("expanded");
+          chevron.textContent = "▾";
+        }
+      });
+
+      yearContainer.appendChild(row);
+    });
   });
 }
+
 
 function renderTodayCard(entry) {
   const container = document.getElementById("today-card");

@@ -262,4 +262,49 @@ body {
   -webkit-user-select: none;
   -webkit-tap-highlight-color: transparent;
 }
+.ledger-year-header {
+  margin-top: 16px;
+  padding: 6px 4px;
+  font-weight: 600;
+  color: #6b5b2d;
+  border-bottom: 1px solid #e6ddc4;
+}
+.ledger-year-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px;
+  margin-top: 12px;
+  background: #f4ecd8;
+  border-radius: 6px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.ledger-year-container {
+  margin-left: 10px;
+}
+
+.year-chevron {
+  margin-right: 6px;
+}
+.reflection-milestones {
+  margin-top: 10px;
+  font-size: 0.9rem;
+}
+
+.reflection-subtitle {
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.milestone-line {
+  opacity: 0.85;
+  margin-left: 6px;
+}
+.milestone-gap {
+  margin-left: 6px;
+  color: #666;
+  font-size: 0.9em;
+}
 
