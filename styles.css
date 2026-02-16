@@ -308,25 +308,35 @@ body {
   font-size: 0.9em;
 }
 /* Splash Screen Styling */
+/* Splash Screen Styling */
 #splash-screen {
   position: fixed;
   top: 0;
   left: 0;
+  /* Use viewport units to ensure it hits all 4 corners */
   width: 100vw;
-  height: 100vh;
-  background-color: #fbf6e8; /* Matches your body background */
+  height: 100vh; 
+  background-color: #fbf6e8;
   display: flex;
   justify-content: center;
   align-items: center;
-  z-index: 9999; /* Ensures it is on top of everything */
+  z-index: 9999;
   opacity: 1;
-  transition: opacity 0.5s ease-out; /* Smooth fade out */
+  transition: opacity 0.5s ease-out;
 }
 
 #splash-screen img {
+  /* This is the magic part for full screen */
   width: 100%;
   height: 100%;
-  object-fit: cover; /* Ensures image fills screen without stretching */
+  object-fit: cover; /* Crops the sides slightly to ensure no gaps at top/bottom */
+  object-position: center; /* Keeps Hanuman centered while cropping sides */
+}
+
+/* Ensure the body doesn't show scrollbars while splash is active */
+body.loading {
+  overflow: hidden;
+  height: 100vh;
 }
 
 /* Hide the main content while splash is active to prevent scrolling */
