@@ -307,4 +307,29 @@ body {
   color: #666;
   font-size: 0.9em;
 }
+/* Splash Screen Styling */
+#splash-screen {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background-color: #fbf6e8; /* Matches your body background */
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 9999; /* Ensures it is on top of everything */
+  opacity: 1;
+  transition: opacity 0.5s ease-out; /* Smooth fade out */
+}
 
+#splash-screen img {
+  width: 50%;
+  height: 100%;
+  object-fit: cover; /* Ensures image fills screen without stretching */
+}
+
+/* Hide the main content while splash is active to prevent scrolling */
+body.loading {
+  overflow: hidden;
+}

@@ -1,5 +1,25 @@
 console.log("Jaap Ledger app.js loaded successfully");
 
+// ---------- Splash Screen Logic ----------
+window.addEventListener("load", () => {
+  const splash = document.getElementById("splash-screen");
+  
+  // Wait 2 seconds (2000ms) then fade out
+  setTimeout(() => {
+    if (splash) {
+      splash.style.opacity = "0";
+      
+      // Remove from DOM after fade animation completes
+      setTimeout(() => {
+        splash.remove();
+        document.body.classList.remove("loading");
+      }, 500); 
+    }
+  }, 2000);
+});
+
+// Add 'loading' class to body immediately
+document.body.classList.add("loading");
 // ---------- Utilities ----------
 
 // Get today's date in YYYY-MM-DD (local)
