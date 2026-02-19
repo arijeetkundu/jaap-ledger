@@ -756,3 +756,100 @@ renderToday();
 }
 document.getElementById("restore-backup-btn")
   ?.addEventListener("click", restoreFromBackup);
+  
+  // ---------- Export Ledger (JSON) ----------
+
+document.getElementById("export-json-btn")
+  ?.addEventListener("click", async () => {
+    if (!ledgerData || ledgerData.length === 0) {
+      alert("Ledger is empty. Nothing to export.");
+      return;
+    }
+
+    // Clone & sanitize (future-proof)
+    const exportData = ledgerData.map(e => ({
+      date: e.date,
+      jaap: e.jaap ?? null,
+      notes: e.notes || ""
+    }));
+
+    const blob = new Blob(
+      [JSON.stringify(exportData, null, 2)],
+      { type: "application/json" }
+    );
+
+    const url = URL.createObjectURL(blob);
+
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `jaap-ledger-export-${getTodayISO()}.json`;
+
+    document.body.appendChild(a);
+    a.click();
+
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  });
+  
+// ---------- Import Ledger (JSON) ----------
+
+const importBtn = document.getElementById("import-json-btn");
+const importInput = document.getElementById("import-json-input");
+
+importBtn?.addEventListener("click", () => {
+  importInput.click();
+});
+
+importInput?.addEventListener("change", async (event) => {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  try {
+    const text = await file.text();
+    const importedData = JSON.parse(text);
+
+    // ---- Validation ----
+    if (!Array.isArray(importedData)) {
+      alert("Invalid file format: expected an array.");
+      return;
+    }
+
+    for (const entry of importedData) {
+      if (
+        typeof entry.date !== "string" ||
+        !("jaap" in entry) ||
+        !("notes" in entry)
+      ) {
+        alert("Invalid ledger entry format detected.");
+        return;
+      }
+    }
+
+    const confirmReplace = confirm(
+      `Import ${importedData.length} entries?\n\n` +
+      `This will REPLACE your current ledger permanently.`
+    );
+
+    if (!confirmReplace) {
+      importInput.value = ""; // reset
+      return;
+    }
+
+    // ---- Replace Ledger ----
+    ledgerData = importedData;
+
+    await saveLedger(ledgerData);
+    await saveAutomaticBackup(ledgerData);
+
+    alert("Ledger imported successfully.");
+
+    renderToday();
+
+  } catch (err) {
+    console.error("Import failed:", err);
+    alert("Failed to import file. Please ensure it is a valid JSON ledger.");
+  } finally {
+    importInput.value = ""; // allow re-import of same file
+  }
+});
+

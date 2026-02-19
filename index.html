@@ -41,9 +41,42 @@
 
   <!-- Reflection Summary -->
   <div id="reflection-summary"></div>
-<button id="restore-backup-btn" class="restore-btn">
-  Restore from Last Backup
+  
+<!-- Maintenance Toggle -->
+<button id="maintenance-toggle" aria-label="Maintenance">
+  ⚙︎
 </button>
+
+<!-- Maintenance Drawer -->
+<div id="maintenance-drawer">
+  <div class="maintenance-panel">
+    <h3>Maintenance</h3>
+
+    <button id="export-json-btn" class="maintenance-btn">
+		⬇️ Export Ledger (JSON)
+	</button>
+
+
+	<button id="import-json-btn" class="maintenance-btn">
+		⬆️ Import Ledger (JSON)
+	</button>
+
+	<input
+		type="file"
+		id="import-json-input"
+		accept="application/json"
+		style="display:none"
+	/>
+
+    <button id="restore-backup-btn" class="maintenance-btn">
+      Restore from Backup
+    </button>
+  </div>
+</div>
+
+
+</div>
+
 
   <hr>
 
@@ -53,6 +86,25 @@
   </section>
 
   <!-- App logic -->
+  <script>
+  const toggleBtn = document.getElementById("maintenance-toggle");
+  const drawer = document.getElementById("maintenance-drawer");
+
+  toggleBtn.addEventListener("click", () => {
+    const isOpen = drawer.classList.toggle("open");
+    drawer.setAttribute("aria-hidden", !isOpen);
+  });
+  document.addEventListener("click", (e) => {
+  if (
+    drawer.classList.contains("open") &&
+    !drawer.contains(e.target) &&
+    e.target !== toggleBtn
+  ) {
+    drawer.classList.remove("open");
+    drawer.setAttribute("aria-hidden", "true");
+  }
+});
+</script>
   <script src="app.js"></script>
 </body>
 </html>

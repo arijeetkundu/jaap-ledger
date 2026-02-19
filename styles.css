@@ -343,3 +343,80 @@ body.loading {
 body.loading {
   overflow: hidden;
 }
+/* ---------- Maintenance Drawer ---------- */
+
+/* ---------- Maintenance Drawer ---------- */
+
+#maintenance-drawer {
+  position: fixed;
+  top: 0;
+  right: 0;
+  width: 85%;
+  max-width: 320px;
+  height: 100vh;
+
+  background: #f9f4e6;
+  box-shadow: -4px 0 12px rgba(0, 0, 0, 0.2);
+
+  transform: translateX(100%);
+  transition: transform 0.3s ease;
+
+  z-index: 9000;
+}
+
+/* Drawer visible */
+#maintenance-drawer.open {
+  transform: translateX(0);
+}
+
+.maintenance-panel {
+  padding: 16px;
+}
+
+#maintenance-toggle {
+  position: fixed;
+  top: 12px;
+  right: 12px;
+
+  width: 44px;
+  height: 44px;
+
+  border-radius: 50%;
+  border: none;
+
+  background: #f4ecd8;
+  font-size: 1.2rem;
+  cursor: pointer;
+
+  z-index: 9100;
+}
+
+}
+.maintenance-title {
+  font-weight: 600;
+  margin-bottom: 12px;
+  font-size: 1rem;
+  color: #5a4a00;
+}
+
+/* Maintenance buttons */
+.maintenance-btn {
+  display: block;
+  width: 100%;
+  margin-top: 12px;
+  padding: 10px 14px;
+
+  font-size: 0.9rem;
+  border-radius: 8px;
+  border: 1px solid #d6cfa5;
+
+  background-color: #f7f2dc;
+  color: #4a3f18;
+  cursor: pointer;
+}
+
+.maintenance-btn:hover {
+  background-color: #efe7c3;
+}
+
+
