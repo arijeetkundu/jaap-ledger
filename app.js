@@ -209,6 +209,28 @@ function ensureTodayEntryExists() {
   return entry;
 }
 
+function ensureRecentEntriesExist(days = 7) {
+	const existingDates = new Set(ledgerData.map(e => e.date));
+	
+	for (let i = 0; i < days; i++) {
+    const d = new Date();
+    d.setDate(d.getDate() - i);
+
+    const iso =
+      d.getFullYear() + "-" +
+      String(d.getMonth() + 1).padStart(2, "0") + "-" +
+      String(d.getDate()).padStart(2, "0");
+
+    if (!existingDates.has(iso)) {
+      ledgerData.push({
+        date: iso,
+        jaap: null,
+        notes: ""
+      });
+    }
+  }
+}		
+
 function isEditableEntry(dateISO) {
   return dateISO === todayISO || isWithinLastNDays(dateISO, 7);
 }
@@ -375,6 +397,12 @@ if (!existingLedger || existingLedger.length === 0) {
 } else {
   ledgerData = existingLedger;
 }
+// Fix to ensure last 7 days always exists
+ensureRecentEntriesExist(7);
+
+//Persist only if we added something
+await saveLedger(ledgerData);
+await saveAutomaticBackup(ledgerData);
 
     renderToday();
 
