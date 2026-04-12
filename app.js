@@ -20,7 +20,38 @@ window.addEventListener("load", () => {
 
 // Add 'loading' class to body immediately
 document.body.classList.add("loading");
+// ---------- Toast Notification ----------
+function showToast(message = "Saved") {
+  const existing = document.getElementById("toast");
+  if (existing) existing.remove();
+
+  const toast = document.createElement("div");
+  toast.id = "toast";
+  toast.className = "toast";
+  toast.textContent = message;
+  document.body.appendChild(toast);
+
+  // Two rAF frames ensure the element is painted before adding the class
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      toast.classList.add("toast-visible");
+    });
+  });
+
+  setTimeout(() => {
+    toast.classList.remove("toast-visible");
+    setTimeout(() => toast.remove(), 300);
+  }, 2000);
+}
+
 // ---------- Utilities ----------
+
+// Format YYYY-MM-DD → "D MMM YYYY" (e.g. "12 Apr 2026")
+const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+function formatDate(isoDate) {
+  const [year, month, day] = isoDate.split("-").map(Number);
+  return `${day} ${MONTHS[month - 1]} ${year}`;
+}
 
 // Get today's date in YYYY-MM-DD (local)
 function getTodayISO() {
@@ -140,7 +171,8 @@ async function markLedgerSeeded() {
 // Check if Poornima is explicitly mentioned in notes
 function hasExplicitPoornima(notes) {
   if (!notes) return false;
-  return notes.includes("पूर्णिमा") || notes.toLowerCase().includes("poornima");
+  const lower = notes.toLowerCase();
+  return notes.includes("पूर्णिमा") || lower.includes("poornima") || lower.includes("purnima");
 }
 
 // Check if a date is within the last N days (inclusive)
@@ -366,10 +398,17 @@ let poornimaDates = [];
 }
  
     // Load Poornima calendar (static metadata is OK)
-    const poornimaRes = await fetch("poornima.json");
-    if (!poornimaRes.ok) throw new Error("Failed to load poornima.json");
-    poornimaDates = await poornimaRes.json();
-    console.log("Poornima calendar loaded:", poornimaDates.length);
+    // Optional: preloaded calendar dates (only covers up to 2027).
+    // The app now derives 🌕 from notes keywords — this is just a fallback.
+    try {
+      const poornimaRes = await fetch("poornima.json");
+      if (poornimaRes.ok) {
+        poornimaDates = await poornimaRes.json();
+        console.log("Poornima calendar loaded:", poornimaDates.length);
+      }
+    } catch {
+      console.log("poornima.json not available — relying on notes keywords");
+    }
 
     // Load ledger ONLY from IndexedDB
     const existingLedger = await loadLedgerFromDB();
@@ -511,7 +550,6 @@ function renderReflectionSummary() {
   const cumulative = getCumulativeTotal();
   const progress = getNextCroreProgress();
 
-  const years = Object.keys(yearlyTotals).sort((a, b) => b - a);
   const milestoneHistory = getCroreMilestoneHistory();
 
   container.innerHTML = `
@@ -528,9 +566,13 @@ function renderReflectionSummary() {
       </div>
 
       <div class="reflection-line">
-        <strong>Next Milestone:</strong>
-        ${progress.currentCrore + 1} Crore
-        (${progress.percent}%)
+        <strong>Next Milestone:</strong> ${progress.currentCrore + 1} Crore
+      </div>
+      <div class="progress-track">
+        <div class="progress-fill" style="width: ${progress.percent}%"></div>
+      </div>
+      <div class="progress-label">
+        ${progress.percent}% &nbsp;·&nbsp; ${progress.progress.toLocaleString()} / 10,000,000
       </div>
 	  
 	  ${milestoneHistory.length > 0 ? `
@@ -538,7 +580,7 @@ function renderReflectionSummary() {
     <div class="reflection-subtitle">Milestones</div>
     ${milestoneHistory.map(m => `
       <div class="milestone-line">
-        ${m.crore} Crore — ${m.date}
+        ${m.crore} Crore — ${formatDate(m.date)}
         ${m.daysTaken !== null
           ? `<span class="milestone-gap">(+${m.daysTaken} days)</span>`
           : ""}
@@ -563,8 +605,45 @@ function renderLedgerList() {
 
   const filtered = ledgerData.filter(entry => entry.date <= todayISO);
   const groupedByYear = groupEntriesByYear(filtered);
+  const years = Object.keys(groupedByYear).sort((a, b) => b - a);
 
   container.innerHTML = "";
+
+  // Jump-to-year selector
+  const jumpBar = document.createElement("div");
+  jumpBar.className = "jump-bar";
+  jumpBar.innerHTML = `
+    <label class="jump-label" for="jump-year">Jump to year</label>
+    <select id="jump-year" class="jump-select">
+      <option value="">— select —</option>
+      ${years.map(y => `<option value="${y}">${y}</option>`).join("")}
+    </select>
+  `;
+  container.appendChild(jumpBar);
+
+  jumpBar.querySelector("#jump-year").addEventListener("change", (e) => {
+    const target = e.target.value;
+    if (!target) return;
+
+    // Collapse all, expand only the target year
+    container.querySelectorAll(".ledger-year-container").forEach(c => {
+      c.style.display = "none";
+    });
+    container.querySelectorAll(".year-chevron").forEach(ch => {
+      ch.textContent = "▸";
+    });
+
+    const targetHeader = container.querySelector(`[data-year="${target}"]`);
+    if (targetHeader) {
+      const targetContainer = targetHeader.nextElementSibling;
+      targetContainer.style.display = "block";
+      targetHeader.querySelector(".year-chevron").textContent = "▾";
+      targetHeader.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+
+    // Reset select back to placeholder so it can be re-used
+    e.target.value = "";
+  });
 
   Object.keys(groupedByYear)
   .sort((a, b) => b - a)
@@ -575,6 +654,7 @@ function renderLedgerList() {
 // Year header
 const yearHeader = document.createElement("div");
 yearHeader.className = "ledger-year-header";
+yearHeader.dataset.year = year;
 
 const yearTotal = groupedByYear[year]
   .reduce((sum, e) => sum + (e.jaap || 0), 0)
@@ -618,7 +698,7 @@ yearHeader.addEventListener("click", () => {
           <span class="ledger-chevron">▸</span>
 
           <span class="ledger-date">
-            ${entry.date}
+            ${formatDate(entry.date)}
             ${getCroreMilestone(entry.date) ? " 🏵️" : ""}
             ${hasExplicitPoornima(entry.notes) ? " 🌕" : ""}
           </span>
@@ -676,6 +756,7 @@ yearHeader.addEventListener("click", () => {
           await saveLedger(ledgerData);
           await saveAutomaticBackup(ledgerData);
           renderToday();
+          showToast("Saved ✓");
         });
       }
 
@@ -685,15 +766,13 @@ yearHeader.addEventListener("click", () => {
 
         const expanded = row.classList.contains("expanded");
 
+        // Collapse all rows — CSS handles the chevron rotation via .expanded
         document.querySelectorAll(".ledger-row").forEach(r => {
           r.classList.remove("expanded");
-          const ch = r.querySelector(".ledger-chevron");
-          if (ch) ch.textContent = "▸";
         });
 
         if (!expanded) {
           row.classList.add("expanded");
-          chevron.textContent = "▾";
         }
       });
 
@@ -719,9 +798,9 @@ function renderTodayCard(entry) {
   }
 
   container.innerHTML = `
-    <h2>Today</h2>
+    <h2>Today${hasExplicitPoornima(entry.notes) ? " 🌕" : ""}</h2>
 
-    <p><strong>Date:</strong> ${entry.date}</p>
+    <p><strong>Date:</strong> ${formatDate(entry.date)}</p>
 
     <label>
       Jaap<br>
@@ -778,9 +857,9 @@ if (!isWithinLastNDays(entry.date, 7)) {
   entry.notes = notesInput;
 
   await saveLedger(ledgerData);
-await saveAutomaticBackup(ledgerData);
-renderToday();
-
+  await saveAutomaticBackup(ledgerData);
+  renderToday();
+  showToast("Saved ✓");
 }
 document.getElementById("restore-backup-btn")
   ?.addEventListener("click", restoreFromBackup);
