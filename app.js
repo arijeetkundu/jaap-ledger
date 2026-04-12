@@ -20,6 +20,30 @@ window.addEventListener("load", () => {
 
 // Add 'loading' class to body immediately
 document.body.classList.add("loading");
+// ---------- Toast Notification ----------
+function showToast(message = "Saved") {
+  const existing = document.getElementById("toast");
+  if (existing) existing.remove();
+
+  const toast = document.createElement("div");
+  toast.id = "toast";
+  toast.className = "toast";
+  toast.textContent = message;
+  document.body.appendChild(toast);
+
+  // Two rAF frames ensure the element is painted before adding the class
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      toast.classList.add("toast-visible");
+    });
+  });
+
+  setTimeout(() => {
+    toast.classList.remove("toast-visible");
+    setTimeout(() => toast.remove(), 300);
+  }, 2000);
+}
+
 // ---------- Utilities ----------
 
 // Get today's date in YYYY-MM-DD (local)
@@ -676,6 +700,7 @@ yearHeader.addEventListener("click", () => {
           await saveLedger(ledgerData);
           await saveAutomaticBackup(ledgerData);
           renderToday();
+          showToast("Saved ✓");
         });
       }
 
@@ -685,15 +710,13 @@ yearHeader.addEventListener("click", () => {
 
         const expanded = row.classList.contains("expanded");
 
+        // Collapse all rows — CSS handles the chevron rotation via .expanded
         document.querySelectorAll(".ledger-row").forEach(r => {
           r.classList.remove("expanded");
-          const ch = r.querySelector(".ledger-chevron");
-          if (ch) ch.textContent = "▸";
         });
 
         if (!expanded) {
           row.classList.add("expanded");
-          chevron.textContent = "▾";
         }
       });
 
@@ -778,9 +801,9 @@ if (!isWithinLastNDays(entry.date, 7)) {
   entry.notes = notesInput;
 
   await saveLedger(ledgerData);
-await saveAutomaticBackup(ledgerData);
-renderToday();
-
+  await saveAutomaticBackup(ledgerData);
+  renderToday();
+  showToast("Saved ✓");
 }
 document.getElementById("restore-backup-btn")
   ?.addEventListener("click", restoreFromBackup);
