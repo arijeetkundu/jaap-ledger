@@ -46,6 +46,13 @@ function showToast(message = "Saved") {
 
 // ---------- Utilities ----------
 
+// Format YYYY-MM-DD → "D MMM YYYY" (e.g. "12 Apr 2026")
+const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+function formatDate(isoDate) {
+  const [year, month, day] = isoDate.split("-").map(Number);
+  return `${day} ${MONTHS[month - 1]} ${year}`;
+}
+
 // Get today's date in YYYY-MM-DD (local)
 function getTodayISO() {
   const today = new Date();
@@ -535,7 +542,6 @@ function renderReflectionSummary() {
   const cumulative = getCumulativeTotal();
   const progress = getNextCroreProgress();
 
-  const years = Object.keys(yearlyTotals).sort((a, b) => b - a);
   const milestoneHistory = getCroreMilestoneHistory();
 
   container.innerHTML = `
@@ -566,7 +572,7 @@ function renderReflectionSummary() {
     <div class="reflection-subtitle">Milestones</div>
     ${milestoneHistory.map(m => `
       <div class="milestone-line">
-        ${m.crore} Crore — ${m.date}
+        ${m.crore} Crore — ${formatDate(m.date)}
         ${m.daysTaken !== null
           ? `<span class="milestone-gap">(+${m.daysTaken} days)</span>`
           : ""}
@@ -684,7 +690,7 @@ yearHeader.addEventListener("click", () => {
           <span class="ledger-chevron">▸</span>
 
           <span class="ledger-date">
-            ${entry.date}
+            ${formatDate(entry.date)}
             ${getCroreMilestone(entry.date) ? " 🏵️" : ""}
             ${hasExplicitPoornima(entry.notes) ? " 🌕" : ""}
           </span>
@@ -786,7 +792,7 @@ function renderTodayCard(entry) {
   container.innerHTML = `
     <h2>Today</h2>
 
-    <p><strong>Date:</strong> ${entry.date}</p>
+    <p><strong>Date:</strong> ${formatDate(entry.date)}</p>
 
     <label>
       Jaap<br>

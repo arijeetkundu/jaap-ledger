@@ -106,7 +106,7 @@ p {
 /* Main row (date + jaap) */
 .ledger-main {
   display: grid;
-  grid-template-columns: 20px 140px 1fr;
+  grid-template-columns: 20px 160px 1fr;
   align-items: center;
   column-gap: 12px;
 }

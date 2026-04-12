@@ -132,6 +132,15 @@ function assert(label, condition) {
   }
   assert("at least one locked-note found in ledger", foundLocked);
 
+  // ── 5b. Date format ─────────────────────────────────────────────
+  console.log("\n=== Date format ===");
+  const firstDate = await page.$eval(
+    ".ledger-year-container:not([style*='none']) .ledger-date",
+    el => el.textContent.trim()
+  );
+  assert(`date uses D MMM YYYY format (got: "${firstDate}")`,
+    /^\d{1,2} [A-Z][a-z]{2} \d{4}/.test(firstDate));
+
   // ── 6. Save toast ───────────────────────────────────────────────
   console.log("\n=== Save toast ===");
   // Update the today card and check toast appears
