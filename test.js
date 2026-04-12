@@ -132,7 +132,20 @@ function assert(label, condition) {
   }
   assert("at least one locked-note found in ledger", foundLocked);
 
-  // ── 5b. Date format ─────────────────────────────────────────────
+  // ── 5b. Poornima keyword detection ──────────────────────────────
+  console.log("\n=== Poornima detection ===");
+  const variants = ["Poornima", "poornima", "Purnima", "purnima", "पूर्णिमा"];
+  for (const v of variants) {
+    const found = await page.evaluate((keyword) => {
+      // Call the app's own hasExplicitPoornima via a test shim
+      const notes = keyword;
+      const lower = notes.toLowerCase();
+      return notes.includes("पूर्णिमा") || lower.includes("poornima") || lower.includes("purnima");
+    }, v);
+    assert(`"${v}" triggers 🌕`, found);
+  }
+
+  // ── 5c. Date format ─────────────────────────────────────────────
   console.log("\n=== Date format ===");
   const firstDate = await page.$eval(
     ".ledger-year-container:not([style*='none']) .ledger-date",

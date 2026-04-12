@@ -171,7 +171,8 @@ async function markLedgerSeeded() {
 // Check if Poornima is explicitly mentioned in notes
 function hasExplicitPoornima(notes) {
   if (!notes) return false;
-  return notes.includes("पूर्णिमा") || notes.toLowerCase().includes("poornima");
+  const lower = notes.toLowerCase();
+  return notes.includes("पूर्णिमा") || lower.includes("poornima") || lower.includes("purnima");
 }
 
 // Check if a date is within the last N days (inclusive)
@@ -397,10 +398,17 @@ let poornimaDates = [];
 }
  
     // Load Poornima calendar (static metadata is OK)
-    const poornimaRes = await fetch("poornima.json");
-    if (!poornimaRes.ok) throw new Error("Failed to load poornima.json");
-    poornimaDates = await poornimaRes.json();
-    console.log("Poornima calendar loaded:", poornimaDates.length);
+    // Optional: preloaded calendar dates (only covers up to 2027).
+    // The app now derives 🌕 from notes keywords — this is just a fallback.
+    try {
+      const poornimaRes = await fetch("poornima.json");
+      if (poornimaRes.ok) {
+        poornimaDates = await poornimaRes.json();
+        console.log("Poornima calendar loaded:", poornimaDates.length);
+      }
+    } catch {
+      console.log("poornima.json not available — relying on notes keywords");
+    }
 
     // Load ledger ONLY from IndexedDB
     const existingLedger = await loadLedgerFromDB();
@@ -790,7 +798,7 @@ function renderTodayCard(entry) {
   }
 
   container.innerHTML = `
-    <h2>Today</h2>
+    <h2>Today${hasExplicitPoornima(entry.notes) ? " 🌕" : ""}</h2>
 
     <p><strong>Date:</strong> ${formatDate(entry.date)}</p>
 
