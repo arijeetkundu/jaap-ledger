@@ -552,9 +552,13 @@ function renderReflectionSummary() {
       </div>
 
       <div class="reflection-line">
-        <strong>Next Milestone:</strong>
-        ${progress.currentCrore + 1} Crore
-        (${progress.percent}%)
+        <strong>Next Milestone:</strong> ${progress.currentCrore + 1} Crore
+      </div>
+      <div class="progress-track">
+        <div class="progress-fill" style="width: ${progress.percent}%"></div>
+      </div>
+      <div class="progress-label">
+        ${progress.percent}% &nbsp;·&nbsp; ${progress.progress.toLocaleString()} / 10,000,000
       </div>
 	  
 	  ${milestoneHistory.length > 0 ? `
@@ -587,8 +591,45 @@ function renderLedgerList() {
 
   const filtered = ledgerData.filter(entry => entry.date <= todayISO);
   const groupedByYear = groupEntriesByYear(filtered);
+  const years = Object.keys(groupedByYear).sort((a, b) => b - a);
 
   container.innerHTML = "";
+
+  // Jump-to-year selector
+  const jumpBar = document.createElement("div");
+  jumpBar.className = "jump-bar";
+  jumpBar.innerHTML = `
+    <label class="jump-label" for="jump-year">Jump to year</label>
+    <select id="jump-year" class="jump-select">
+      <option value="">— select —</option>
+      ${years.map(y => `<option value="${y}">${y}</option>`).join("")}
+    </select>
+  `;
+  container.appendChild(jumpBar);
+
+  jumpBar.querySelector("#jump-year").addEventListener("change", (e) => {
+    const target = e.target.value;
+    if (!target) return;
+
+    // Collapse all, expand only the target year
+    container.querySelectorAll(".ledger-year-container").forEach(c => {
+      c.style.display = "none";
+    });
+    container.querySelectorAll(".year-chevron").forEach(ch => {
+      ch.textContent = "▸";
+    });
+
+    const targetHeader = container.querySelector(`[data-year="${target}"]`);
+    if (targetHeader) {
+      const targetContainer = targetHeader.nextElementSibling;
+      targetContainer.style.display = "block";
+      targetHeader.querySelector(".year-chevron").textContent = "▾";
+      targetHeader.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+
+    // Reset select back to placeholder so it can be re-used
+    e.target.value = "";
+  });
 
   Object.keys(groupedByYear)
   .sort((a, b) => b - a)
@@ -599,6 +640,7 @@ function renderLedgerList() {
 // Year header
 const yearHeader = document.createElement("div");
 yearHeader.className = "ledger-year-header";
+yearHeader.dataset.year = year;
 
 const yearTotal = groupedByYear[year]
   .reduce((sum, e) => sum + (e.jaap || 0), 0)
