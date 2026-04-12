@@ -310,7 +310,7 @@ body {
 
 /* Locked entry indicator */
 .locked-note {
-  display: inline-block;
+  display: block;
   margin-top: 8px;
   padding: 4px 10px;
   background-color: #f0ece0;
@@ -429,7 +429,6 @@ body.loading {
   z-index: 9100;
 }
 
-}
 .maintenance-title {
   font-weight: 600;
   margin-bottom: 12px;
