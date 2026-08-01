@@ -46,15 +46,29 @@
   <!-- Reflection Summary -->
   <div id="reflection-summary"></div>
   
+<!-- Mala View Toggle -->
+<div id="mala-toggle-wrap" class="mala-toggle-wrap" title="Toggle Mala View">
+  <span class="mala-toggle-icon mala-toggle-icon-off" aria-hidden="true">🔢</span>
+  <label class="mala-toggle-switch">
+    <input type="checkbox" id="mala-toggle" aria-label="Toggle Mala View">
+    <span class="mala-toggle-slider"></span>
+  </label>
+  <span class="mala-toggle-icon mala-toggle-icon-on" aria-hidden="true">📿</span>
+</div>
+
 <!-- Maintenance Toggle -->
-<button id="maintenance-toggle" aria-label="Maintenance">
+<button id="maintenance-toggle" aria-label="Settings">
   ⚙︎
 </button>
 
 <!-- Maintenance Drawer -->
 <div id="maintenance-drawer">
   <div class="maintenance-panel">
-    <h3>Maintenance</h3>
+    <h3>Settings</h3>
+
+    <button id="sankalpa-open-btn" class="maintenance-btn">
+		🕉️ Sankalpa
+	</button>
 
     <button id="export-json-btn" class="maintenance-btn">
 		⬇️ Export Ledger (JSON)
@@ -76,6 +90,11 @@
       Restore from Backup
     </button>
   </div>
+</div>
+
+<!-- Sankalpa Page (full-screen) -->
+<div id="sankalpa-page" class="fullscreen-page" aria-hidden="true">
+  <!-- Filled by app.js -->
 </div>
 
 

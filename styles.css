@@ -103,18 +103,32 @@ p {
   cursor: pointer;
 }
 
-/* Main row (date + jaap) */
+/* Main row (date + jaap + sparkline) */
 .ledger-main {
   display: grid;
-  grid-template-columns: 20px 160px 1fr;
+  /* Date column sizes to its own text (auto) rather than a fixed width, so no
+     trailing slack skews the jaap column's center off to one side. */
+  grid-template-columns: 20px auto 1fr 76px;
   align-items: center;
   column-gap: 12px;
+  width: 100%;
 }
 
 .ledger-jaap {
-  text-align: right;
+  text-align: center;
   font-weight: 600;
   letter-spacing: 0.3px;
+}
+
+/* Sparkline cell */
+.ledger-sparkline {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ledger-sparkline .sparkline {
+  display: block;
 }
 .ledger-date {
   font-weight: 500;
@@ -283,6 +297,11 @@ body {
 
 .ledger-year-container {
   margin-left: 10px;
+}
+
+.year-left {
+  display: flex;
+  align-items: center;
 }
 
 .year-chevron {
@@ -482,6 +501,185 @@ body.loading {
   cursor: pointer;
 
   z-index: 9100;
+}
+
+/* Mala View toggle — lives next to Settings, reachable in one tap */
+.mala-toggle-wrap {
+  position: fixed;
+  top: 15px;
+  right: 60px;
+
+  display: flex;
+  align-items: center;
+  gap: 6px;
+
+  z-index: 9100;
+}
+
+.mala-toggle-icon {
+  font-size: 1rem;
+  line-height: 1;
+  opacity: 0.4;
+  transition: opacity 0.2s ease;
+}
+
+.mala-toggle-wrap .mala-toggle-icon-off {
+  opacity: 1;
+}
+
+.mala-toggle-wrap.mala-view-on .mala-toggle-icon-off {
+  opacity: 0.4;
+}
+
+.mala-toggle-wrap.mala-view-on .mala-toggle-icon-on {
+  opacity: 1;
+}
+
+.mala-toggle-switch {
+  position: relative;
+  display: inline-block;
+  width: 44px;
+  height: 24px;
+
+  cursor: pointer;
+}
+
+.mala-toggle-switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.mala-toggle-slider {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+
+  background-color: #d6cfa5;
+  border-radius: 34px;
+  transition: background-color 0.2s ease;
+}
+
+.mala-toggle-slider::before {
+  content: "";
+  position: absolute;
+  left: 3px;
+  bottom: 3px;
+  width: 20px;
+  height: 20px;
+
+  background-color: #fff;
+  border-radius: 50%;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+  transition: transform 0.2s ease;
+}
+
+.mala-toggle-switch input:checked + .mala-toggle-slider {
+  background-color: #34c759;
+}
+
+.mala-toggle-switch input:checked + .mala-toggle-slider::before {
+  transform: translateX(18px);
+}
+
+.mala-toggle-switch input:focus-visible + .mala-toggle-slider {
+  box-shadow: 0 0 0 2px rgba(52, 199, 89, 0.4);
+}
+
+/* Reflection Card predictions */
+.reflection-predictions {
+  margin-top: 8px;
+}
+
+.prediction-line {
+  font-size: 0.9rem;
+}
+
+.prediction-pace {
+  margin-left: 4px;
+  color: #777;
+  font-size: 0.85em;
+}
+
+/* ---------- Sankalpa (full-screen page) ---------- */
+
+.fullscreen-page {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+
+  background: #fbf6e8;
+  overflow-y: auto;
+
+  transform: translateY(100%);
+  transition: transform 0.3s ease;
+
+  z-index: 9700;
+  padding: 16px;
+}
+
+.fullscreen-page.open {
+  transform: translateY(0);
+}
+
+.fullscreen-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.fullscreen-header h2 {
+  margin: 0;
+  font-size: 1.2rem;
+  color: #5a4a00;
+}
+
+.fullscreen-close {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: none;
+  background: #f4ecd8;
+  font-size: 1rem;
+  cursor: pointer;
+}
+
+.sankalpa-body {
+  max-width: 480px;
+}
+
+.sankalpa-intro {
+  color: #666;
+}
+
+.sankalpa-view {
+  background-color: #f7f3dd;
+  padding: 14px 16px;
+  border-radius: 10px;
+  border-left: 5px solid #c9b458;
+  margin-bottom: 16px;
+}
+
+.sankalpa-text-display {
+  font-size: 1.05rem;
+  white-space: pre-wrap;
+  margin: 0 0 8px 0;
+}
+
+.sankalpa-context-display {
+  color: #666;
+  margin: 0 0 8px 0;
+}
+
+.sankalpa-date-display {
+  font-size: 0.85rem;
+  color: #888;
+  margin: 0;
 }
 
 .maintenance-title {

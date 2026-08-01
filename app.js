@@ -53,6 +53,54 @@ function formatDate(isoDate) {
   return `${day} ${MONTHS[month - 1]} ${year}`;
 }
 
+// ---------- Sumiran-Lite: shared constants & helpers ----------
+
+const CRORE = 10_000_000;
+const MALA_SIZE = 108;
+
+// Indian digit grouping, e.g. 6500000 -> "65,00,000"
+function formatIndianNumber(n) {
+  if (n === null || n === undefined || isNaN(n)) return "0";
+  const isNeg = n < 0;
+  n = Math.trunc(Math.abs(n));
+  const s = String(n);
+  if (s.length <= 3) return (isNeg ? "-" : "") + s;
+  const last3 = s.slice(-3);
+  const rest = s.slice(0, -3).replace(/\B(?=(\d{2})+(?!\d))/g, ",");
+  return (isNeg ? "-" : "") + rest + "," + last3;
+}
+
+// Always floors — 602.4 malas becomes 602, never rounds up.
+function jaapToMala(jaap) {
+  return Math.floor(jaap / MALA_SIZE);
+}
+
+function malaToJaap(malas) {
+  return malas * MALA_SIZE;
+}
+
+// Pure formatting — never mutates stored data.
+function formatAsMala(jaap) {
+  return `${formatIndianNumber(jaapToMala(jaap))} mala`;
+}
+
+// Add/subtract calendar days from an ISO date, local time
+function addDaysISO(dateISO, delta) {
+  const [y, m, d] = dateISO.split("-").map(Number);
+  const dt = new Date(y, m - 1, d);
+  dt.setDate(dt.getDate() + delta);
+  return dt.getFullYear() + "-" +
+    String(dt.getMonth() + 1).padStart(2, "0") + "-" +
+    String(dt.getDate()).padStart(2, "0");
+}
+
+// Escape user text before inserting into innerHTML
+function escapeHTML(str) {
+  const div = document.createElement("div");
+  div.textContent = str ?? "";
+  return div.innerHTML;
+}
+
 // Get today's date in YYYY-MM-DD (local)
 function getTodayISO() {
   const today = new Date();
@@ -100,35 +148,46 @@ function getCroreMilestone(dateISO) {
   return null;
 }
 
-function getCroreMilestoneHistory() {
+// ---------- Sumiran-Lite: Milestone Tracking + Predictions ----------
+
+// Which Crore bracket the lifetime total currently sits in (0-indexed count of Crores fully completed).
+function getCurrentMilestone(total) {
+  return Math.floor(total / CRORE);
+}
+
+// Percentage progress within the current (in-progress) Crore. Exact multiples of
+// CRORE naturally yield 0 here (start of the next bracket), not 100.
+function getMilestoneProgress(total) {
+  return ((total % CRORE) / CRORE) * 100;
+}
+
+// Every Crore boundary crossed, in order, with the date crossed and days since the previous milestone.
+function getMilestoneHistory(entries) {
   const milestones = [];
 
-  // Sort entries chronologically
-  const sorted = [...ledgerData].sort((a, b) =>
-    a.date.localeCompare(b.date)
-  );
+  const sorted = [...entries].sort((a, b) => a.date.localeCompare(b.date));
 
   let lastCrore = 0;
   let lastMilestoneDate = null;
+  let running = 0;
 
   sorted.forEach(entry => {
-    const total = getCumulativeJaapUpTo(entry.date);
-    const currentCrore = Math.floor(total / 10000000);
+    running += entry.jaap || 0;
+    const currentCrore = getCurrentMilestone(running);
 
     if (currentCrore > lastCrore) {
-      let daysTaken = null;
+      let daysSincePrevious = null;
 
       if (lastMilestoneDate) {
         const prev = new Date(lastMilestoneDate);
         const curr = new Date(entry.date);
-        const diffMs = curr - prev;
-        daysTaken = Math.round(diffMs / (1000 * 60 * 60 * 24));
+        daysSincePrevious = Math.round((curr - prev) / (1000 * 60 * 60 * 24));
       }
 
       milestones.push({
         crore: currentCrore,
         date: entry.date,
-        daysTaken
+        daysSincePrevious
       });
 
       lastCrore = currentCrore;
@@ -137,6 +196,115 @@ function getCroreMilestoneHistory() {
   });
 
   return milestones;
+}
+
+// Sum of non-null jaap values (and count of days with recorded practice) within an inclusive date range.
+function sumJaapInRange(entries, startISO, endISO) {
+  let sum = 0;
+  let count = 0;
+
+  entries.forEach(e => {
+    if (e.date >= startISO && e.date <= endISO && e.jaap !== null && e.jaap !== undefined) {
+      sum += e.jaap;
+      count++;
+    }
+  });
+
+  return { sum, count };
+}
+
+// Shared by both prediction functions: project a daily pace forward to the next Crore boundary.
+function projectMilestoneFromPace(entries, dailyPace) {
+  if (!dailyPace || dailyPace <= 0) return null;
+
+  const total = entries.reduce((s, e) => s + (e.jaap || 0), 0);
+  const nextTarget = (getCurrentMilestone(total) + 1) * CRORE;
+  const remaining = nextTarget - total;
+  const daysNeeded = Math.ceil(remaining / dailyPace);
+
+  return {
+    predictedDate: addDaysISO(getTodayISO(), daysNeeded),
+    dailyPace
+  };
+}
+
+// 30-day rolling pace: average daily jaap over the last 30 calendar days ending today,
+// divided by the number of days in that window with recorded (non-null) practice —
+// not a flat /30 — so long gaps don't artificially deflate pace. Same divisor
+// convention as predictNextMilestoneYTD, for consistency.
+function predictNextMilestone(entries) {
+  const today = getTodayISO();
+  const startISO = addDaysISO(today, -29);
+  const { sum, count } = sumJaapInRange(entries, startISO, today);
+
+  if (count === 0) return null;
+  return projectMilestoneFromPace(entries, sum / count);
+}
+
+// Year-to-date pace: only computed once 30+ non-null entries exist in the current calendar year.
+function predictNextMilestoneYTD(entries) {
+  const today = getTodayISO();
+  const yearStart = today.slice(0, 4) + "-01-01";
+  const { sum, count } = sumJaapInRange(entries, yearStart, today);
+
+  if (count < 30) return null;
+  return projectMilestoneFromPace(entries, sum / count);
+}
+
+// ---------- Sumiran-Lite: Ledger Row Sparkline ----------
+
+function buildDateJaapMap(entries) {
+  const map = new Map();
+  entries.forEach(e => {
+    if (e.jaap !== null && e.jaap !== undefined) {
+      map.set(e.date, e.jaap);
+    }
+  });
+  return map;
+}
+
+// Rolling 7-day window (D-6..D) for a given row date. Missing/null days are skipped, never treated as zero.
+function getRollingWindowFromMap(dateJaapMap, targetDate) {
+  const points = [];
+  for (let i = 6; i >= 0; i--) {
+    const d = addDaysISO(targetDate, -i);
+    if (dateJaapMap.has(d)) {
+      points.push({ date: d, jaap: dateJaapMap.get(d) });
+    }
+  }
+  return points;
+}
+
+// Pure, independently testable wrapper matching the spec API — builds its own lookup.
+// Production rendering uses getRollingWindowFromMap directly with a precomputed map
+// to avoid rebuilding it per row.
+function getRollingWindow(allEntries, targetDate) {
+  return getRollingWindowFromMap(buildDateJaapMap(allEntries), targetDate);
+}
+
+function renderSparklineSVG(points) {
+  if (!points || points.length === 0) return "";
+
+  const width = 72, height = 28, pad = 3;
+  const usable = height - pad * 2;
+  const n = points.length;
+  const values = points.map(p => p.jaap);
+  const lo = Math.min(...values);
+  const hi = Math.max(...values);
+
+  const coords = points.map((p, i) => {
+    const x = n === 1 ? 36 : 2 + i * (68 / (n - 1));
+    const y = hi === lo ? height / 2 : pad + ((hi - p.jaap) / (hi - lo)) * usable;
+    return { x, y };
+  });
+
+  const polyline = coords.map(c => `${c.x.toFixed(2)},${c.y.toFixed(2)}`).join(" ");
+  const last = coords[coords.length - 1];
+
+  return `<svg class="sparkline" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">` +
+    (n > 1 ? `<polyline points="${polyline}" fill="none" stroke="#C9A227" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>` : "") +
+    `<circle cx="${last.x.toFixed(2)}" cy="${last.y.toFixed(2)}" r="3" fill="#9C7A17"/>` +
+    `</svg>`;
 }
 
 
@@ -206,23 +374,6 @@ function getYearlyTotals() {
 
 function getCumulativeTotal() {
   return ledgerData.reduce((sum, e) => sum + (e.jaap || 0), 0);
-}
-
-function getNextCroreProgress() {
-  const total = getCumulativeTotal();
-
-  const currentCrore = Math.floor(total / 10000000);
-  const nextCroreTarget = (currentCrore + 1) * 10000000;
-
-  const progress = total - currentCrore * 10000000;
-  const percent = Math.floor((progress / 10000000) * 100);
-
-  return {
-    currentCrore,
-    nextCroreTarget,
-    progress,
-    percent
-  };
 }
 
 function ensureTodayEntryExists() {
@@ -342,7 +493,8 @@ const DB_NAME = "jaap-ledger-db";
 const STORE_NAME = "ledger";
 const BACKUP_STORE = "ledger-backups";
 const META_STORE = "meta";            // 👈 ADD
-const DB_VERSION = 3;                 // 👈 BUMP version
+const SANKALPA_STORE = "sankalpa";
+const DB_VERSION = 4;                 // 👈 BUMP version
 
 
 function openDB() {
@@ -361,6 +513,9 @@ function openDB() {
       }
 	  if (!db.objectStoreNames.contains(META_STORE)) {
 		db.createObjectStore(META_STORE);
+	}
+	  if (!db.objectStoreNames.contains(SANKALPA_STORE)) {
+		db.createObjectStore(SANKALPA_STORE);
 	}
 
     };
@@ -383,6 +538,93 @@ async function saveLedger(data) {
 // ---------- State ----------
 let ledgerData = [];
 let poornimaDates = [];
+// Display preference only — never mutates stored ledger data. Persisted in
+// localStorage (same tier as other display preferences), not IndexedDB.
+let malaViewEnabled = localStorage.getItem("malaViewEnabled") === "true";
+
+// ---------- Sumiran-Lite: Sankalpa storage ----------
+
+async function getSankalpa() {
+  const db = await openDB();
+  const tx = db.transaction(SANKALPA_STORE, "readonly");
+  const store = tx.objectStore(SANKALPA_STORE);
+
+  return new Promise(resolve => {
+    const req = store.get("primary");
+    req.onsuccess = () => resolve(req.result || null);
+    req.onerror = () => resolve(null);
+  });
+}
+
+// Always writes with id = 'primary' — upsert, never insert — so only one Sankalpa ever exists.
+async function saveSankalpa({ text, context, date }) {
+  const db = await openDB();
+  const tx = db.transaction(SANKALPA_STORE, "readwrite");
+  const store = tx.objectStore(SANKALPA_STORE);
+
+  return new Promise((resolve, reject) => {
+    store.put({ id: "primary", text, context, date }, "primary");
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+  });
+}
+
+// ---------- Sumiran-Lite: Mala View input helpers ----------
+
+// Shared jaap-count input markup for Today Card and editable ledger rows.
+// Switches label/mode based on the current Mala View toggle state.
+function renderJaapInputField(entry, opts = {}) {
+  const idAttr = opts.id ? ` id="${opts.id}"` : "";
+  const className = opts.className || "edit-jaap";
+
+  if (malaViewEnabled) {
+    const malaValue = entry.jaap == null ? "" : jaapToMala(entry.jaap);
+    return `
+      <label>
+        Malas<br>
+        <input type="number" step="1"${idAttr} class="${className}" value="${malaValue}" placeholder="Enter malas">
+      </label>
+    `;
+  }
+
+  return `
+    <label>
+      Jaap<br>
+      <input type="number"${idAttr} class="${className}" value="${entry.jaap ?? ""}" placeholder="Enter jaap count">
+    </label>
+  `;
+}
+
+// Converts a raw input string back into a jaap count for storage, honoring the
+// active input mode. In Mala View, applies the precision guard: if the user left
+// the (floored) mala value unchanged and the original jaap was a legacy fractional
+// mala entry (not an exact multiple of 108), the original jaap is preserved exactly
+// rather than being truncated to malaInput * 108.
+function computeJaapFromInput(rawValue, originalJaap) {
+  if (rawValue === "" || rawValue === null || rawValue === undefined) return null;
+  if (!malaViewEnabled) return Number(rawValue);
+
+  const malaInput = Math.trunc(Number(rawValue));
+  const originalMalaFloored = originalJaap == null ? null : jaapToMala(originalJaap);
+  const unchanged = originalMalaFloored !== null && malaInput === originalMalaFloored;
+  const isLegacyFractional = originalJaap != null && originalJaap % MALA_SIZE !== 0;
+
+  if (unchanged && isLegacyFractional) {
+    return originalJaap;
+  }
+
+  return malaToJaap(malaInput);
+}
+
+function updateMalaToggleButton() {
+  const input = document.getElementById("mala-toggle");
+  if (!input) return;
+  input.checked = malaViewEnabled;
+  input.title = malaViewEnabled ? "Mala View: On" : "Mala View: Off";
+
+  const wrap = document.getElementById("mala-toggle-wrap");
+  if (wrap) wrap.classList.toggle("mala-view-on", malaViewEnabled);
+}
 // ---------- Load ledger ----------
 (async function initApp() {
   try {
@@ -548,41 +790,67 @@ function renderReflectionSummary() {
   const CURRENT_YEAR = getTodayISO().slice(0, 4);
   const currentYearTotal = yearlyTotals[CURRENT_YEAR] || 0;
   const cumulative = getCumulativeTotal();
-  const progress = getNextCroreProgress();
 
-  const milestoneHistory = getCroreMilestoneHistory();
+  const currentCrore = getCurrentMilestone(cumulative);
+  const progressInCrore = cumulative - currentCrore * CRORE;
+  const percent = Math.floor(getMilestoneProgress(cumulative));
+
+  const milestoneHistory = getMilestoneHistory(ledgerData);
+  const pred30 = predictNextMilestone(ledgerData);
+  const predYTD = predictNextMilestoneYTD(ledgerData);
+
+  // Lifetime/yearly totals respect Mala View; Crore/progress numbers stay in jaap terms
+  // (Crore is the domain unit for milestones, not malas — per spec §4.5).
+  const formatTotal = n => malaViewEnabled ? formatAsMala(n) : formatIndianNumber(n);
 
   container.innerHTML = `
     <div class="reflection-box">
-	
+
 	<div class="reflection-line">
   <strong>${CURRENT_YEAR} Total:</strong>
-  ${currentYearTotal.toLocaleString()}
+  ${formatTotal(currentYearTotal)}
 </div>
 
       <div class="reflection-line">
         <strong>Total Jaap:</strong>
-        ${cumulative.toLocaleString()}
+        ${formatTotal(cumulative)}
       </div>
 
       <div class="reflection-line">
-        <strong>Next Milestone:</strong> ${progress.currentCrore + 1} Crore
+        <strong>Next Milestone:</strong> ${currentCrore + 1} Crore
       </div>
       <div class="progress-track">
-        <div class="progress-fill" style="width: ${progress.percent}%"></div>
+        <div class="progress-fill" style="width: ${percent}%"></div>
       </div>
       <div class="progress-label">
-        ${progress.percent}% &nbsp;·&nbsp; ${progress.progress.toLocaleString()} / 10,000,000
+        ${percent}% &nbsp;·&nbsp; ${formatIndianNumber(progressInCrore)} / ${formatIndianNumber(CRORE)}
       </div>
-	  
+
+      ${pred30 || predYTD ? `
+  <div class="reflection-predictions">
+    ${pred30 ? `
+      <div class="reflection-line prediction-line">
+        <strong>30-Day Pace:</strong> ${formatDate(pred30.predictedDate)}
+        <span class="prediction-pace">(${formatTotal(Math.round(pred30.dailyPace))}/day)</span>
+      </div>
+    ` : ""}
+    ${predYTD ? `
+      <div class="reflection-line prediction-line">
+        <strong>YTD Pace:</strong> ${formatDate(predYTD.predictedDate)}
+        <span class="prediction-pace">(${formatTotal(Math.round(predYTD.dailyPace))}/day)</span>
+      </div>
+    ` : ""}
+  </div>
+` : ""}
+
 	  ${milestoneHistory.length > 0 ? `
   <div class="reflection-milestones">
     <div class="reflection-subtitle">Milestones</div>
     ${milestoneHistory.map(m => `
       <div class="milestone-line">
         ${m.crore} Crore — ${formatDate(m.date)}
-        ${m.daysTaken !== null
-          ? `<span class="milestone-gap">(+${m.daysTaken} days)</span>`
+        ${m.daysSincePrevious !== null
+          ? `<span class="milestone-gap">(+${m.daysSincePrevious} days)</span>`
           : ""}
       </div>
     `).join("")}
@@ -606,6 +874,9 @@ function renderLedgerList() {
   const filtered = ledgerData.filter(entry => entry.date <= todayISO);
   const groupedByYear = groupEntriesByYear(filtered);
   const years = Object.keys(groupedByYear).sort((a, b) => b - a);
+
+  // Precompute once so each row's sparkline is an O(1) lookup instead of an O(n) scan.
+  const sparklineMap = buildDateJaapMap(ledgerData);
 
   container.innerHTML = "";
 
@@ -661,8 +932,10 @@ const yearTotal = groupedByYear[year]
   .toLocaleString();
 
 yearHeader.innerHTML = `
-  <span class="year-chevron">${isCurrentYear ? "▾" : "▸"}</span>
-  <span class="year-label">${year}</span>
+  <span class="year-left">
+    <span class="year-chevron">${isCurrentYear ? "▾" : "▸"}</span>
+    <span class="year-label">${year}</span>
+  </span>
   <span class="year-total">${yearTotal}</span>
 `;
 
@@ -693,6 +966,13 @@ yearHeader.addEventListener("click", () => {
         row.classList.add("sunday");
       }
 
+      // Suppress today's sparkline until today's own jaap has been entered and
+      // saved — otherwise it renders a (correctly spec'd) trend from the prior
+      // 6 days alone, which reads as misleading before today's practice is logged.
+      const isUnsavedToday = entry.date === todayISO && (entry.jaap === null || entry.jaap === undefined);
+      const sparklinePoints = getRollingWindowFromMap(sparklineMap, entry.date);
+      const sparklineHTML = isUnsavedToday ? "" : renderSparklineSVG(sparklinePoints);
+
       row.innerHTML = `
         <div class="ledger-main">
           <span class="ledger-chevron">▸</span>
@@ -703,7 +983,9 @@ yearHeader.addEventListener("click", () => {
             ${hasExplicitPoornima(entry.notes) ? " 🌕" : ""}
           </span>
 
-          <span class="ledger-jaap">${entry.jaap ?? "—"}</span>
+          <span class="ledger-jaap">${entry.jaap == null ? "—" : (malaViewEnabled ? formatAsMala(entry.jaap) : entry.jaap)}</span>
+
+          <span class="ledger-sparkline">${sparklineHTML}</span>
         </div>
 
         <div class="ledger-notes">
@@ -718,10 +1000,7 @@ yearHeader.addEventListener("click", () => {
           ${
             isEditableEntry(entry.date)
               ? `
-                <label>
-                  Jaap<br>
-                  <input type="number" class="edit-jaap" value="${entry.jaap ?? ""}">
-                </label>
+                ${renderJaapInputField(entry)}
 
                 <br><br>
 
@@ -750,7 +1029,7 @@ yearHeader.addEventListener("click", () => {
           const jaapInput = row.querySelector(".edit-jaap").value;
           const notesInput = row.querySelector(".edit-notes").value;
 
-          entry.jaap = jaapInput === "" ? null : Number(jaapInput);
+          entry.jaap = computeJaapFromInput(jaapInput, entry.jaap);
           entry.notes = notesInput;
 
           await saveLedger(ledgerData);
@@ -802,15 +1081,7 @@ function renderTodayCard(entry) {
 
     <p><strong>Date:</strong> ${formatDate(entry.date)}</p>
 
-    <label>
-      Jaap<br>
-      <input
-        type="number"
-        id="today-jaap"
-        value="${entry.jaap ?? ""}"
-        placeholder="Enter jaap count"
-      >
-    </label>
+    ${renderJaapInputField(entry, { id: "today-jaap" })}
 
     <br><br>
 
@@ -843,8 +1114,6 @@ async function updateTodayEntry() {
   const jaapInput = document.getElementById("today-jaap").value;
   const notesInput = document.getElementById("today-notes").value;
 
-  const jaapValue = jaapInput === "" ? null : Number(jaapInput);
-
 const entry = ledgerData.find(e => e.date === todayISO);
 if (!entry) return;
 
@@ -853,7 +1122,7 @@ if (!isWithinLastNDays(entry.date, 7)) {
   return;
 }
 
-  entry.jaap = jaapValue;
+  entry.jaap = computeJaapFromInput(jaapInput, entry.jaap);
   entry.notes = notesInput;
 
   await saveLedger(ledgerData);
@@ -863,7 +1132,166 @@ if (!isWithinLastNDays(entry.date, 7)) {
 }
 document.getElementById("restore-backup-btn")
   ?.addEventListener("click", restoreFromBackup);
-  
+
+// ---------- Mala View toggle ----------
+
+document.getElementById("mala-toggle")?.addEventListener("change", (e) => {
+  malaViewEnabled = e.target.checked;
+  localStorage.setItem("malaViewEnabled", String(malaViewEnabled));
+  updateMalaToggleButton();
+  renderToday();
+});
+
+updateMalaToggleButton();
+
+// ---------- Sankalpa ----------
+
+function openSankalpaPage() {
+  const page = document.getElementById("sankalpa-page");
+  if (!page) return;
+  page.classList.add("open");
+  page.setAttribute("aria-hidden", "false");
+  renderSankalpaPage();
+}
+
+function closeSankalpaPage() {
+  const page = document.getElementById("sankalpa-page");
+  if (!page) return;
+  page.classList.remove("open");
+  page.setAttribute("aria-hidden", "true");
+}
+
+async function renderSankalpaPage() {
+  const page = document.getElementById("sankalpa-page");
+  if (!page) return;
+
+  const sankalpa = await getSankalpa();
+
+  if (!sankalpa) {
+    page.innerHTML = `
+      <div class="fullscreen-header">
+        <h2>Sankalpa</h2>
+        <button id="sankalpa-close" class="fullscreen-close" aria-label="Close">✕</button>
+      </div>
+      <div class="sankalpa-body">
+        <p class="sankalpa-intro">Establish your Sankalpa — a vow of intent for your practice.</p>
+
+        <label>
+          Sankalpa<br>
+          <textarea id="sankalpa-text" class="edit-notes" rows="4" placeholder="Your vow..."></textarea>
+        </label>
+
+        <br><br>
+
+        <label>
+          Context (optional)<br>
+          <input type="text" id="sankalpa-context" class="edit-jaap" placeholder="Guru, Devatā, occasion...">
+        </label>
+
+        <br><br>
+
+        <button id="sankalpa-establish" class="save-entry" disabled>Establish Sankalpa</button>
+      </div>
+    `;
+
+    const textEl = page.querySelector("#sankalpa-text");
+    const establishBtn = page.querySelector("#sankalpa-establish");
+
+    const syncDisabled = () => {
+      establishBtn.disabled = textEl.value.trim().length === 0;
+    };
+    textEl.addEventListener("input", syncDisabled);
+    syncDisabled();
+
+    establishBtn.addEventListener("click", async () => {
+      const text = textEl.value.trim();
+      if (!text) return;
+
+      const context = page.querySelector("#sankalpa-context").value.trim();
+      await saveSankalpa({ text, context, date: getTodayISO() });
+      showToast("Sankalpa established ✓");
+      renderSankalpaPage();
+    });
+
+    page.querySelector("#sankalpa-close").addEventListener("click", closeSankalpaPage);
+    return;
+  }
+
+  page.innerHTML = `
+    <div class="fullscreen-header">
+      <h2>Sankalpa</h2>
+      <button id="sankalpa-close" class="fullscreen-close" aria-label="Close">✕</button>
+    </div>
+    <div class="sankalpa-body">
+      <div class="sankalpa-view">
+        <p class="sankalpa-text-display">${escapeHTML(sankalpa.text)}</p>
+        ${sankalpa.context ? `<p class="sankalpa-context-display"><em>${escapeHTML(sankalpa.context)}</em></p>` : ""}
+        <p class="sankalpa-date-display">Established ${formatDate(sankalpa.date)}</p>
+      </div>
+
+      <button id="sankalpa-rewrite-btn" class="maintenance-btn">Rewrite Sankalpa</button>
+
+      <div id="sankalpa-rewrite-form" style="display:none;">
+        <br>
+        <label>
+          Sankalpa<br>
+          <textarea id="sankalpa-text-edit" class="edit-notes" rows="4">${escapeHTML(sankalpa.text)}</textarea>
+        </label>
+
+        <br><br>
+
+        <label>
+          Context (optional)<br>
+          <input type="text" id="sankalpa-context-edit" class="edit-jaap" value="${escapeHTML(sankalpa.context || "")}">
+        </label>
+
+        <br><br>
+
+        <button id="sankalpa-confirm-rewrite" class="save-entry" disabled>Confirm Rewrite</button>
+        <button id="sankalpa-cancel-rewrite" class="maintenance-btn">Cancel</button>
+      </div>
+    </div>
+  `;
+
+  page.querySelector("#sankalpa-close").addEventListener("click", closeSankalpaPage);
+
+  const rewriteBtn = page.querySelector("#sankalpa-rewrite-btn");
+  const rewriteForm = page.querySelector("#sankalpa-rewrite-form");
+  const textEdit = page.querySelector("#sankalpa-text-edit");
+  const confirmBtn = page.querySelector("#sankalpa-confirm-rewrite");
+
+  rewriteBtn.addEventListener("click", () => {
+    rewriteForm.style.display = "block";
+  });
+
+  const syncConfirmDisabled = () => {
+    confirmBtn.disabled = textEdit.value.trim().length === 0;
+  };
+  textEdit.addEventListener("input", syncConfirmDisabled);
+  syncConfirmDisabled();
+
+  page.querySelector("#sankalpa-cancel-rewrite").addEventListener("click", () => {
+    rewriteForm.style.display = "none";
+  });
+
+  confirmBtn.addEventListener("click", async () => {
+    const text = textEdit.value.trim();
+    if (!text) return;
+
+    const confirmed = confirm("Rewrite Sankalpa? Your original date will be preserved.");
+    if (!confirmed) return;
+
+    const context = page.querySelector("#sankalpa-context-edit").value.trim();
+    // date is always preserved from the original record — never reset to today.
+    await saveSankalpa({ text, context, date: sankalpa.date });
+    showToast("Sankalpa rewritten ✓");
+    renderSankalpaPage();
+  });
+}
+
+document.getElementById("sankalpa-open-btn")
+  ?.addEventListener("click", openSankalpaPage);
+
   // ---------- Export Ledger (JSON) ----------
 
 document.getElementById("export-json-btn")
