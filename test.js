@@ -33,7 +33,7 @@ function assert(label, condition) {
 
   // ── 1. Basic structure ──────────────────────────────────────────
   console.log("\n=== Structure ===");
-  assert("h1 Jaap Ledger present", await page.$eval("h1", el => el.textContent.includes("Jaap Ledger")));
+  assert("h1 Sumiran Lite present", await page.$eval("h1", el => el.textContent.includes("Sumiran Lite")));
   assert("#today-card rendered", await page.$eval("#today-card", el => el.innerHTML.trim().length > 0));
   assert("#reflection-summary rendered", await page.$eval("#reflection-summary", el => el.innerHTML.trim().length > 0));
   assert("#ledger-list rendered", await page.$eval("#ledger-list", el => el.innerHTML.trim().length > 0));

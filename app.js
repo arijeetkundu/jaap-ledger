@@ -1,4 +1,4 @@
-console.log("Jaap Ledger app.js loaded successfully");
+console.log("Sumiran Lite app.js loaded successfully");
 
 // ---------- Splash Screen Logic ----------
 window.addEventListener("load", () => {

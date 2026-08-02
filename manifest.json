@@ -1,6 +1,6 @@
 {
-  "name": "Jaap Ledger",
-  "short_name": "Jaap",
+  "name": "Sumiran Lite",
+  "short_name": "Sumiran Lite",
   "description": "Offline Jaap Sadhana Ledger",
   "start_url": "./index.html",
   "display": "standalone",
