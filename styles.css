@@ -14,6 +14,17 @@ body {
   line-height: 1.5;
 }
 
+/* Selectable tiled background themes */
+body.bg-alpana {
+  background-image: url('icons/bg-alpana.webp');
+  background-repeat: repeat;
+}
+
+body.bg-mandala {
+  background-image: url('icons/bg-mandala.webp');
+  background-repeat: repeat;
+}
+
 /* App title */
 h1 {
   font-size: 1.4rem;
@@ -77,6 +88,7 @@ p {
   padding: 8px 4px;
   border-bottom: 1px solid #e0dccf;
   font-size: 0.95rem;
+  background-color: #fffef9;
 }
 
 /* Ledger date */
@@ -427,7 +439,7 @@ body {
   left: 0;
   /* Use viewport units to ensure it hits all 4 corners */
   width: 100vw;
-  height: 100vh; 
+  height: 100vh;
   background-color: #fbf6e8;
   display: flex;
   justify-content: center;
@@ -435,6 +447,16 @@ body {
   z-index: 9999;
   opacity: 1;
   transition: opacity 0.5s ease-out;
+}
+
+body.bg-alpana #splash-screen {
+  background-image: url('icons/bg-alpana.webp');
+  background-repeat: repeat;
+}
+
+body.bg-mandala #splash-screen {
+  background-image: url('icons/bg-mandala.webp');
+  background-repeat: repeat;
 }
 
 #splash-screen img {
@@ -707,6 +729,34 @@ body.loading {
 
 .maintenance-btn:hover {
   background-color: #efe7c3;
+}
+
+/* Background theme swatches */
+.background-swatch-wrap {
+  display: flex;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.background-swatch {
+  flex: 1;
+  padding: 4px;
+  border-radius: 8px;
+  border: 2px solid transparent;
+  background-color: #f7f2dc;
+  cursor: pointer;
+}
+
+.background-swatch img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  object-fit: cover;
+  border-radius: 4px;
+}
+
+.background-swatch.active {
+  border-color: #c9b458;
 }
 
 

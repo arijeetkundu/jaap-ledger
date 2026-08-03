@@ -25,14 +25,14 @@
 
 <link rel="apple-touch-icon" href="icons/icon-192.png">
 <link rel="icon" href="icons/icon-192.png">
-<link rel="apple-touch-startup-image" href="hanuman-splash.png"> 
+<link rel="apple-touch-startup-image" href="splash/hanuman-splash.png">
 </head>
 
 <body>
 <div id="splash-screen">
   <picture>
-    <source srcset="hanuman-splash.webp" type="image/webp">
-    <img src="hanuman-splash.png" alt="App Splash Screen">
+    <source id="splash-source" srcset="splash/hanuman-splash.webp" type="image/webp">
+    <img id="splash-img" src="splash/hanuman-splash.png" alt="App Splash Screen">
   </picture>
 </div>
 
@@ -89,6 +89,16 @@
     <button id="restore-backup-btn" class="maintenance-btn">
       Restore from Backup
     </button>
+
+    <h3>Background</h3>
+    <div id="background-swatch-wrap" class="background-swatch-wrap">
+      <button type="button" class="background-swatch" id="bg-swatch-alpana" data-bg="alpana" aria-label="Alpana background" title="Alpana">
+        <img src="icons/bg-alpana.webp" alt="">
+      </button>
+      <button type="button" class="background-swatch" id="bg-swatch-mandala" data-bg="mandala" aria-label="Mandala background" title="Mandala">
+        <img src="icons/bg-mandala.webp" alt="">
+      </button>
+    </div>
   </div>
 </div>
 

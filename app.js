@@ -1,5 +1,35 @@
 console.log("Sumiran Lite app.js loaded successfully");
 
+// ---------- Background Theme ----------
+let backgroundChoice = localStorage.getItem("backgroundChoice") || "mandala";
+document.body.classList.add("bg-" + backgroundChoice);
+
+// ---------- Splash Screen Rotation ----------
+const SPLASH_IMAGES = [
+  { id: "hanuman", webp: "splash/hanuman-splash.webp", png: "splash/hanuman-splash.png", alt: "Hanuman meditating" },
+  { id: "chaturbhuj-rama", webp: "splash/chaturbhuj-rama.webp", png: "splash/chaturbhuj-rama.png", alt: "Chaturbhuj Rama" },
+  { id: "lord-rama", webp: "splash/lord-rama.webp", png: "splash/lord-rama.png", alt: "Lord Rama" },
+  { id: "ram-rameshwar", webp: "splash/ram-rameshwar.webp", png: "splash/ram-rameshwar.png", alt: "Ram at Rameshwar" },
+  { id: "ram-darbar", webp: "splash/ram-darbar.webp", png: "splash/ram-darbar.png", alt: "Ram Darbar" },
+];
+
+(function chooseSplashImage() {
+  const lastId = localStorage.getItem("lastSplashImage");
+  const candidates = SPLASH_IMAGES.filter((img) => img.id !== lastId);
+  const pool = candidates.length > 0 ? candidates : SPLASH_IMAGES;
+  const chosen = pool[Math.floor(Math.random() * pool.length)];
+
+  const source = document.getElementById("splash-source");
+  const img = document.getElementById("splash-img");
+  if (source) source.srcset = chosen.webp;
+  if (img) {
+    img.src = chosen.png;
+    img.alt = chosen.alt;
+  }
+
+  localStorage.setItem("lastSplashImage", chosen.id);
+})();
+
 // ---------- Splash Screen Logic ----------
 window.addEventListener("load", () => {
   const splash = document.getElementById("splash-screen");
@@ -625,6 +655,12 @@ function updateMalaToggleButton() {
   const wrap = document.getElementById("mala-toggle-wrap");
   if (wrap) wrap.classList.toggle("mala-view-on", malaViewEnabled);
 }
+
+function updateBackgroundSwatchButtons() {
+  document.querySelectorAll(".background-swatch").forEach((btn) => {
+    btn.classList.toggle("active", btn.dataset.bg === backgroundChoice);
+  });
+}
 // ---------- Load ledger ----------
 (async function initApp() {
   try {
@@ -1143,6 +1179,22 @@ document.getElementById("mala-toggle")?.addEventListener("change", (e) => {
 });
 
 updateMalaToggleButton();
+
+// ---------- Background theme swatches ----------
+
+document.querySelectorAll(".background-swatch").forEach((btn) => {
+  btn.addEventListener("click", () => {
+    const choice = btn.dataset.bg;
+    if (choice === backgroundChoice) return;
+    document.body.classList.remove("bg-" + backgroundChoice);
+    backgroundChoice = choice;
+    document.body.classList.add("bg-" + backgroundChoice);
+    localStorage.setItem("backgroundChoice", backgroundChoice);
+    updateBackgroundSwatchButtons();
+  });
+});
+
+updateBackgroundSwatchButtons();
 
 // ---------- Sankalpa ----------
 
