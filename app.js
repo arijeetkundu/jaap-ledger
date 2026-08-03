@@ -338,13 +338,6 @@ function renderSparklineSVG(points) {
 }
 
 
-function isStandalonePWA() {
-  return (
-    window.matchMedia("(display-mode: standalone)").matches ||
-    window.navigator.standalone === true
-  );
-}
-
 async function hasEverSeededLedger() {
   const db = await openDB();
   const tx = db.transaction(META_STORE, "readonly");
@@ -728,21 +721,6 @@ await saveAutomaticBackup(ledgerData);
   }
 })();
 
-
-// ---------- Local Storage ----------
-function loadFromLocalStorage(baseData) {
-  const saved = localStorage.getItem("jaap-ledger");
-  if (saved) {
-    console.log("Loaded ledger from localStorage");
-    return JSON.parse(saved);
-  }
-  return baseData;
-}
-
-function saveToLocalStorage(data) {
-  localStorage.setItem("jaap-ledger", JSON.stringify(data));
-  console.log("Ledger saved to localStorage");
-}
 
 async function saveAutomaticBackup(data) {
   const db = await openDB();

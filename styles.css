@@ -211,15 +211,6 @@ p {
   margin-bottom: 6px;
 }
 
-.yearly-totals {
-  margin-top: 8px;
-  font-size: 0.9rem;
-  color: #555;
-}
-
-.year-line {
-  margin-top: 2px;
-}
 .legend {
   margin-top: 8px;
   font-size: 0.8rem;
@@ -261,20 +252,6 @@ p {
 .save-entry:active,
 #update-today:active {
   background-color: #e5dbac;
-}
-.restore-btn {
-  margin-top: 12px;
-  padding: 8px 14px;
-  border-radius: 6px;
-  border: 1px solid #c9bfa8;
-  background-color: #f8f1df;
-  color: #4b3f2f;
-  font-size: 0.9rem;
-  cursor: pointer;
-}
-
-.restore-btn:hover {
-  background-color: #f2e6c9;
 }
 body {
   overscroll-behavior-y: contain;
@@ -702,13 +679,6 @@ body.loading {
   font-size: 0.85rem;
   color: #888;
   margin: 0;
-}
-
-.maintenance-title {
-  font-weight: 600;
-  margin-bottom: 12px;
-  font-size: 1rem;
-  color: #5a4a00;
 }
 
 /* Maintenance buttons */
