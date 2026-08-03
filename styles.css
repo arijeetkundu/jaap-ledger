@@ -14,15 +14,24 @@ body {
   line-height: 1.5;
 }
 
-/* Selectable tiled background themes */
-body.bg-alpana {
-  background-image: url('icons/bg-alpana.webp');
+/* Selectable tiled background themes — rendered on a dedicated fixed
+   element (not background-attachment: fixed on body, which iOS Safari
+   has historically ignored/degraded) so the pattern stays pinned to the
+   viewport while page content scrolls over it. */
+#app-background {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
   background-repeat: repeat;
 }
 
-body.bg-mandala {
+body.bg-alpana #app-background {
+  background-image: url('icons/bg-alpana.webp');
+}
+
+body.bg-mandala #app-background {
   background-image: url('icons/bg-mandala.webp');
-  background-repeat: repeat;
 }
 
 /* App title */
