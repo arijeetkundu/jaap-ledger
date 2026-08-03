@@ -14,6 +14,8 @@ Live app: https://arijeetkundu.github.io/jaap-ledger/
 - **Poornima (full moon) detection** from notes keywords, with a static fallback calendar.
 - **Automatic backups** plus manual JSON import/export.
 - **Installable PWA** — add to home screen with splash screen and icons.
+- **Background themes** — switch the app's tiled background between Alpana and Mandala patterns (default Mandala) from Settings.
+- **Rotating splash screen** — 5 images in rotation, never repeating the same one on two consecutive app opens.
 
 All practice data lives in the browser's IndexedDB — nothing is sent to a server.
 
@@ -26,7 +28,7 @@ All practice data lives in the browser's IndexedDB — nothing is sent to a serv
 | Logic | Vanilla JavaScript (`app.js`), no frameworks or bundler |
 | Storage | IndexedDB (practice data, backups, Sankalpa) + localStorage (display preferences only) |
 | PWA shell | `manifest.json` + `icons/` |
-| Testing | Puppeteer browser smoke tests (`test.js`) |
+| Testing | Puppeteer-driven structural, unit, and E2E tests (`tests/`), run via `npm test` |
 | Hosting | GitHub Pages (static) |
 
 ## Project structure
@@ -39,10 +41,13 @@ jaap-ledger/
 ├── data.json                  Historical seed data (used only on first-ever load)
 ├── poornima.json              Static full-moon date fallback list
 ├── manifest.json              PWA manifest
-├── hanuman-splash.png/.webp   Splash screen artwork
-├── icons/                     App icons (192x192, 512x512)
-├── test.js                    Puppeteer smoke-test suite
-├── package.json                devDependencies: puppeteer, sharp
+├── splash/                    5 rotating splash images (.png/.webp pairs)
+├── icons/                     App icons (192x192, 512x512) + bg-alpana.webp/bg-mandala.webp tile assets
+├── tests/
+│   ├── test.js                Puppeteer structural smoke tests
+│   ├── test-unit.js           Puppeteer-driven unit tests for pure logic functions
+│   └── test-e2e.js            Puppeteer full user-flow E2E tests
+├── package.json                devDependencies: puppeteer, sharp; "test" script runs all 3 suites
 └── package-lock.json
 ```
 
@@ -62,10 +67,10 @@ To test on a phone on the same Wi-Fi network, open `http://<your-machine's-LAN-I
 ```
 npm install
 python -m http.server 3333   # in one terminal
-node test.js                 # in another
+npm test                     # in another
 ```
 
-`test.js` runs Puppeteer-driven smoke tests against a running instance of the app (structural checks, no console errors).
+`npm test` runs the full suite against a running instance of the app: `tests/test.js` (structural smoke tests), `tests/test-unit.js` (pure-logic unit tests, calling app.js's global functions directly), and `tests/test-e2e.js` (full user-flow E2E tests — Sankalpa, Import/Export, Restore from Backup, Background themes, Splash rotation, and more). Each file can also be run individually, e.g. `node tests/test-unit.js`.
 
 ## Deployment
 
