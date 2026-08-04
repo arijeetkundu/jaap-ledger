@@ -74,6 +74,42 @@ function showToast(message = "Saved") {
   }, 2000);
 }
 
+// Page-wide falling petal celebration, triggered when a Today Card save
+// crosses a new Crore boundary (see updateTodayEntry). Purely decorative —
+// builds a batch of .petal-fly spans into #petal-overlay with randomized
+// fall paths, then removes them once the longest one has finished.
+function celebrateMilestone() {
+  const overlay = document.getElementById("petal-overlay");
+  if (!overlay) return;
+
+  const PETAL_COUNT = 32;
+  const MIN_DURATION = 4.5;
+  const MAX_DURATION = 7;
+  let maxDurationMs = 0;
+
+  for (let i = 0; i < PETAL_COUNT; i++) {
+    const petal = document.createElement("span");
+    petal.className = "petal-fly " + (i % 2 === 0 ? "petal-rose" : "petal-marigold");
+
+    const left = Math.random() * 100;
+    const sway = 30 + Math.random() * 70; // px of horizontal drift each way
+    const duration = MIN_DURATION + Math.random() * (MAX_DURATION - MIN_DURATION);
+    const delay = Math.random() * 1.2;
+
+    petal.style.setProperty("--petal-left", `${left}%`);
+    petal.style.setProperty("--sway", `${sway}px`);
+    petal.style.setProperty("--fall-duration", `${duration}s`);
+    petal.style.setProperty("--fall-delay", `${delay}s`);
+
+    overlay.appendChild(petal);
+    maxDurationMs = Math.max(maxDurationMs, (duration + delay) * 1000);
+  }
+
+  setTimeout(() => {
+    overlay.innerHTML = "";
+  }, maxDurationMs + 200);
+}
+
 // ---------- Utilities ----------
 
 // Format YYYY-MM-DD → "D MMM YYYY" (e.g. "12 Apr 2026")
@@ -1007,7 +1043,6 @@ yearHeader.addEventListener("click", () => {
             getCroreMilestone(entry.date)
               ? `<div class="milestone">
                    ◈ ${getCroreMilestone(entry.date)} Crore Jaap Completed
-                   ${Array.from({ length: 28 }, (_, i) => `<span class="petal petal-${i % 2 === 0 ? "rose" : "marigold"}" style="--petal-left:${(i * 13) % 100}%; --petal-delay:${(i % 10) * 0.08}s; --petal-duration:${1.3 + (i % 4) * 0.15}s; --petal-rotation:${(i % 4) * 90 + 45}deg;"></span>`).join("")}
                  </div>`
               : ""
           }
@@ -1140,10 +1175,16 @@ if (!isWithinLastNDays(entry.date, 7)) {
   entry.jaap = computeJaapFromInput(jaapInput, entry.jaap);
   entry.notes = notesInput;
 
+  const crossedNewMilestone = getCroreMilestone(entry.date);
+
   await saveLedger(ledgerData);
   await saveAutomaticBackup(ledgerData);
   renderToday();
   showToast("Saved ✓");
+
+  if (crossedNewMilestone) {
+    celebrateMilestone();
+  }
 }
 document.getElementById("restore-backup-btn")
   ?.addEventListener("click", restoreFromBackup);

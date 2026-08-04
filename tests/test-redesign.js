@@ -63,53 +63,51 @@ function assert(label, condition) {
     return bg.startsWith("linear-gradient") && bg.includes("108, 28, 39") && bg.includes("74, 17, 25");
   }
 
-  // ── Milestone celebration: falling petals ──────────────────────────
-  console.log("\n=== Milestone celebration (falling petals) ===");
-  const expandedMilestone = await page.evaluate(() => {
-    const rows = Array.from(document.querySelectorAll(".ledger-row"));
-    const target = rows.find(r => r.querySelector(".ledger-date")?.textContent.includes("🏵"));
-    if (!target) return { found: false };
-    target.querySelector(".ledger-chevron").click();
-    return { found: true };
-  });
-  assert("a Crore-crossing ledger row exists in the seed data (🏵️ marker)", expandedMilestone.found);
+  // ── Milestone celebration: page-wide falling petals ─────────────────
+  // Reproduces the exact repro used to diagnose the original "nothing
+  // happened" report: type a Crore-crossing value into Today's jaap field
+  // and click Update — the petal shower must appear immediately in
+  // #petal-overlay, with no manual row-expansion involved.
+  console.log("\n=== Milestone celebration (page-wide falling petals) ===");
 
-  if (expandedMilestone.found) {
-    await new Promise(r => setTimeout(r, 300));
-    const milestoneInfo = await page.evaluate(() => {
-      const el = document.querySelector(".milestone");
-      if (!el) return null;
-      const petals = el.querySelectorAll(".petal");
-      const roses = el.querySelectorAll(".petal-rose").length;
-      const marigolds = el.querySelectorAll(".petal-marigold").length;
-      const anyOverlappingText = Array.from(petals).every(p => getComputedStyle(p).pointerEvents === "none");
-      return {
-        bannerText: el.textContent.trim().startsWith("◈"),
-        totalPetals: petals.length,
-        roses,
-        marigolds,
-        allPetalsIgnorePointerEvents: anyOverlappingText,
-      };
-    });
-    assert("milestone banner renders with its Crore text", !!milestoneInfo && milestoneInfo.bannerText);
-    assert("milestone banner renders exactly 28 petals", !!milestoneInfo && milestoneInfo.totalPetals === 28);
-    assert("petals are evenly split rose/marigold (14/14)", !!milestoneInfo && milestoneInfo.roses === 14 && milestoneInfo.marigolds === 14);
-    assert("petals never intercept taps (pointer-events: none)", !!milestoneInfo && milestoneInfo.allPetalsIgnorePointerEvents);
-  }
+  const preExisting = await page.evaluate(() => document.querySelectorAll("#petal-overlay .petal-fly").length);
+  assert("no petals present before any crossing update", preExisting === 0);
 
-  // A non-milestone row's notes must NOT contain any petals.
-  const nonMilestoneClean = await page.evaluate(() => {
-    const rows = Array.from(document.querySelectorAll(".ledger-row"));
-    const plain = rows.find(r => !r.querySelector(".ledger-date")?.textContent.includes("🏵"));
-    if (!plain) return null;
-    plain.querySelector(".ledger-chevron").click();
-    return true;
+  const todayJaapField = await page.$("#today-jaap");
+  await todayJaapField.click({ clickCount: 3 });
+  await todayJaapField.type("10000000"); // guaranteed to cross a Crore boundary
+  await page.click("#update-today");
+  await new Promise(r => setTimeout(r, 400)); // IndexedDB write + re-render
+
+  const celebration = await page.evaluate(() => {
+    const petals = Array.from(document.querySelectorAll("#petal-overlay .petal-fly"));
+    const roses = petals.filter(p => p.classList.contains("petal-rose")).length;
+    const marigolds = petals.filter(p => p.classList.contains("petal-marigold")).length;
+    const allIgnorePointerEvents = petals.every(p => getComputedStyle(p).pointerEvents === "none");
+    const overlay = getComputedStyle(document.getElementById("petal-overlay"));
+    return {
+      totalPetals: petals.length,
+      roses,
+      marigolds,
+      allIgnorePointerEvents,
+      overlayPosition: overlay.position,
+    };
   });
-  await new Promise(r => setTimeout(r, 300));
-  if (nonMilestoneClean) {
-    const strayPetals = await page.evaluate(() => document.querySelectorAll(".ledger-row.expanded:not(:has(.milestone)) .petal").length);
-    assert("a non-milestone row never renders petals", strayPetals === 0);
-  }
+  assert("crossing update immediately populates #petal-overlay with 32 petals (no row expansion needed)", celebration.totalPetals === 32);
+  assert("petals are evenly split rose/marigold (16/16)", celebration.roses === 16 && celebration.marigolds === 16);
+  assert("petals never intercept taps (pointer-events: none)", celebration.allIgnorePointerEvents);
+  assert("#petal-overlay is a fixed, page-level layer", celebration.overlayPosition === "fixed");
+
+  // A save that does NOT cross a new Crore boundary must not trigger any petals.
+  await page.reload({ waitUntil: "networkidle0" });
+  await new Promise(r => setTimeout(r, SPLASH_WAIT_MS));
+  const nonCrossingField = await page.$("#today-jaap");
+  await nonCrossingField.click({ clickCount: 3 });
+  await nonCrossingField.type("50"); // far from any Crore boundary
+  await page.click("#update-today");
+  await new Promise(r => setTimeout(r, 400));
+  const noPetalsOnPlainSave = await page.evaluate(() => document.querySelectorAll("#petal-overlay .petal-fly").length);
+  assert("a non-crossing save triggers no petals", noPetalsOnPlainSave === 0);
 
   // ── Splash entrance animation ───────────────────────────────────────
   console.log("\n=== Splash entrance animation ===");

@@ -187,7 +187,7 @@ p {
 .ledger-sparkline {
   display: flex;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-end;
 }
 
 .ledger-sparkline .sparkline {
@@ -249,8 +249,6 @@ p {
 }
 /* Milestone (Crore Jaap) */
 .milestone {
-  position: relative;
-  overflow: visible;
   margin-bottom: 6px;
   padding: 6px 10px;
   font-size: 0.85rem;
@@ -261,21 +259,29 @@ p {
   border-radius: 6px;
 }
 
-/* ---------- Milestone celebration: falling rose & marigold petals ----------
-   Purely decorative <span class="petal petal-rose|petal-marigold"> elements
-   are added by app.js inside this same conditionally-rendered banner (see
-   the Crore-crossing branch) — no new state, function, or trigger, just
-   extra spans in the template string already being built. */
-.petal {
-  position: absolute;
-  top: -6px;
-  left: var(--petal-left, 50%);
-  width: 8px;
-  height: 8px;
-  border-radius: 0 70% 0 70%;
+/* ---------- Milestone celebration: page-wide falling rose & marigold petals
+   ----------
+   #petal-overlay is a page-level, pointer-events:none layer (see
+   index.html). app.js's celebrateMilestone() populates it with ~32
+   .petal-fly spans when the Today Card save just crossed a new Crore
+   boundary, and removes them once they've finished falling. */
+#petal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9600;
   pointer-events: none;
+  overflow: hidden;
+}
+
+.petal-fly {
+  position: absolute;
+  top: -5vh;
+  left: var(--petal-left, 50%);
+  width: 10px;
+  height: 10px;
+  border-radius: 0 70% 0 70%;
   opacity: 0;
-  animation: petal-fall var(--petal-duration, 1.6s) var(--petal-delay, 0s) ease-in forwards;
+  animation: petal-fall-page var(--fall-duration, 5s) var(--fall-delay, 0s) linear forwards;
 }
 
 .petal-rose {
@@ -286,25 +292,38 @@ p {
   background: #e8961f;
 }
 
-@keyframes petal-fall {
+/* A real falling petal doesn't drop in a straight line — it sways side to
+   side as it tumbles. Each petal's --sway distance is randomized in JS so
+   32 petals read as a natural shower rather than a repeating pattern. */
+@keyframes petal-fall-page {
   0% {
     opacity: 0;
-    transform: translateY(0) rotate(0deg);
+    transform: translate(0, 0) rotate(0deg);
   }
-  10% {
+  6% {
+    opacity: 1;
+  }
+  25% {
+    transform: translate(var(--sway), 27vh) rotate(90deg);
+  }
+  50% {
+    transform: translate(calc(var(--sway) * -1), 52vh) rotate(180deg);
+  }
+  75% {
+    transform: translate(var(--sway), 77vh) rotate(270deg);
+  }
+  94% {
     opacity: 1;
   }
   100% {
     opacity: 0;
-    transform: translateY(70px) rotate(var(--petal-rotation, 220deg));
+    transform: translate(0, 105vh) rotate(360deg);
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .petal {
-    animation: none;
-    opacity: 0.85;
-    top: 4px;
+  .petal-fly {
+    display: none;
   }
 }
 /* Reflection Summary */
@@ -349,8 +368,14 @@ p {
   border-color: var(--gold);
   box-shadow: 0 0 0 2px rgba(201, 162, 39, 0.25);
 }
+/* #today-card #update-today (rather than a bare #update-today) deliberately
+   raises specificity to ID+ID so it reliably beats the generic
+   "#today-card button" rule above (ID+element) for the color/background
+   properties — #update-today lives inside #today-card in the DOM, so
+   without this the generic rule would otherwise win regardless of source
+   order and make the button text unreadable against this gradient. */
 .save-entry,
-#update-today {
+#today-card #update-today {
   padding: 8px 18px;
   border-radius: 10px;
   border: none;
@@ -363,12 +388,12 @@ p {
 }
 
 .save-entry:hover,
-#update-today:hover {
+#today-card #update-today:hover {
   background: linear-gradient(180deg, #7d2530, var(--maroon-deep));
 }
 
 .save-entry:active,
-#update-today:active {
+#today-card #update-today:active {
   background: var(--maroon-deep);
 }
 body {
@@ -559,9 +584,9 @@ body.bg-mandala #splash-screen {
   content: "";
   position: absolute;
   inset: 0;
-  background: radial-gradient(circle at 50% 45%, rgba(233, 197, 101, 0.35), transparent 60%);
+  background: radial-gradient(circle at 50% 45%, rgba(233, 197, 101, 0.5), transparent 62%);
   opacity: 0;
-  animation: splash-glow 1.4s ease-out both;
+  animation: splash-glow 1.8s ease-out both;
 }
 
 #splash-screen img {
@@ -571,17 +596,17 @@ body.bg-mandala #splash-screen {
   height: 100%;
   object-fit: cover; /* Crops the sides slightly to ensure no gaps at top/bottom */
   object-position: center; /* Keeps Hanuman centered while cropping sides */
-  animation: splash-entrance 0.7s var(--ease-premium) both;
+  animation: splash-entrance 0.9s var(--ease-premium) both;
 }
 
 @keyframes splash-entrance {
   from {
     opacity: 0;
-    transform: scale(1.04);
+    transform: scale(1.08) translateY(8px);
   }
   to {
     opacity: 1;
-    transform: scale(1);
+    transform: scale(1) translateY(0);
   }
 }
 
@@ -589,7 +614,7 @@ body.bg-mandala #splash-screen {
   0% {
     opacity: 0;
   }
-  40% {
+  35% {
     opacity: 1;
   }
   100% {
