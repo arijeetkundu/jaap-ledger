@@ -1007,6 +1007,7 @@ yearHeader.addEventListener("click", () => {
             getCroreMilestone(entry.date)
               ? `<div class="milestone">
                    ◈ ${getCroreMilestone(entry.date)} Crore Jaap Completed
+                   ${Array.from({ length: 28 }, (_, i) => `<span class="petal petal-${i % 2 === 0 ? "rose" : "marigold"}" style="--petal-left:${(i * 13) % 100}%; --petal-delay:${(i % 10) * 0.08}s; --petal-duration:${1.3 + (i % 4) * 0.15}s; --petal-rotation:${(i % 4) * 90 + 45}deg;"></span>`).join("")}
                  </div>`
               : ""
           }

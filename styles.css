@@ -3,6 +3,32 @@
   box-sizing: border-box;
 }
 
+/* ---------- Design tokens: Temple Gold & Maroon ---------- */
+:root {
+  --ink: #2b1810;
+  --ink-muted: #8a6a52;
+  --cream: #fbf1de;
+  --surface: #fffaf0;
+  --surface-2: #fdf3dd;
+  --maroon: #6c1c27;
+  --maroon-deep: #4a1119;
+  --maroon-red: #8a2432;
+  --gold: #c9a227;
+  --gold-hairline: #dcb865;
+  --gold-light: #f1cf85;
+  --font-heading: Georgia, "Iowan Old Style", "Palatino Linotype", Palatino, serif;
+  --ease-premium: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+html {
+  scroll-behavior: smooth;
+}
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+}
+
 /* Page */
 body {
   margin: 0;
@@ -10,8 +36,8 @@ body {
   padding-top: calc(env(safe-area-inset-top, 0px) + 16px);
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI",
                Roboto, Helvetica, Arial, sans-serif;
-  background-color: #fbf6e8;
-  color: #2b2b2b;
+  background-color: var(--cream);
+  color: var(--ink);
   line-height: 1.5;
 }
 
@@ -37,8 +63,10 @@ body.bg-mandala #app-background {
 
 /* App title */
 h1 {
+  font-family: var(--font-heading);
   font-size: 1.4rem;
-  font-weight: 600;
+  font-weight: 700;
+  color: var(--maroon);
   margin-bottom: 12px;
 }
 
@@ -49,19 +77,32 @@ p {
 }
 /* Today Entry Card */
 #today-card {
-  background-color: #eef1fa; /* soft lavender-blue */
+  background: linear-gradient(180deg, var(--surface), var(--surface-2));
+  border: 1px solid var(--gold-hairline);
   padding: 18px;
-  border-radius: 10px;
-  box-shadow: 0 3px 6px rgba(0, 0, 0, 0.12);
+  border-radius: 14px;
+  box-shadow: 0 10px 24px -12px rgba(108, 28, 39, 0.28), inset 0 0 0 1px rgba(255, 255, 255, 0.5);
   margin-bottom: 24px;
 }
 
 /* Today heading */
 #today-card h2 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   margin-top: 0;
   margin-bottom: 12px;
+  font-family: var(--font-heading);
   font-size: 1.1rem;
-  font-weight: 600;
+  font-weight: 700;
+  color: var(--maroon);
+}
+
+#today-card h2::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: rgba(122, 31, 43, 0.18);
 }
 
 /* Today text */
@@ -74,10 +115,10 @@ p {
   margin-top: 12px;
   padding: 6px 14px;
   font-size: 0.9rem;
-  border-radius: 6px;
-  border: 1px solid #ccc;
-  background-color: #f3f0e6;
-  color: #2b2b2b;
+  border-radius: 8px;
+  border: 1px solid var(--gold-hairline);
+  background-color: var(--surface);
+  color: var(--ink);
   cursor: pointer;
 }
 
@@ -96,14 +137,14 @@ p {
   display: flex;
   justify-content: space-between;
   padding: 8px 4px;
-  border-bottom: 1px solid #e0dccf;
+  border-bottom: 1px solid rgba(122, 31, 43, 0.12);
   font-size: 0.95rem;
-  background-color: #fffef9;
+  background-color: #fffdf7;
 }
 
 /* Ledger date */
 .ledger-date {
-  color: #444;
+  color: var(--ink-muted);
 }
 
 /* Ledger jaap */
@@ -154,36 +195,49 @@ p {
 }
 .ledger-date {
   font-weight: 500;
-  color: #444;
+  color: var(--ink-muted);
   letter-spacing: 0.2px;
 }
 
 /* Sunday date only */
 .ledger-row.sunday .ledger-date {
-  color: #b00020;
+  color: var(--maroon-red);
   font-weight: 600;
 }
 
-/* Notes (hidden by default) */
+/* Notes (collapsed by default — animated open via max-height rather than
+   display:none/block, so expanding a row feels smooth instead of an
+   instant pop). max-height is a generous cap, not a real content height,
+   since a single-element CSS-only transition can't target "auto". */
 .ledger-notes {
-  display: none;
-  margin-top: 6px;
-  padding: 6px 4px;
+  max-height: 0;
+  overflow: hidden;
+  padding: 0 4px;
+  margin-top: 0;
   font-size: 0.9rem;
-  color: #555;
+  color: var(--ink-muted);
   line-height: 1.4;
+  transition: max-height 0.35s var(--ease-premium), padding 0.35s var(--ease-premium), margin 0.35s var(--ease-premium);
 }
 
 /* Expanded state */
 .ledger-row.expanded .ledger-notes {
-  display: block;
+  max-height: 600px;
+  padding: 6px 4px;
+  margin-top: 6px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ledger-notes {
+    transition: none;
+  }
 }
 
 /* Chevron indicator */
 .ledger-chevron {
   font-size: 0.9rem;
-  color: #999;
-  transition: transform 0.15s ease, color 0.15s ease;
+  color: var(--ink-muted);
+  transition: transform 0.25s var(--ease-premium), color 0.25s var(--ease-premium);
   cursor: pointer;
   user-select: none;
 }
@@ -191,18 +245,67 @@ p {
 /* Expanded state chevron */
 .ledger-row.expanded .ledger-chevron {
   transform: rotate(90deg); /* ▸ → ▾ */
-  color: #555;
+  color: var(--maroon);
 }
 /* Milestone (Crore Jaap) */
 .milestone {
+  position: relative;
+  overflow: visible;
   margin-bottom: 6px;
-  padding: 4px 8px;
+  padding: 6px 10px;
   font-size: 0.85rem;
   font-weight: 600;
-  color: #5a4a00;
-  background-color: #f6f1d5; /* soft golden parchment */
-  border-left: 4px solid #c9b458;
-  border-radius: 4px;
+  color: var(--gold-light);
+  background: linear-gradient(90deg, var(--maroon-deep), var(--maroon));
+  border-left: 4px solid var(--gold);
+  border-radius: 6px;
+}
+
+/* ---------- Milestone celebration: falling rose & marigold petals ----------
+   Purely decorative <span class="petal petal-rose|petal-marigold"> elements
+   are added by app.js inside this same conditionally-rendered banner (see
+   the Crore-crossing branch) — no new state, function, or trigger, just
+   extra spans in the template string already being built. */
+.petal {
+  position: absolute;
+  top: -6px;
+  left: var(--petal-left, 50%);
+  width: 8px;
+  height: 8px;
+  border-radius: 0 70% 0 70%;
+  pointer-events: none;
+  opacity: 0;
+  animation: petal-fall var(--petal-duration, 1.6s) var(--petal-delay, 0s) ease-in forwards;
+}
+
+.petal-rose {
+  background: #d46a8c;
+}
+
+.petal-marigold {
+  background: #e8961f;
+}
+
+@keyframes petal-fall {
+  0% {
+    opacity: 0;
+    transform: translateY(0) rotate(0deg);
+  }
+  10% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(70px) rotate(var(--petal-rotation, 220deg));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .petal {
+    animation: none;
+    opacity: 0.85;
+    top: 4px;
+  }
 }
 /* Reflection Summary */
 #reflection-summary {
@@ -210,10 +313,12 @@ p {
 }
 
 .reflection-box {
-  background-color: #f7f3dd; /* warm parchment */
+  background: linear-gradient(180deg, var(--surface), var(--surface-2));
+  border: 1px solid var(--gold-hairline);
   padding: 14px 16px;
-  border-radius: 10px;
-  border-left: 5px solid #c9b458;
+  border-radius: 14px;
+  border-left: 5px solid var(--gold);
+  box-shadow: 0 10px 24px -12px rgba(108, 28, 39, 0.28);
   font-size: 0.95rem;
 }
 
@@ -224,44 +329,47 @@ p {
 .legend {
   margin-top: 8px;
   font-size: 0.8rem;
-  color: #777;
+  color: var(--ink-muted);
 }
 /* Inline edit focus */
 .edit-jaap,
 .edit-notes {
   width: 100%;
   padding: 6px 8px;
-  border-radius: 6px;
-  border: 1px solid #ccc;
+  border-radius: 8px;
+  border: 1px solid var(--gold-hairline);
   font-size: 0.95rem;
-  background-color: #fffef9;
+  background-color: #fffdf7;
+  color: var(--ink);
 }
 
 .edit-jaap:focus,
 .edit-notes:focus {
   outline: none;
-  border-color: #c9b458;      /* soft gold */
-  box-shadow: 0 0 0 2px rgba(201, 180, 88, 0.25);
+  border-color: var(--gold);
+  box-shadow: 0 0 0 2px rgba(201, 162, 39, 0.25);
 }
 .save-entry,
 #update-today {
-  padding: 6px 14px;
-  border-radius: 8px;
-  border: 1px solid #d6cfa5;
-  background-color: #f7f2dc;
-  color: #4a3f18;
+  padding: 8px 18px;
+  border-radius: 10px;
+  border: none;
+  background: linear-gradient(180deg, var(--maroon), var(--maroon-deep));
+  color: var(--gold-light);
   font-size: 0.9rem;
+  font-weight: 600;
+  box-shadow: 0 6px 14px -6px rgba(108, 28, 39, 0.6);
   cursor: pointer;
 }
 
 .save-entry:hover,
 #update-today:hover {
-  background-color: #efe7c3;
+  background: linear-gradient(180deg, #7d2530, var(--maroon-deep));
 }
 
 .save-entry:active,
 #update-today:active {
-  background-color: #e5dbac;
+  background: var(--maroon-deep);
 }
 body {
   overscroll-behavior-y: contain;
@@ -279,8 +387,8 @@ body {
   margin-top: 16px;
   padding: 6px 4px;
   font-weight: 600;
-  color: #6b5b2d;
-  border-bottom: 1px solid #e6ddc4;
+  color: var(--maroon);
+  border-bottom: 1px solid var(--gold-hairline);
 }
 .ledger-year-header {
   display: flex;
@@ -288,8 +396,9 @@ body {
   align-items: center;
   padding: 10px;
   margin-top: 12px;
-  background: #f4ecd8;
-  border-radius: 6px;
+  background: var(--surface);
+  border: 1px solid var(--gold-hairline);
+  border-radius: 8px;
   font-weight: 600;
   cursor: pointer;
 }
@@ -322,7 +431,7 @@ body {
 }
 .milestone-gap {
   margin-left: 6px;
-  color: #666;
+  color: var(--ink-muted);
   font-size: 0.9em;
 }
 
@@ -330,23 +439,23 @@ body {
 .progress-track {
   margin-top: 6px;
   height: 10px;
-  background-color: #e8e0c4;
+  background-color: var(--gold-hairline);
   border-radius: 999px;
   overflow: hidden;
 }
 
 .progress-fill {
   height: 100%;
-  background: linear-gradient(90deg, #c9b458, #e8d07a);
+  background: linear-gradient(90deg, #9c6a12, #d9a63a 55%, var(--gold-light));
   border-radius: 999px;
-  transition: width 0.4s ease;
+  transition: width 0.4s var(--ease-premium);
   min-width: 2px;
 }
 
 .progress-label {
   margin-top: 4px;
   font-size: 0.8rem;
-  color: #888;
+  color: var(--ink-muted);
 }
 
 /* Jump-to-year bar */
@@ -359,7 +468,7 @@ body {
 
 .jump-label {
   font-size: 0.82rem;
-  color: #888;
+  color: var(--ink-muted);
   white-space: nowrap;
 }
 
@@ -367,9 +476,9 @@ body {
   flex: 1;
   padding: 6px 10px;
   border-radius: 8px;
-  border: 1px solid #d6cfa5;
-  background-color: #f7f2dc;
-  color: #4a3f18;
+  border: 1px solid var(--gold-hairline);
+  background-color: var(--surface);
+  color: var(--maroon);
   font-size: 0.88rem;
   cursor: pointer;
   appearance: auto;
@@ -377,8 +486,8 @@ body {
 
 .jump-select:focus {
   outline: none;
-  border-color: #c9b458;
-  box-shadow: 0 0 0 2px rgba(201, 180, 88, 0.25);
+  border-color: var(--gold);
+  box-shadow: 0 0 0 2px rgba(201, 162, 39, 0.25);
 }
 
 /* Locked entry indicator */
@@ -386,11 +495,11 @@ body {
   display: block;
   margin-top: 8px;
   padding: 4px 10px;
-  background-color: #f0ece0;
-  border: 1px solid #d6cfa5;
+  background-color: var(--surface-2);
+  border: 1px solid var(--gold-hairline);
   border-radius: 6px;
   font-size: 0.82rem;
-  color: #999;
+  color: var(--ink-muted);
   font-style: italic;
   letter-spacing: 0.2px;
 }
@@ -401,14 +510,14 @@ body {
   bottom: 32px;
   left: 50%;
   transform: translateX(-50%) translateY(12px);
-  background-color: #4a3f18;
-  color: #fff;
+  background-color: var(--maroon-deep);
+  color: var(--gold-light);
   padding: 10px 22px;
   border-radius: 20px;
   font-size: 0.88rem;
   font-weight: 500;
   opacity: 0;
-  transition: opacity 0.25s ease, transform 0.25s ease;
+  transition: opacity 0.25s var(--ease-premium), transform 0.25s var(--ease-premium);
   z-index: 9500;
   pointer-events: none;
   white-space: nowrap;
@@ -427,7 +536,7 @@ body {
   /* Use viewport units to ensure it hits all 4 corners */
   width: 100vw;
   height: 100vh;
-  background-color: #fbf6e8;
+  background-color: var(--cream);
   display: flex;
   justify-content: center;
   align-items: center;
@@ -446,12 +555,53 @@ body.bg-mandala #splash-screen {
   background-repeat: repeat;
 }
 
+#splash-screen::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 50% 45%, rgba(233, 197, 101, 0.35), transparent 60%);
+  opacity: 0;
+  animation: splash-glow 1.4s ease-out both;
+}
+
 #splash-screen img {
   /* This is the magic part for full screen */
+  position: relative;
   width: 100%;
   height: 100%;
   object-fit: cover; /* Crops the sides slightly to ensure no gaps at top/bottom */
   object-position: center; /* Keeps Hanuman centered while cropping sides */
+  animation: splash-entrance 0.7s var(--ease-premium) both;
+}
+
+@keyframes splash-entrance {
+  from {
+    opacity: 0;
+    transform: scale(1.04);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes splash-glow {
+  0% {
+    opacity: 0;
+  }
+  40% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #splash-screen img,
+  #splash-screen::before {
+    animation: none;
+  }
 }
 
 /* Ensure the body doesn't show scrollbars while splash is active */
@@ -475,14 +625,22 @@ body.loading {
   width: 85%;
   max-width: 320px;
   height: 100vh;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
 
-  background: #f9f4e6;
+  background: var(--cream);
   box-shadow: -4px 0 12px rgba(0, 0, 0, 0.2);
 
   transform: translateX(100%);
-  transition: transform 0.3s ease;
+  transition: transform 0.35s var(--ease-premium);
 
   z-index: 9000;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #maintenance-drawer {
+    transition: none;
+  }
 }
 
 /* Drawer visible */
@@ -504,9 +662,10 @@ body.loading {
   height: 44px;
 
   border-radius: 50%;
-  border: none;
+  border: 1px solid var(--gold-hairline);
 
-  background: #f4ecd8;
+  background: var(--surface);
+  color: var(--maroon);
   font-size: 1.2rem;
   cursor: pointer;
 
@@ -517,11 +676,15 @@ body.loading {
 .mala-toggle-wrap {
   position: fixed;
   top: calc(env(safe-area-inset-top, 0px) + 15px);
-  right: 60px;
+  right: 66px;
 
   display: flex;
   align-items: center;
   gap: 6px;
+  padding: 5px 9px;
+  border-radius: 999px;
+  background: var(--surface);
+  border: 1px solid var(--gold-hairline);
 
   z-index: 9100;
 }
@@ -567,9 +730,9 @@ body.loading {
   right: 0;
   bottom: 0;
 
-  background-color: #d6cfa5;
+  background-color: var(--gold-hairline);
   border-radius: 34px;
-  transition: background-color 0.2s ease;
+  transition: background-color 0.2s var(--ease-premium);
 }
 
 .mala-toggle-slider::before {
@@ -609,7 +772,7 @@ body.loading {
 
 .prediction-pace {
   margin-left: 4px;
-  color: #777;
+  color: var(--ink-muted);
   font-size: 0.85em;
 }
 
@@ -622,11 +785,12 @@ body.loading {
   width: 100vw;
   height: 100vh;
 
-  background: #fbf6e8;
+  background: var(--cream);
   overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
 
   transform: translateY(100%);
-  transition: transform 0.3s ease;
+  transition: transform 0.35s var(--ease-premium);
 
   z-index: 9700;
   padding: 16px;
@@ -635,6 +799,12 @@ body.loading {
 
 .fullscreen-page.open {
   transform: translateY(0);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fullscreen-page {
+    transition: none;
+  }
 }
 
 .fullscreen-header {
@@ -646,16 +816,18 @@ body.loading {
 
 .fullscreen-header h2 {
   margin: 0;
+  font-family: var(--font-heading);
   font-size: 1.2rem;
-  color: #5a4a00;
+  color: var(--maroon);
 }
 
 .fullscreen-close {
   width: 40px;
   height: 40px;
   border-radius: 50%;
-  border: none;
-  background: #f4ecd8;
+  border: 1px solid var(--gold-hairline);
+  background: var(--surface);
+  color: var(--maroon);
   font-size: 1rem;
   cursor: pointer;
 }
@@ -665,14 +837,16 @@ body.loading {
 }
 
 .sankalpa-intro {
-  color: #666;
+  color: var(--ink-muted);
 }
 
 .sankalpa-view {
-  background-color: #f7f3dd;
+  background: linear-gradient(180deg, var(--surface), var(--surface-2));
+  border: 1px solid var(--gold-hairline);
   padding: 14px 16px;
-  border-radius: 10px;
-  border-left: 5px solid #c9b458;
+  border-radius: 14px;
+  border-left: 5px solid var(--gold);
+  box-shadow: 0 10px 24px -12px rgba(108, 28, 39, 0.28);
   margin-bottom: 16px;
 }
 
@@ -683,13 +857,13 @@ body.loading {
 }
 
 .sankalpa-context-display {
-  color: #666;
+  color: var(--ink-muted);
   margin: 0 0 8px 0;
 }
 
 .sankalpa-date-display {
   font-size: 0.85rem;
-  color: #888;
+  color: var(--ink-muted);
   margin: 0;
 }
 
@@ -702,15 +876,16 @@ body.loading {
 
   font-size: 0.9rem;
   border-radius: 8px;
-  border: 1px solid #d6cfa5;
+  border: 1px solid var(--gold-hairline);
 
-  background-color: #f7f2dc;
-  color: #4a3f18;
+  background-color: var(--surface);
+  color: var(--maroon);
   cursor: pointer;
+  transition: background-color 0.2s var(--ease-premium);
 }
 
 .maintenance-btn:hover {
-  background-color: #efe7c3;
+  background-color: var(--surface-2);
 }
 
 /* Background theme swatches */
@@ -725,7 +900,7 @@ body.loading {
   padding: 4px;
   border-radius: 8px;
   border: 2px solid transparent;
-  background-color: #f7f2dc;
+  background-color: var(--surface);
   cursor: pointer;
 }
 
@@ -738,7 +913,7 @@ body.loading {
 }
 
 .background-swatch.active {
-  border-color: #c9b458;
+  border-color: var(--gold);
 }
 
 
