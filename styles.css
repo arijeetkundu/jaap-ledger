@@ -177,6 +177,15 @@ p {
   width: 100%;
 }
 
+/* Grid items default to min-width: auto, which lets their intrinsic
+   content size override the track size in some WebKit versions —
+   pinning min-width: 0 on every column keeps each one honestly
+   constrained to its assigned track, so the 1fr jaap column and the
+   flush-right sparkline column can't silently overflow/shift. */
+.ledger-main > * {
+  min-width: 0;
+}
+
 .ledger-jaap {
   text-align: center;
   font-weight: 600;
@@ -262,7 +271,7 @@ p {
 /* ---------- Milestone celebration: page-wide falling rose & marigold petals
    ----------
    #petal-overlay is a page-level, pointer-events:none layer (see
-   index.html). app.js's celebrateMilestone() populates it with ~32
+   index.html). app.js's celebrateMilestone() populates it with a batch of
    .petal-fly spans when the Today Card save just crossed a new Crore
    boundary, and removes them once they've finished falling. */
 #petal-overlay {
@@ -277,8 +286,8 @@ p {
   position: absolute;
   top: -5vh;
   left: var(--petal-left, 50%);
-  width: 10px;
-  height: 10px;
+  width: var(--petal-size, 10px);
+  height: var(--petal-size, 10px);
   border-radius: 0 70% 0 70%;
   opacity: 0;
   animation: petal-fall-page var(--fall-duration, 5s) var(--fall-delay, 0s) linear forwards;
@@ -292,9 +301,14 @@ p {
   background: #e8961f;
 }
 
-/* A real falling petal doesn't drop in a straight line — it sways side to
-   side as it tumbles. Each petal's --sway distance is randomized in JS so
-   32 petals read as a natural shower rather than a repeating pattern. */
+/* A real falling petal doesn't drop in a straight line, and a whole
+   shower of them doesn't move in unison — each one tumbles on its own
+   unpredictable path. Rather than one shared --sway value mirrored
+   left/right/left (which reads as a uniform zigzag when many petals fall
+   together), each petal gets 5 independently randomized horizontal
+   waypoints (--sway1..--sway5) and its own total rotation (--spin, random
+   magnitude AND direction) from app.js, so no two petals — and no visible
+   "cluster" of them — trace the same shape. */
 @keyframes petal-fall-page {
   0% {
     opacity: 0;
@@ -303,21 +317,24 @@ p {
   6% {
     opacity: 1;
   }
-  25% {
-    transform: translate(var(--sway), 27vh) rotate(90deg);
+  20% {
+    transform: translate(var(--sway1), 20vh) rotate(calc(var(--spin) * 0.2));
   }
-  50% {
-    transform: translate(calc(var(--sway) * -1), 52vh) rotate(180deg);
+  40% {
+    transform: translate(var(--sway2), 40vh) rotate(calc(var(--spin) * 0.4));
   }
-  75% {
-    transform: translate(var(--sway), 77vh) rotate(270deg);
+  60% {
+    transform: translate(var(--sway3), 60vh) rotate(calc(var(--spin) * 0.6));
+  }
+  80% {
+    transform: translate(var(--sway4), 80vh) rotate(calc(var(--spin) * 0.8));
   }
   94% {
     opacity: 1;
   }
   100% {
     opacity: 0;
-    transform: translate(0, 105vh) rotate(360deg);
+    transform: translate(var(--sway5), 105vh) rotate(var(--spin));
   }
 }
 

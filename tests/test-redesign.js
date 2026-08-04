@@ -85,18 +85,27 @@ function assert(label, condition) {
     const marigolds = petals.filter(p => p.classList.contains("petal-marigold")).length;
     const allIgnorePointerEvents = petals.every(p => getComputedStyle(p).pointerEvents === "none");
     const overlay = getComputedStyle(document.getElementById("petal-overlay"));
+    // Regression guard: each petal's 5 sway waypoints must be independently
+    // randomized, not one shared value mirrored left/right (which is what
+    // produced the "clusters following the same zigzag" look previously).
+    const distinctSwayCombos = new Set(
+      petals.map(p => ["--sway1", "--sway2", "--sway3", "--sway4", "--sway5"]
+        .map(prop => p.style.getPropertyValue(prop)).join("|"))
+    ).size;
     return {
       totalPetals: petals.length,
       roses,
       marigolds,
       allIgnorePointerEvents,
       overlayPosition: overlay.position,
+      distinctSwayCombos,
     };
   });
-  assert("crossing update immediately populates #petal-overlay with 32 petals (no row expansion needed)", celebration.totalPetals === 32);
-  assert("petals are evenly split rose/marigold (16/16)", celebration.roses === 16 && celebration.marigolds === 16);
+  assert("crossing update immediately populates #petal-overlay with 96 petals (no row expansion needed)", celebration.totalPetals === 96);
+  assert("petals are evenly split rose/marigold (48/48)", celebration.roses === 48 && celebration.marigolds === 48);
   assert("petals never intercept taps (pointer-events: none)", celebration.allIgnorePointerEvents);
   assert("#petal-overlay is a fixed, page-level layer", celebration.overlayPosition === "fixed");
+  assert("petal fall paths are independently randomized, not a shared shape", celebration.distinctSwayCombos > 90);
 
   // A save that does NOT cross a new Crore boundary must not trigger any petals.
   await page.reload({ waitUntil: "networkidle0" });

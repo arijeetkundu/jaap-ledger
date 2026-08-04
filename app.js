@@ -82,24 +82,39 @@ function celebrateMilestone() {
   const overlay = document.getElementById("petal-overlay");
   if (!overlay) return;
 
-  const PETAL_COUNT = 32;
+  const PETAL_COUNT = 96;
   const MIN_DURATION = 4.5;
-  const MAX_DURATION = 7;
+  const MAX_DURATION = 7.5;
   let maxDurationMs = 0;
+
+  // Random horizontal drift (px) for one of a petal's 5 independent
+  // waypoints — a real petal tumbling through the air changes direction
+  // unpredictably, not in a neat mirrored left-right-left pattern.
+  const randomSway = () => `${(Math.random() * 2 - 1) * (20 + Math.random() * 60)}px`;
 
   for (let i = 0; i < PETAL_COUNT; i++) {
     const petal = document.createElement("span");
     petal.className = "petal-fly " + (i % 2 === 0 ? "petal-rose" : "petal-marigold");
 
     const left = Math.random() * 100;
-    const sway = 30 + Math.random() * 70; // px of horizontal drift each way
+    const size = 7 + Math.random() * 6;
     const duration = MIN_DURATION + Math.random() * (MAX_DURATION - MIN_DURATION);
-    const delay = Math.random() * 1.2;
+    const delay = Math.random() * 1.8;
+    // Total rotation over the whole fall: random magnitude and direction,
+    // so petals don't all spin the same way at the same rate.
+    const spinDirection = Math.random() < 0.5 ? -1 : 1;
+    const spin = spinDirection * (180 + Math.random() * 720);
 
     petal.style.setProperty("--petal-left", `${left}%`);
-    petal.style.setProperty("--sway", `${sway}px`);
+    petal.style.setProperty("--petal-size", `${size}px`);
     petal.style.setProperty("--fall-duration", `${duration}s`);
     petal.style.setProperty("--fall-delay", `${delay}s`);
+    petal.style.setProperty("--spin", `${spin}deg`);
+    petal.style.setProperty("--sway1", randomSway());
+    petal.style.setProperty("--sway2", randomSway());
+    petal.style.setProperty("--sway3", randomSway());
+    petal.style.setProperty("--sway4", randomSway());
+    petal.style.setProperty("--sway5", randomSway());
 
     overlay.appendChild(petal);
     maxDurationMs = Math.max(maxDurationMs, (duration + delay) * 1000);
