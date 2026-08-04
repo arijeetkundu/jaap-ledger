@@ -133,9 +133,16 @@ p {
 }
 
 /* Ledger row */
+/* Block (not flex) stacking: .ledger-row's two children, .ledger-main (the
+   summary line) and .ledger-notes (the expandable detail below it), should
+   simply stack vertically full-width. display: flex here (default row
+   direction) was making them compete for horizontal space as flex
+   siblings instead — .ledger-main's width: 100% was shrinking based on
+   .ledger-notes' content width (which varies row to row: notes text,
+   milestone banner, edit form), which was the real cause of every ledger
+   alignment inconsistency reported, not the jaap count's own centering
+   rule. */
 .ledger-row {
-  display: flex;
-  justify-content: space-between;
   padding: 8px 4px;
   border-bottom: 1px solid rgba(122, 31, 43, 0.12);
   font-size: 0.95rem;
@@ -166,30 +173,61 @@ p {
   cursor: pointer;
 }
 
-/* Main row (date + jaap + sparkline) */
+/* Main row (date + jaap + sparkline). The jaap count is deliberately NOT
+   a grid item (see .ledger-jaap below) — it's taken out of grid flow
+   entirely and centered via absolute positioning against this container,
+   which is what lets it sit at the row's true horizontal center
+   independent of the grid's own column tracks. Giving a grid item
+   grid-column: 1 / -1 to span the whole row (tried first) instead
+   corrupts auto-placement: the other auto-placed siblings get pushed into
+   a new implicit row rather than sharing row 1, breaking the whole
+   layout — so the remaining three items are pinned to explicit column
+   numbers below to stay unaffected by jaap's removal from the flow. */
 .ledger-main {
+  position: relative;
   display: grid;
-  /* Date column sizes to its own text (auto) rather than a fixed width, so no
-     trailing slack skews the jaap column's center off to one side. */
   grid-template-columns: 20px auto 1fr 76px;
   align-items: center;
   column-gap: 12px;
   width: 100%;
 }
 
+.ledger-chevron {
+  grid-column: 1;
+}
+
+.ledger-date {
+  grid-column: 2;
+}
+
+.ledger-sparkline {
+  grid-column: 4;
+}
+
 /* Grid items default to min-width: auto, which lets their intrinsic
    content size override the track size in some WebKit versions —
-   pinning min-width: 0 on every column keeps each one honestly
-   constrained to its assigned track, so the 1fr jaap column and the
-   flush-right sparkline column can't silently overflow/shift. */
+   pinning min-width: 0 keeps date/sparkline honestly constrained to
+   their assigned track. */
 .ledger-main > * {
   min-width: 0;
 }
 
+/* Anchored to the true center of the whole row (not the leftover space
+   between date and sparkline) so date/count/sparkline are independently
+   left/center/right-justified across the full row width, with equal gaps
+   on both sides of the count regardless of how wide any of the three is. */
 .ledger-jaap {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
   text-align: center;
   font-weight: 600;
   letter-spacing: 0.3px;
+  max-width: 45%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 /* Sparkline cell */

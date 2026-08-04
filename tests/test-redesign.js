@@ -63,6 +63,44 @@ function assert(label, condition) {
     return bg.startsWith("linear-gradient") && bg.includes("108, 28, 39") && bg.includes("74, 17, 25");
   }
 
+  // ── Ledger row geometry: date left / count true-center / sparkline right ──
+  // Reproduces the exact overlap bug from the user's annotated screenshot:
+  // a wide (6-digit) raw jaap value must never visually collide with the
+  // date or the sparkline, and the count must sit at the true horizontal
+  // center of the whole row — not just "somewhere between" its neighbors.
+  console.log("\n=== Ledger row geometry (no overlap, true centering) ===");
+  const geomJaapField = await page.$("#today-jaap");
+  await geomJaapField.click({ clickCount: 3 });
+  await geomJaapField.type("118800"); // the exact value from the reported bug; doesn't cross a Crore boundary
+  await page.click("#update-today");
+  await new Promise(r => setTimeout(r, 500));
+
+  const geometry = await page.evaluate(() => {
+    const row = document.querySelector(".ledger-row");
+    const main = row.querySelector(".ledger-main");
+    const date = row.querySelector(".ledger-date");
+    const jaap = row.querySelector(".ledger-jaap");
+    const spark = row.querySelector(".ledger-sparkline");
+    const rMain = main.getBoundingClientRect();
+    const rDate = date.getBoundingClientRect();
+    const rJaap = jaap.getBoundingClientRect();
+    const rSpark = spark.getBoundingClientRect();
+    return {
+      jaapText: jaap.textContent.trim(),
+      mainWidth: rMain.width,
+      overlapsDate: rJaap.left < rDate.right,
+      overlapsSparkline: rJaap.right > rSpark.left,
+      sparklineFlushRight: Math.abs(rSpark.right - rMain.right) < 1,
+      centerDelta: Math.abs((rJaap.left + rJaap.width / 2) - (rMain.left + rMain.width / 2)),
+    };
+  });
+  assert("today's row shows the entered wide value", geometry.jaapText === "118800");
+  assert("row spans its full container width (not shrunk by a flex sibling)", geometry.mainWidth > 300);
+  assert("jaap count never overlaps the date", !geometry.overlapsDate);
+  assert("jaap count never overlaps the sparkline", !geometry.overlapsSparkline);
+  assert("sparkline sits flush against the row's right edge", geometry.sparklineFlushRight);
+  assert("jaap count is centered on the true row width (within 1px)", geometry.centerDelta < 1);
+
   // ── Milestone celebration: page-wide falling petals ─────────────────
   // Reproduces the exact repro used to diagnose the original "nothing
   // happened" report: type a Crore-crossing value into Today's jaap field
