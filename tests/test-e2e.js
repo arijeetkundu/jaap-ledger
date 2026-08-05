@@ -234,22 +234,19 @@ async function freshLoad(page, { clearStorage = false } = {}) {
     !!progress && !progress.trackBg.includes("220, 184, 101")
   );
 
-  // ── Splash screen rotation ─────────────────────────────────────────
-  console.log("\n=== Splash screen rotation ===");
+  // ── Splash screen default (Hanuman, no custom images configured) ────
+  // Full rotation behavior with custom images mixed in (never-repeat
+  // invariant across a multi-image pool) is covered in
+  // tests/test-splash-custom.js; here we just confirm the no-customs
+  // default is stable, since Hanuman is the sole fixed default image.
+  console.log("\n=== Splash screen default ===");
   const seen = [];
-  for (let i = 0; i < 6; i++) {
+  for (let i = 0; i < 3; i++) {
     await page.reload({ waitUntil: "networkidle0" });
     const chosen = await page.evaluate(() => localStorage.getItem("lastSplashImage"));
     seen.push(chosen);
   }
-  let consecutiveRepeat = false;
-  for (let i = 1; i < seen.length; i++) {
-    if (seen[i] === seen[i - 1]) consecutiveRepeat = true;
-  }
-  assert("splash image never repeats on consecutive opens", !consecutiveRepeat);
-  assert("all chosen images come from the known pool of 5", seen.every(id =>
-    ["hanuman", "chaturbhuj-rama", "lord-rama", "ram-rameshwar", "ram-darbar"].includes(id)
-  ));
+  assert("with no custom images configured, splash always shows the Hanuman default", seen.every(id => id === "hanuman"));
 
   await new Promise(r => setTimeout(r, SPLASH_WAIT_MS));
 

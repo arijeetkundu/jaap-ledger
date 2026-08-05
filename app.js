@@ -5,84 +5,53 @@ let backgroundChoice = localStorage.getItem("backgroundChoice") || "mandala";
 document.body.classList.add("bg-" + backgroundChoice);
 
 // ---------- Splash Screen Rotation ----------
-const SPLASH_IMAGES = [
-  { id: "hanuman", webp: "splash/hanuman-splash.webp", png: "splash/hanuman-splash.png", alt: "Hanuman meditating" },
-  { id: "chaturbhuj-rama", webp: "splash/chaturbhuj-rama.webp", png: "splash/chaturbhuj-rama.png", alt: "Chaturbhuj Rama" },
-  { id: "lord-rama", webp: "splash/lord-rama.webp", png: "splash/lord-rama.png", alt: "Lord Rama" },
-  { id: "ram-rameshwar", webp: "splash/ram-rameshwar.webp", png: "splash/ram-rameshwar.png", alt: "Ram at Rameshwar" },
-  { id: "ram-darbar", webp: "splash/ram-darbar.webp", png: "splash/ram-darbar.png", alt: "Ram Darbar" },
-];
+// Hanuman is a fixed, always-present default — not a "slot," never stored,
+// never replaceable. Up to 4 additional slots hold the user's own pictures;
+// whatever number are actually filled (0-4) rotates alongside Hanuman.
+const SPLASH_DEFAULT_IMAGE = {
+  id: "hanuman",
+  webp: "splash/hanuman-splash.webp",
+  png: "splash/hanuman-splash.png",
+  alt: "Hanuman meditating",
+};
+const SPLASH_CUSTOM_SLOT_COUNT = 4;
 
-// ---------- Custom splash image slots ----------
-// A user can replace any of the 5 rotation slots with their own picture.
-// Two-tier storage keeps startup cheap: `splashSlots` is a few hundred
-// bytes of metadata read on every launch; the actual (larger) image data
-// lives under its own `splashImage:slotN` key, read only for the one slot
-// actually chosen that launch. If `splashSlots` is absent, behavior is
-// byte-for-byte identical to the original 5-bundled-image rotation.
-function defaultSplashSlots() {
-  return SPLASH_IMAGES.map((img) => ({ id: img.id, custom: false }));
-}
-
-function resolveSplashSlots() {
-  let slots = null;
-  try {
-    const raw = localStorage.getItem("splashSlots");
-    slots = raw ? JSON.parse(raw) : null;
-  } catch (e) {
-    slots = null;
-  }
-  if (!Array.isArray(slots) || slots.length !== 5) {
-    slots = defaultSplashSlots();
-  }
-  // Normalize entries defensively so one corrupt entry can't break the rest.
-  return slots.map((entry, i) => {
-    if (entry && typeof entry === "object" && typeof entry.id === "string") {
-      return { id: entry.id, custom: !!entry.custom };
-    }
-    return { id: SPLASH_IMAGES[i].id, custom: false };
-  });
-}
-
-function saveSplashSlots(slots) {
-  localStorage.setItem("splashSlots", JSON.stringify(slots));
-}
-
-// Resolves one slot entry into something renderable. A custom slot whose
-// data URL is missing or corrupt falls back to that slot's bundled default
-// so a broken image can never actually render.
-function resolveSplashRenderable(entry, slotIndex) {
-  const bundledDefault = SPLASH_IMAGES[slotIndex];
-  if (entry.custom) {
+// A slot's filled/empty state is just "does this key hold a valid data
+// URL" — no separate metadata store to keep in sync.
+function resolveSplashCustomSlots() {
+  const slots = [];
+  for (let i = 0; i < SPLASH_CUSTOM_SLOT_COUNT; i++) {
     let dataUrl = null;
     try {
-      dataUrl = localStorage.getItem("splashImage:slot" + slotIndex);
+      dataUrl = localStorage.getItem("splashImage:custom" + i);
     } catch (e) {
       dataUrl = null;
     }
-    if (dataUrl && dataUrl.indexOf("data:image/") === 0) {
-      return { id: entry.id, custom: true, dataUrl, alt: "Your custom splash image" };
-    }
-    return {
-      id: bundledDefault.id,
-      custom: false,
-      webp: bundledDefault.webp,
-      png: bundledDefault.png,
-      alt: bundledDefault.alt,
-    };
+    const filled = !!dataUrl && dataUrl.indexOf("data:image/") === 0;
+    slots.push({ filled, dataUrl: filled ? dataUrl : null });
   }
-  const bundled = SPLASH_IMAGES.find((img) => img.id === entry.id) || bundledDefault;
-  return { id: bundled.id, custom: false, webp: bundled.webp, png: bundled.png, alt: bundled.alt };
+  return slots;
+}
+
+function resolveSplashRotationPool() {
+  const pool = [
+    { id: SPLASH_DEFAULT_IMAGE.id, custom: false, webp: SPLASH_DEFAULT_IMAGE.webp, png: SPLASH_DEFAULT_IMAGE.png, alt: SPLASH_DEFAULT_IMAGE.alt },
+  ];
+  resolveSplashCustomSlots().forEach((slot, i) => {
+    if (slot.filled) {
+      pool.push({ id: "custom" + i, custom: true, dataUrl: slot.dataUrl, alt: "Your custom splash image" });
+    }
+  });
+  return pool;
 }
 
 (function chooseSplashImage() {
-  const slots = resolveSplashSlots();
-  const renderables = slots.map((entry, i) => resolveSplashRenderable(entry, i));
+  const pool = resolveSplashRotationPool();
 
   const lastId = localStorage.getItem("lastSplashImage");
-  const candidates = renderables.filter((r) => r.id !== lastId);
-  const pool = candidates.length > 0 ? candidates : renderables;
-  const chosen = pool[Math.floor(Math.random() * pool.length)];
+  const candidates = pool.filter((r) => r.id !== lastId);
+  const chosenFrom = candidates.length > 0 ? candidates : pool;
+  const chosen = chosenFrom[Math.floor(Math.random() * chosenFrom.length)];
 
   const source = document.getElementById("splash-source");
   const img = document.getElementById("splash-img");
@@ -1399,44 +1368,28 @@ async function processSplashImage(file) {
   return dataUrl;
 }
 
-function setSplashSlotCustom(slotIndex, dataUrl) {
-  const slots = resolveSplashSlots();
-  const previousEntry = slots[slotIndex];
-  const previousDataUrl = previousEntry.custom
-    ? localStorage.getItem("splashImage:slot" + slotIndex)
-    : null;
+function setCustomSplashImage(slotIndex, dataUrl) {
+  const key = "splashImage:custom" + slotIndex;
+  const previousDataUrl = localStorage.getItem(key);
   try {
-    localStorage.setItem("splashImage:slot" + slotIndex, dataUrl);
-    slots[slotIndex] = { id: "slot" + slotIndex, custom: true };
-    saveSplashSlots(slots);
+    localStorage.setItem(key, dataUrl);
   } catch (e) {
-    // Roll back so a quota error never leaves slot metadata and image data
-    // out of sync.
+    // Roll back so a quota error never leaves a slot half-written.
     if (previousDataUrl !== null) {
-      try { localStorage.setItem("splashImage:slot" + slotIndex, previousDataUrl); } catch (e2) {}
+      try { localStorage.setItem(key, previousDataUrl); } catch (e2) {}
     }
     throw new Error("Not enough storage space to save this image.");
   }
 }
 
-function resetSplashSlot(slotIndex) {
-  const slots = resolveSplashSlots();
-  slots[slotIndex] = { id: SPLASH_IMAGES[slotIndex].id, custom: false };
-  saveSplashSlots(slots);
+function removeCustomSplashImage(slotIndex) {
   try {
-    localStorage.removeItem("splashImage:slot" + slotIndex);
+    localStorage.removeItem("splashImage:custom" + slotIndex);
   } catch (e) {}
 }
 
-function resetAllSplashSlots() {
-  try {
-    localStorage.removeItem("splashSlots");
-  } catch (e) {}
-  for (let i = 0; i < 5; i++) {
-    try {
-      localStorage.removeItem("splashImage:slot" + i);
-    } catch (e) {}
-  }
+function removeAllCustomSplashImages() {
+  for (let i = 0; i < SPLASH_CUSTOM_SLOT_COUNT; i++) removeCustomSplashImage(i);
 }
 
 let pendingSplashSlot = null;
@@ -1444,38 +1397,60 @@ let pendingSplashSlot = null;
 function renderSplashSlotUI() {
   const wrap = document.getElementById("splash-slot-wrap");
   if (!wrap) return;
-  const slots = resolveSplashSlots();
   wrap.innerHTML = "";
 
-  slots.forEach((entry, i) => {
-    const renderable = resolveSplashRenderable(entry, i);
+  // Tile 0: Hanuman, locked — always shown, never a file-picker trigger.
+  const lockedBtn = document.createElement("button");
+  lockedBtn.type = "button";
+  lockedBtn.className = "splash-slot splash-slot-locked";
+  lockedBtn.title = "Hanuman is the default image and can't be changed";
 
+  const lockedImg = document.createElement("img");
+  lockedImg.src = SPLASH_DEFAULT_IMAGE.webp;
+  lockedImg.alt = "";
+  lockedBtn.appendChild(lockedImg);
+
+  const lockBadge = document.createElement("span");
+  lockBadge.className = "splash-slot-lock";
+  lockBadge.textContent = "🔒";
+  lockedBtn.appendChild(lockBadge);
+
+  lockedBtn.addEventListener("click", () => {
+    showToast("Hanuman is the default image and can't be changed");
+  });
+  wrap.appendChild(lockedBtn);
+
+  // Tiles 1-4: up to 4 user-uploaded slots, each independently empty or filled.
+  resolveSplashCustomSlots().forEach((slot, i) => {
     const btn = document.createElement("button");
     btn.type = "button";
     btn.className = "splash-slot";
     btn.dataset.slot = String(i);
-    btn.title = renderable.custom
-      ? "Custom image — tap to replace"
-      : `${renderable.alt} — tap to customize`;
 
-    const img = document.createElement("img");
-    img.src = renderable.custom ? renderable.dataUrl : renderable.webp;
-    img.alt = "";
-    btn.appendChild(img);
-
-    if (renderable.custom) {
+    if (slot.filled) {
       btn.classList.add("splash-slot-custom");
-      const resetBadge = document.createElement("span");
-      resetBadge.className = "splash-slot-reset";
-      resetBadge.textContent = "✕";
-      resetBadge.title = "Reset to default";
-      resetBadge.addEventListener("click", (e) => {
+      btn.title = "Custom image — tap to replace";
+
+      const img = document.createElement("img");
+      img.src = slot.dataUrl;
+      img.alt = "";
+      btn.appendChild(img);
+
+      const removeBadge = document.createElement("span");
+      removeBadge.className = "splash-slot-reset";
+      removeBadge.textContent = "✕";
+      removeBadge.title = "Remove image";
+      removeBadge.addEventListener("click", (e) => {
         e.stopPropagation();
-        resetSplashSlot(i);
+        removeCustomSplashImage(i);
         renderSplashSlotUI();
-        showToast("Splash image reset");
+        showToast("Image removed");
       });
-      btn.appendChild(resetBadge);
+      btn.appendChild(removeBadge);
+    } else {
+      btn.classList.add("splash-slot-empty");
+      btn.title = "Add your own picture";
+      btn.textContent = "+";
     }
 
     btn.addEventListener("click", () => {
@@ -1501,7 +1476,7 @@ document.getElementById("splash-image-input")?.addEventListener("change", async 
 
   try {
     const dataUrl = await processSplashImage(file);
-    setSplashSlotCustom(slotIndex, dataUrl);
+    setCustomSplashImage(slotIndex, dataUrl);
     renderSplashSlotUI();
     showToast("Splash image updated ✓");
   } catch (err) {
@@ -1513,9 +1488,14 @@ document.getElementById("splash-image-input")?.addEventListener("change", async 
 });
 
 document.getElementById("splash-images-reset-btn")?.addEventListener("click", () => {
-  resetAllSplashSlots();
+  const anyFilled = resolveSplashCustomSlots().some((slot) => slot.filled);
+  if (!anyFilled) {
+    showToast("No custom images to remove");
+    return;
+  }
+  removeAllCustomSplashImages();
   renderSplashSlotUI();
-  showToast("Splash images reset to defaults");
+  showToast("Custom images removed");
 });
 
 renderSplashSlotUI();

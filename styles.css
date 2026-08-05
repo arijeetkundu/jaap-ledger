@@ -1100,4 +1100,39 @@ body.loading {
   cursor: pointer;
 }
 
+/* Empty custom slot: an inviting "add your own picture" placeholder */
+.splash-slot-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-style: dashed;
+  color: var(--ink-muted);
+  font-size: 1.6rem;
+  font-weight: 300;
+  line-height: 1;
+  background-color: transparent;
+}
+
+/* Locked default slot: always shown, never a file-picker trigger */
+.splash-slot-locked {
+  cursor: default;
+  border-color: var(--gold-hairline);
+}
+
+.splash-slot-lock {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  width: 18px;
+  height: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: var(--surface);
+  font-size: 0.7rem;
+  line-height: 1;
+  pointer-events: none;
+}
+
 
