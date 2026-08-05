@@ -524,17 +524,24 @@ body {
 }
 
 /* Milestone progress bar */
+/* The empty track is a light maroon-tinted groove and the fill is a deep
+   maroon->gold gradient, so the filled portion is clearly darker than the
+   unfilled one at every point. Previously the track was a mid gold
+   (--gold-hairline) while the fill *ended* on a lighter gold
+   (--gold-light) — the leading edge of "filled" was lighter than "empty",
+   which is what made progress nearly impossible to read. */
 .progress-track {
   margin-top: 6px;
-  height: 10px;
-  background-color: var(--gold-hairline);
+  height: 12px;
+  background-color: rgba(108, 28, 39, 0.12);
+  box-shadow: inset 0 1px 2px rgba(108, 28, 39, 0.15);
   border-radius: 999px;
   overflow: hidden;
 }
 
 .progress-fill {
   height: 100%;
-  background: linear-gradient(90deg, #9c6a12, #d9a63a 55%, var(--gold-light));
+  background: linear-gradient(90deg, var(--maroon), var(--gold));
   border-radius: 999px;
   transition: width 0.4s var(--ease-premium);
   min-width: 2px;
@@ -659,26 +666,32 @@ body {
    exact box, so they're all rendered at the same size regardless of
    which one is currently loaded. */
 #splash-screen img {
-  /* aspect-ratio ~2:3 matches the 5 deity source images' own ratio
-     (measured 0.665-0.690) so object-fit: contain shows each one in
-     full with no side-cropping (a fixed independent width+height, tried
-     first, forced a ~0.50 box ratio that cropped the left/right edges
-     to fill it). Width stays a deliberate 74% (not measured from the
-     art — keeps the frame off the screen edges); height is derived from
-     the ratio, which works out to roughly 51% of viewport height on a
-     typical phone — comfortably inside the ~20%-88% "wall" zone
-     measured from the background art. Centered on that zone's vertical
-     midpoint (~54%) via top/left + transform, rather than the previous
-     fixed insets, since height is no longer a fixed percentage. */
+  /* height: auto (rather than a fixed aspect-ratio) lets the frame adopt
+     each image's OWN ratio, so there's no letterbox and no cropping. A
+     fixed aspect-ratio: 2/3 was tried first, but the 5 deity images range
+     0.665-0.690, so anything wider than 0.667 got letterboxed — Ram
+     Darbar (0.690) showed a measured 15px white band. This also means an
+     arbitrary image of any shape displays undistorted, which is what the
+     upcoming user-supplied splash images need.
+
+     Width stays a deliberate 74% (not measured from the art — it keeps
+     the frame clear of the screen edges). max-height is a safety cap that
+     doesn't engage for the current images (~48-51% tall); it exists so a
+     very tall image shrinks proportionally instead of overflowing the
+     background art's ~20%-88% "wall" panel. Centered on that panel's
+     vertical midpoint (~54%). */
   position: absolute;
   top: 54%;
   left: 50%;
   width: 74%;
-  aspect-ratio: 2 / 3;
+  height: auto;
+  max-height: 62%;
   /* Static fallback so centering still holds if the animation is disabled
      (prefers-reduced-motion below sets animation: none, which would
      otherwise drop this transform along with the animation). */
   transform: translate(-50%, -50%);
+  /* No-op while the box matches the image's ratio, but guarantees no
+     distortion if max-height ever clamps. */
   object-fit: contain;
   object-position: center;
   background-color: var(--surface);

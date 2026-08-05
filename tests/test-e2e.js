@@ -168,10 +168,20 @@ async function freshLoad(page, { clearStorage = false } = {}) {
     const rS = s.getBoundingClientRect();
     const rImg = img.getBoundingClientRect();
     const cs = getComputedStyle(img);
+    // Compare against the CONTENT box (border-box minus the border on each
+    // side), since that's the area the image actually renders into.
+    const border = parseFloat(cs.borderTopWidth) * 2;
+    const contentW = rImg.width - border;
+    const contentH = rImg.height - border;
+    const naturalRatio = img.naturalWidth / img.naturalHeight;
     return {
       borderWidth: parseFloat(cs.borderTopWidth),
       objectFit: cs.objectFit,
-      boxRatio: rImg.width / rImg.height,
+      contentRatio: contentW / contentH,
+      naturalRatio,
+      // How much empty band (letterbox) exists above+below the image
+      // inside its own frame. 0 means the frame hugs the image exactly.
+      letterboxPx: contentH - contentW / naturalRatio,
       insetTopPct: ((rImg.top - rS.top) / rS.height) * 100,
       insetLeftPct: ((rImg.left - rS.left) / rS.width) * 100,
       insetBottomPct: ((rS.bottom - rImg.bottom) / rS.height) * 100,
@@ -185,15 +195,43 @@ async function freshLoad(page, { clearStorage = false } = {}) {
       framing.insetTopPct > 5 && framing.insetLeftPct > 5 &&
       framing.insetBottomPct > 5 && framing.insetRightPct > 5
   );
-  // Regression guard for the reported left/right-cropping bug: the frame's
-  // own box ratio must match the deity images' natural ~2:3 ratio (all 5
-  // source images measure 0.665-0.690), and object-fit must be "contain"
-  // (not "cover") -- together these guarantee the whole image is always
-  // visible rather than being cropped to fill a mismatched box shape.
-  assert("deity image uses object-fit: contain (shows the whole image, never crops)", !!framing && framing.objectFit === "contain");
+  assert("deity image uses object-fit: contain (never distorts or crops)", !!framing && framing.objectFit === "contain");
+  // Regression guard for the reported white-band bug: the frame must take
+  // each image's OWN aspect ratio, so no letterbox appears above/below it.
+  // A previous fixed aspect-ratio: 2/3 left a measured 15px band on Ram
+  // Darbar (0.690 natural ratio vs the frame's 0.667).
   assert(
-    "frame's box ratio matches the deity images' ~2:3 aspect ratio (no more cropping)",
-    !!framing && Math.abs(framing.boxRatio - 2 / 3) < 0.02
+    "frame hugs the image's own aspect ratio (no letterbox band)",
+    !!framing && Math.abs(framing.contentRatio - framing.naturalRatio) < 0.01
+  );
+  assert(
+    "no white space above/below the deity image",
+    !!framing && Math.abs(framing.letterboxPx) < 1.5
+  );
+
+  // ── Reflection card progress bar contrast ───────────────────────────
+  console.log("\n=== Progress bar contrast ===");
+  await new Promise(r => setTimeout(r, SPLASH_WAIT_MS)); // let the splash clear
+  const progress = await page.evaluate(() => {
+    const track = document.querySelector(".progress-track");
+    const fill = document.querySelector(".progress-fill");
+    if (!track || !fill) return null;
+    return {
+      trackBg: getComputedStyle(track).backgroundColor,
+      fillImage: getComputedStyle(fill).backgroundImage,
+    };
+  });
+  assert("progress bar renders", !!progress);
+  // The fill must carry the deep maroon token (108, 28, 39) so it reads
+  // clearly darker than the light track -- previously both were golds,
+  // with the fill's leading edge actually lighter than the empty track.
+  assert(
+    "progress fill uses the deep maroon->gold gradient",
+    !!progress && progress.fillImage.includes("108, 28, 39")
+  );
+  assert(
+    "progress track is no longer the old flat mid-gold",
+    !!progress && !progress.trackBg.includes("220, 184, 101")
   );
 
   // ── Splash screen rotation ─────────────────────────────────────────
