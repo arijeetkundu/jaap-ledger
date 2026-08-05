@@ -88,13 +88,56 @@ async function freshLoad(page, { clearStorage = false } = {}) {
     (await page.evaluate(() => document.body.className)).includes("bg-alpana")
   );
 
-  const splashBg = await page.evaluate(() => {
+  // The splash screen is deliberately independent of the app's background
+  // theme — it always shows its own dedicated art, never Alpana/Mandala/
+  // Jharokha, regardless of which theme is currently selected.
+  const splashBgWithAlpana = await page.evaluate(() => {
     const el = document.getElementById("splash-screen");
     return el ? getComputedStyle(el).backgroundImage : null;
   });
   assert(
-    "splash screen picks up the same chosen theme",
-    !!splashBg && splashBg.includes("bg-alpana.webp")
+    "splash screen always shows its own dedicated background, not the app theme",
+    !!splashBgWithAlpana &&
+      splashBgWithAlpana.includes("splash-background.webp") &&
+      !splashBgWithAlpana.includes("bg-alpana.webp")
+  );
+
+  // Third option: Jharokha — a single full-bleed image, not a repeating tile.
+  await new Promise(r => setTimeout(r, SPLASH_WAIT_MS));
+  await page.click("#maintenance-toggle");
+  await page.waitForSelector("#maintenance-drawer.open");
+  await new Promise(r => setTimeout(r, 400));
+  await page.click("#bg-swatch-jharokha");
+  assert(
+    "clicking Jharokha swatch swaps body class",
+    (await page.evaluate(() => document.body.className)).includes("bg-jharokha")
+  );
+  assert(
+    "Jharokha selection persisted to localStorage",
+    await page.evaluate(() => localStorage.getItem("backgroundChoice")) === "jharokha"
+  );
+  const jharokhaBg = await page.evaluate(() => {
+    const cs = getComputedStyle(document.getElementById("app-background"));
+    return { image: cs.backgroundImage, repeat: cs.backgroundRepeat, size: cs.backgroundSize };
+  });
+  assert("Jharokha background image is applied", jharokhaBg.image.includes("bg-jharokha.webp"));
+  assert("Jharokha does not tile (background-repeat: no-repeat)", jharokhaBg.repeat === "no-repeat");
+  assert("Jharokha covers the viewport (background-size: cover)", jharokhaBg.size === "cover");
+
+  // Reload for a fresh #splash-screen to check (it self-removes ~2.5s after
+  // load, and enough time has passed in this section that it's long gone
+  // otherwise) — this also closes the drawer, so the swatch-restore flow
+  // below can reliably re-open it from a known closed state.
+  await page.reload({ waitUntil: "networkidle0" });
+  const splashBgWithJharokha = await page.evaluate(() => {
+    const el = document.getElementById("splash-screen");
+    return el ? getComputedStyle(el).backgroundImage : null;
+  });
+  assert(
+    "splash screen still ignores Jharokha too",
+    !!splashBgWithJharokha &&
+      splashBgWithJharokha.includes("splash-background.webp") &&
+      !splashBgWithJharokha.includes("bg-jharokha.webp")
   );
 
   // Restore Mandala for the rest of the suite (also re-verifies the swatch flow in reverse).
@@ -108,6 +151,33 @@ async function freshLoad(page, { clearStorage = false } = {}) {
     (await page.evaluate(() => document.body.className)).includes("bg-mandala")
   );
   await page.click("#maintenance-toggle"); // close drawer
+
+  // ── Splash deity image: framed, not full-bleed ──────────────────────
+  console.log("\n=== Splash deity image framing ===");
+  await page.reload({ waitUntil: "networkidle0" });
+  await new Promise(r => setTimeout(r, 900)); // steady display window, well before the 2s fade
+  const framing = await page.evaluate(() => {
+    const s = document.getElementById("splash-screen");
+    const img = document.getElementById("splash-img");
+    if (!s || !img) return null;
+    const rS = s.getBoundingClientRect();
+    const rImg = img.getBoundingClientRect();
+    const cs = getComputedStyle(img);
+    return {
+      borderWidth: parseFloat(cs.borderTopWidth),
+      insetTopPct: ((rImg.top - rS.top) / rS.height) * 100,
+      insetLeftPct: ((rImg.left - rS.left) / rS.width) * 100,
+      insetBottomPct: ((rS.bottom - rImg.bottom) / rS.height) * 100,
+      insetRightPct: ((rS.right - rImg.right) / rS.width) * 100,
+    };
+  });
+  assert("deity image has a visible border", !!framing && framing.borderWidth >= 4);
+  assert(
+    "deity image is inset on all four sides (a framed picture, not full-bleed)",
+    !!framing &&
+      framing.insetTopPct > 5 && framing.insetLeftPct > 5 &&
+      framing.insetBottomPct > 5 && framing.insetRightPct > 5
+  );
 
   // ── Splash screen rotation ─────────────────────────────────────────
   console.log("\n=== Splash screen rotation ===");

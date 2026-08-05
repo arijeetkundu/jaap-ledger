@@ -41,10 +41,12 @@ body {
   line-height: 1.5;
 }
 
-/* Selectable tiled background themes — rendered on a dedicated fixed
-   element (not background-attachment: fixed on body, which iOS Safari
-   has historically ignored/degraded) so the pattern stays pinned to the
-   viewport while page content scrolls over it. */
+/* Selectable background themes — rendered on a dedicated fixed element
+   (not background-attachment: fixed on body, which iOS Safari has
+   historically ignored/degraded) so the pattern stays pinned to the
+   viewport while page content scrolls over it. Alpana/Mandala tile;
+   Jharokha is a single full-bleed image and explicitly overrides the
+   shared repeat/size below. */
 #app-background {
   position: fixed;
   inset: 0;
@@ -59,6 +61,12 @@ body.bg-alpana #app-background {
 
 body.bg-mandala #app-background {
   background-image: url('icons/bg-mandala.webp');
+}
+
+body.bg-jharokha #app-background {
+  background-image: url('icons/bg-jharokha.webp');
+  background-repeat: no-repeat;
+  background-size: cover;
 }
 
 /* App title */
@@ -609,6 +617,10 @@ body {
 }
 /* Splash Screen Styling */
 /* Splash Screen Styling */
+/* The splash background is fixed/unconditional — deliberately independent
+   of the app's selectable background theme (Alpana/Mandala/Jharokha),
+   which must never appear here. See #splash-screen img below for the
+   deity picture framed on this background's "wall" panel. */
 #splash-screen {
   position: fixed;
   top: 0;
@@ -617,22 +629,16 @@ body {
   width: 100vw;
   height: 100vh;
   background-color: var(--cream);
+  background-image: url('splash/splash-background.webp');
+  background-size: cover;
+  background-repeat: no-repeat;
+  background-position: center;
   display: flex;
   justify-content: center;
   align-items: center;
   z-index: 9999;
   opacity: 1;
   transition: opacity 0.5s ease-out;
-}
-
-body.bg-alpana #splash-screen {
-  background-image: url('icons/bg-alpana.webp');
-  background-repeat: repeat;
-}
-
-body.bg-mandala #splash-screen {
-  background-image: url('icons/bg-mandala.webp');
-  background-repeat: repeat;
 }
 
 #splash-screen::before {
@@ -644,13 +650,30 @@ body.bg-mandala #splash-screen {
   animation: splash-glow 1.8s ease-out both;
 }
 
+/* Deity image framed like a picture hanging on the background's plain
+   "wall" panel — inset percentages are measured from the artwork itself
+   (splash/splash-background.webp): the ornate floral border occupies
+   roughly the top 12% / bottom 8%, with the arch's peak tapering to about
+   20% — these insets keep the frame comfortably inside that panel on all
+   sides. Every rotating deity image (app.js's SPLASH_IMAGES) shares this
+   exact box, so they're all rendered at the same size regardless of
+   which one is currently loaded. */
 #splash-screen img {
-  /* This is the magic part for full screen */
-  position: relative;
-  width: 100%;
-  height: 100%;
-  object-fit: cover; /* Crops the sides slightly to ensure no gaps at top/bottom */
-  object-position: center; /* Keeps Hanuman centered while cropping sides */
+  /* For a replaced element like <img>, setting all 4 inset offsets does
+     NOT stretch the box the way it would for a normal block element —
+     replaced elements fall back to intrinsic sizing unless width/height
+     are given explicitly, so top/left + explicit width/height (rather
+     than bottom/right) is what actually reproduces the measured 20/12
+     top/bottom and 13/13 left/right insets (74% × 68% of the screen). */
+  position: absolute;
+  top: 20%;
+  left: 13%;
+  width: 74%;
+  height: 68%;
+  object-fit: cover;
+  object-position: center;
+  border: 7px solid var(--gold);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
   animation: splash-entrance 0.9s var(--ease-premium) both;
 }
 
