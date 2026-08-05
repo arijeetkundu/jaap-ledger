@@ -109,6 +109,17 @@ function assert(label, condition) {
 
   // ── 5. Locked entry styling ─────────────────────────────────────
   console.log("\n=== Locked entries ===");
+  // A fresh ledger only ever has entries within the last 7 days (no more
+  // data.json seeding), so none would naturally be locked — inject one
+  // clearly-old entry so the locked-row rendering has something to find.
+  await page.evaluate(async () => {
+    const oldDate = addDaysISO(getTodayISO(), -30);
+    ledgerData.push({ date: oldDate, jaap: 500, notes: "old entry for locked-row test" });
+    await saveLedger(ledgerData);
+    renderToday();
+  });
+  await new Promise(r => setTimeout(r, 300));
+
   // Only test rows inside a currently-visible year container
   const visibleRows = await page.$$(".ledger-year-container[style='display: block;'] .ledger-row, .ledger-year-container:not([style*='none']) .ledger-row");
   let foundLocked = false;

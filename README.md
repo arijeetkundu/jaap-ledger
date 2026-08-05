@@ -12,7 +12,7 @@ Live app: https://arijeetkundu.github.io/jaap-ledger/
 - **Mala View** — toggle the whole app between raw jaap counts and mala (108-count) units.
 - **Ledger row sparklines** — a rolling 7-day trend line per row.
 - **Sankalpa** — a single, persistent record of your vow of intent.
-- **Poornima (full moon) detection** from notes keywords, with a static fallback calendar.
+- **Poornima (full moon) detection** from notes keywords.
 - **Automatic backups** plus manual JSON import/export (ledger data only — splash images are device-local and not included).
 - **Installable PWA** — add to home screen with a framed, gold-bordered splash screen and icons.
 - **Background themes** — switch the app's tiled/full-bleed background between Alpana, Mandala (default), and Jharokha from Settings.
@@ -39,8 +39,7 @@ jaap-ledger/
 ├── index.html                          Page shell; all containers filled by app.js
 ├── app.js                              All application logic
 ├── styles.css                          All styling (Temple Gold & Maroon design tokens)
-├── data.json                           Historical seed data (used only on first-ever load)
-├── poornima.json                       Static full-moon date fallback list
+├── data.json                           Local-testing fixture only — never loaded into a real user's ledger
 ├── manifest.json                       PWA manifest
 ├── splash/
 │   ├── hanuman-splash.png/.webp        Fixed default splash image (locked, never replaceable)
@@ -59,7 +58,7 @@ jaap-ledger/
 
 ## Running locally
 
-The app uses `fetch()` to load `data.json` and `poornima.json`, so it must be served over HTTP rather than opened via a `file://` URL.
+Serve the app over HTTP rather than opening `index.html` directly via a `file://` URL — IndexedDB and PWA installability are unreliable on the `file://` origin in most browsers.
 
 ```
 python -m http.server 3333

@@ -433,27 +433,6 @@ function renderSparklineSVG(points) {
 }
 
 
-async function hasEverSeededLedger() {
-  const db = await openDB();
-  const tx = db.transaction(META_STORE, "readonly");
-  const store = tx.objectStore(META_STORE);
-
-  return new Promise(resolve => {
-    const req = store.get("ledgerSeeded");
-    req.onsuccess = () => resolve(!!req.result);
-    req.onerror = () => resolve(false);
-  });
-}
-
-async function markLedgerSeeded() {
-  const db = await openDB();
-  const tx = db.transaction(META_STORE, "readwrite");
-  const store = tx.objectStore(META_STORE);
-
-  store.put(true, "ledgerSeeded");
-}
-
-
 // Check if Poornima is explicitly mentioned in notes
 function hasExplicitPoornima(notes) {
   if (!notes) return false;
@@ -470,11 +449,6 @@ function isWithinLastNDays(dateISO, days) {
   const diffDays = diffTime / (1000 * 60 * 60 * 24);
 
   return diffDays >= 0 && diffDays <= days;
-}
-
-// TEMP: Poornima check for today (stub)
-function isTodayPoornima() {
-  return poornimaDates.includes(getTodayISO());
 }
 
 function getYearlyTotals() {
@@ -655,7 +629,6 @@ async function saveLedger(data) {
 
 // ---------- State ----------
 let ledgerData = [];
-let poornimaDates = [];
 // Display preference only — never mutates stored ledger data. Persisted in
 // localStorage (same tier as other display preferences), not IndexedDB.
 let malaViewEnabled = localStorage.getItem("malaViewEnabled") === "true";
@@ -763,45 +736,12 @@ function updateBackgroundSwatchButtons() {
   });
 }
  
-    // Load Poornima calendar (static metadata is OK)
-    // Optional: preloaded calendar dates (only covers up to 2027).
-    // The app now derives 🌕 from notes keywords — this is just a fallback.
-    try {
-      const poornimaRes = await fetch("poornima.json");
-      if (poornimaRes.ok) {
-        poornimaDates = await poornimaRes.json();
-        console.log("Poornima calendar loaded:", poornimaDates.length);
-      }
-    } catch {
-      console.log("poornima.json not available — relying on notes keywords");
-    }
-
-    // Load ledger ONLY from IndexedDB
+    // Load ledger ONLY from IndexedDB — a fresh/empty ledger always starts
+    // blank, never seeded from data.json (that file is a local-testing
+    // fixture only, not real seed data for new users).
     const existingLedger = await loadLedgerFromDB();
+    ledgerData = existingLedger && existingLedger.length > 0 ? existingLedger : [];
 
-const everSeeded = await hasEverSeededLedger();
-
-if (!existingLedger || existingLedger.length === 0) {
-  console.log("Ledger empty");
-
-  if (!everSeeded) {
-    console.log("First-ever seed — loading data.json");
-
-    const fallbackRes = await fetch("data.json");
-    const fallbackData = await fallbackRes.json();
-
-    ledgerData = fallbackData;
-
-    await saveLedger(ledgerData);
-    await saveAutomaticBackup(ledgerData);
-    await markLedgerSeeded();
-  } else {
-    console.log("Ledger empty but already seeded earlier — starting empty");
-    ledgerData = [];
-  }
-} else {
-  ledgerData = existingLedger;
-}
 // Fix to ensure last 7 days always exists
 ensureRecentEntriesExist(7);
 
@@ -1172,18 +1112,6 @@ yearHeader.addEventListener("click", () => {
 
 function renderTodayCard(entry) {
   const container = document.getElementById("today-card");
-
-  if (!entry) {
-    container.innerHTML = `
-      <h2>
-  Today
-  ${isTodayPoornima() ? " 🌕" : ""}
-</h2>
-      <p>No entry yet for today.</p>
-      <button disabled>Save</button>
-    `;
-    return;
-  }
 
   container.innerHTML = `
     <h2>Today${hasExplicitPoornima(entry.notes) ? " 🌕" : ""}</h2>
