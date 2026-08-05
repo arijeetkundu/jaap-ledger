@@ -22,7 +22,7 @@
 
 <link rel="apple-touch-icon" href="icons/icon-192.png">
 <link rel="icon" href="icons/icon-192.png">
-<link rel="apple-touch-startup-image" href="splash/hanuman-splash.png">
+<link rel="apple-touch-startup-image" href="splash/launch-neutral.png">
 </head>
 
 <body>
@@ -101,6 +101,21 @@
         <img src="icons/bg-jharokha.webp" alt="">
       </button>
     </div>
+
+    <h3>Splash Images</h3>
+    <p class="maintenance-hint">Tap a slot to replace it with your own picture.</p>
+    <div id="splash-slot-wrap" class="splash-slot-wrap">
+      <!-- Rendered by app.js -->
+    </div>
+    <input
+      type="file"
+      id="splash-image-input"
+      accept="image/*"
+      style="display:none"
+    />
+    <button id="splash-images-reset-btn" class="maintenance-btn">
+      Reset Splash Images
+    </button>
   </div>
 </div>
 

@@ -1,6 +1,6 @@
 {
   "scripts": {
-    "test": "node tests/test.js && node tests/test-unit.js && node tests/test-e2e.js && node tests/test-redesign.js"
+    "test": "node tests/test.js && node tests/test-unit.js && node tests/test-e2e.js && node tests/test-redesign.js && node tests/test-splash-custom.js"
   },
   "devDependencies": {
     "puppeteer": "^24.40.0",

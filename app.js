@@ -13,18 +13,93 @@ const SPLASH_IMAGES = [
   { id: "ram-darbar", webp: "splash/ram-darbar.webp", png: "splash/ram-darbar.png", alt: "Ram Darbar" },
 ];
 
+// ---------- Custom splash image slots ----------
+// A user can replace any of the 5 rotation slots with their own picture.
+// Two-tier storage keeps startup cheap: `splashSlots` is a few hundred
+// bytes of metadata read on every launch; the actual (larger) image data
+// lives under its own `splashImage:slotN` key, read only for the one slot
+// actually chosen that launch. If `splashSlots` is absent, behavior is
+// byte-for-byte identical to the original 5-bundled-image rotation.
+function defaultSplashSlots() {
+  return SPLASH_IMAGES.map((img) => ({ id: img.id, custom: false }));
+}
+
+function resolveSplashSlots() {
+  let slots = null;
+  try {
+    const raw = localStorage.getItem("splashSlots");
+    slots = raw ? JSON.parse(raw) : null;
+  } catch (e) {
+    slots = null;
+  }
+  if (!Array.isArray(slots) || slots.length !== 5) {
+    slots = defaultSplashSlots();
+  }
+  // Normalize entries defensively so one corrupt entry can't break the rest.
+  return slots.map((entry, i) => {
+    if (entry && typeof entry === "object" && typeof entry.id === "string") {
+      return { id: entry.id, custom: !!entry.custom };
+    }
+    return { id: SPLASH_IMAGES[i].id, custom: false };
+  });
+}
+
+function saveSplashSlots(slots) {
+  localStorage.setItem("splashSlots", JSON.stringify(slots));
+}
+
+// Resolves one slot entry into something renderable. A custom slot whose
+// data URL is missing or corrupt falls back to that slot's bundled default
+// so a broken image can never actually render.
+function resolveSplashRenderable(entry, slotIndex) {
+  const bundledDefault = SPLASH_IMAGES[slotIndex];
+  if (entry.custom) {
+    let dataUrl = null;
+    try {
+      dataUrl = localStorage.getItem("splashImage:slot" + slotIndex);
+    } catch (e) {
+      dataUrl = null;
+    }
+    if (dataUrl && dataUrl.indexOf("data:image/") === 0) {
+      return { id: entry.id, custom: true, dataUrl, alt: "Your custom splash image" };
+    }
+    return {
+      id: bundledDefault.id,
+      custom: false,
+      webp: bundledDefault.webp,
+      png: bundledDefault.png,
+      alt: bundledDefault.alt,
+    };
+  }
+  const bundled = SPLASH_IMAGES.find((img) => img.id === entry.id) || bundledDefault;
+  return { id: bundled.id, custom: false, webp: bundled.webp, png: bundled.png, alt: bundled.alt };
+}
+
 (function chooseSplashImage() {
+  const slots = resolveSplashSlots();
+  const renderables = slots.map((entry, i) => resolveSplashRenderable(entry, i));
+
   const lastId = localStorage.getItem("lastSplashImage");
-  const candidates = SPLASH_IMAGES.filter((img) => img.id !== lastId);
-  const pool = candidates.length > 0 ? candidates : SPLASH_IMAGES;
+  const candidates = renderables.filter((r) => r.id !== lastId);
+  const pool = candidates.length > 0 ? candidates : renderables;
   const chosen = pool[Math.floor(Math.random() * pool.length)];
 
   const source = document.getElementById("splash-source");
   const img = document.getElementById("splash-img");
-  if (source) source.srcset = chosen.webp;
-  if (img) {
-    img.src = chosen.png;
-    img.alt = chosen.alt;
+  if (chosen.custom) {
+    // <source srcset> beats <img src> in a <picture> element, so it must be
+    // cleared or the bundled webp would silently keep showing.
+    if (source) source.removeAttribute("srcset");
+    if (img) {
+      img.src = chosen.dataUrl;
+      img.alt = chosen.alt;
+    }
+  } else {
+    if (source) source.srcset = chosen.webp;
+    if (img) {
+      img.src = chosen.png;
+      img.alt = chosen.alt;
+    }
   }
 
   localStorage.setItem("lastSplashImage", chosen.id);
@@ -1230,6 +1305,220 @@ document.querySelectorAll(".background-swatch").forEach((btn) => {
 });
 
 updateBackgroundSwatchButtons();
+
+// ---------- Custom splash image upload pipeline ----------
+// Two limits matter here: file size protects decode-time RAM (a browser
+// must expand an image to a raw width*height*4-byte bitmap before it can
+// downscale it), while the megapixel guard catches highly-compressed files
+// that are small on disk but huge in pixels. Everything downstream targets
+// a small, consistent stored size (~100-150KB) regardless of input size.
+const SPLASH_MAX_FILE_BYTES = 5 * 1024 * 1024; // 5MB
+const SPLASH_MAX_MEGAPIXELS = 40 * 1000 * 1000; // ~40MP
+const SPLASH_MAX_EDGE = 900; // longest stored edge, in px
+const SPLASH_TARGET_BYTES = 250 * 1024; // re-encode smaller past this
+
+function readFileAsDataURL(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = () => reject(reader.error || new Error("Failed to read file."));
+    reader.readAsDataURL(file);
+  });
+}
+
+function loadImageElement(src) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => resolve(img);
+    img.onerror = () => reject(new Error("Failed to decode image."));
+    img.src = src;
+  });
+}
+
+async function processSplashImage(file) {
+  if (!file || !file.type || file.type.indexOf("image/") !== 0) {
+    throw new Error("Please choose an image file.");
+  }
+  if (file.size > SPLASH_MAX_FILE_BYTES) {
+    throw new Error("Image is too large. Please choose a file under 5MB.");
+  }
+
+  let bitmap = null;
+
+  if (typeof createImageBitmap === "function") {
+    try {
+      // Ask the browser to downsample while decoding, so a huge source
+      // photo never has to fully materialize in memory at full resolution.
+      bitmap = await createImageBitmap(file, { resizeWidth: SPLASH_MAX_EDGE, resizeQuality: "high" });
+    } catch (e) {
+      bitmap = null;
+    }
+  }
+
+  if (!bitmap) {
+    // Fallback path decodes at full size, so the megapixel guard is what
+    // protects memory here.
+    const dataUrl = await readFileAsDataURL(file);
+    const imgEl = await loadImageElement(dataUrl);
+    if (imgEl.naturalWidth * imgEl.naturalHeight > SPLASH_MAX_MEGAPIXELS) {
+      throw new Error("Image resolution is too high. Please choose a smaller image.");
+    }
+    bitmap = imgEl;
+  }
+
+  const sourceWidth = bitmap.width || bitmap.naturalWidth;
+  const sourceHeight = bitmap.height || bitmap.naturalHeight;
+
+  const scale = Math.min(1, SPLASH_MAX_EDGE / Math.max(sourceWidth, sourceHeight));
+  const targetWidth = Math.max(1, Math.round(sourceWidth * scale));
+  const targetHeight = Math.max(1, Math.round(sourceHeight * scale));
+
+  const canvas = document.createElement("canvas");
+  canvas.width = targetWidth;
+  canvas.height = targetHeight;
+  const ctx = canvas.getContext("2d");
+  ctx.drawImage(bitmap, 0, 0, targetWidth, targetHeight);
+
+  // Release the decoded bitmap immediately rather than waiting on GC.
+  if (typeof bitmap.close === "function") bitmap.close();
+
+  let quality = 0.82;
+  let dataUrl = canvas.toDataURL("image/webp", quality);
+  if (dataUrl.indexOf("data:image/webp") !== 0) {
+    dataUrl = canvas.toDataURL("image/jpeg", quality);
+  }
+
+  let attempts = 0;
+  while (dataUrl.length * 0.75 > SPLASH_TARGET_BYTES && attempts < 3 && quality > 0.4) {
+    quality = Math.max(0.4, quality - 0.15);
+    const type = dataUrl.indexOf("data:image/webp") === 0 ? "image/webp" : "image/jpeg";
+    dataUrl = canvas.toDataURL(type, quality);
+    attempts++;
+  }
+
+  return dataUrl;
+}
+
+function setSplashSlotCustom(slotIndex, dataUrl) {
+  const slots = resolveSplashSlots();
+  const previousEntry = slots[slotIndex];
+  const previousDataUrl = previousEntry.custom
+    ? localStorage.getItem("splashImage:slot" + slotIndex)
+    : null;
+  try {
+    localStorage.setItem("splashImage:slot" + slotIndex, dataUrl);
+    slots[slotIndex] = { id: "slot" + slotIndex, custom: true };
+    saveSplashSlots(slots);
+  } catch (e) {
+    // Roll back so a quota error never leaves slot metadata and image data
+    // out of sync.
+    if (previousDataUrl !== null) {
+      try { localStorage.setItem("splashImage:slot" + slotIndex, previousDataUrl); } catch (e2) {}
+    }
+    throw new Error("Not enough storage space to save this image.");
+  }
+}
+
+function resetSplashSlot(slotIndex) {
+  const slots = resolveSplashSlots();
+  slots[slotIndex] = { id: SPLASH_IMAGES[slotIndex].id, custom: false };
+  saveSplashSlots(slots);
+  try {
+    localStorage.removeItem("splashImage:slot" + slotIndex);
+  } catch (e) {}
+}
+
+function resetAllSplashSlots() {
+  try {
+    localStorage.removeItem("splashSlots");
+  } catch (e) {}
+  for (let i = 0; i < 5; i++) {
+    try {
+      localStorage.removeItem("splashImage:slot" + i);
+    } catch (e) {}
+  }
+}
+
+let pendingSplashSlot = null;
+
+function renderSplashSlotUI() {
+  const wrap = document.getElementById("splash-slot-wrap");
+  if (!wrap) return;
+  const slots = resolveSplashSlots();
+  wrap.innerHTML = "";
+
+  slots.forEach((entry, i) => {
+    const renderable = resolveSplashRenderable(entry, i);
+
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "splash-slot";
+    btn.dataset.slot = String(i);
+    btn.title = renderable.custom
+      ? "Custom image — tap to replace"
+      : `${renderable.alt} — tap to customize`;
+
+    const img = document.createElement("img");
+    img.src = renderable.custom ? renderable.dataUrl : renderable.webp;
+    img.alt = "";
+    btn.appendChild(img);
+
+    if (renderable.custom) {
+      btn.classList.add("splash-slot-custom");
+      const resetBadge = document.createElement("span");
+      resetBadge.className = "splash-slot-reset";
+      resetBadge.textContent = "✕";
+      resetBadge.title = "Reset to default";
+      resetBadge.addEventListener("click", (e) => {
+        e.stopPropagation();
+        resetSplashSlot(i);
+        renderSplashSlotUI();
+        showToast("Splash image reset");
+      });
+      btn.appendChild(resetBadge);
+    }
+
+    btn.addEventListener("click", () => {
+      pendingSplashSlot = i;
+      const input = document.getElementById("splash-image-input");
+      if (input) input.click();
+    });
+
+    wrap.appendChild(btn);
+  });
+}
+
+document.getElementById("splash-image-input")?.addEventListener("change", async (event) => {
+  const input = event.target;
+  const file = input.files[0];
+  const slotIndex = pendingSplashSlot;
+  pendingSplashSlot = null;
+
+  if (!file || slotIndex === null) {
+    input.value = "";
+    return;
+  }
+
+  try {
+    const dataUrl = await processSplashImage(file);
+    setSplashSlotCustom(slotIndex, dataUrl);
+    renderSplashSlotUI();
+    showToast("Splash image updated ✓");
+  } catch (err) {
+    console.error("Splash image upload failed:", err);
+    showToast(err && err.message ? err.message : "Failed to process image.");
+  } finally {
+    input.value = "";
+  }
+});
+
+document.getElementById("splash-images-reset-btn")?.addEventListener("click", () => {
+  resetAllSplashSlots();
+  renderSplashSlotUI();
+  showToast("Splash images reset to defaults");
+});
+
+renderSplashSlotUI();
 
 // ---------- Sankalpa ----------
 
