@@ -41,6 +41,11 @@ async function freshLoad(page, { clearStorage = false } = {}) {
 (async () => {
   const browser = await puppeteer.launch({ headless: true, args: ["--no-sandbox"] });
   const page = await browser.newPage();
+  // This app is a phone PWA; Puppeteer's 800x600 default is a desktop-ish
+  // shape that doesn't reflect real usage and breaks viewport-relative
+  // layout assertions (e.g. the splash screen's portrait-framed deity
+  // image). Use a representative phone viewport for the whole suite.
+  await page.setViewport({ width: 390, height: 844 });
 
   const pageErrors = [];
   page.on("pageerror", err => pageErrors.push(err.message));
@@ -155,7 +160,7 @@ async function freshLoad(page, { clearStorage = false } = {}) {
   // ── Splash deity image: framed, not full-bleed ──────────────────────
   console.log("\n=== Splash deity image framing ===");
   await page.reload({ waitUntil: "networkidle0" });
-  await new Promise(r => setTimeout(r, 900)); // steady display window, well before the 2s fade
+  await new Promise(r => setTimeout(r, 300)); // steady display window, safely before the ~2s fade (900ms was occasionally flaky under system load)
   const framing = await page.evaluate(() => {
     const s = document.getElementById("splash-screen");
     const img = document.getElementById("splash-img");
@@ -165,6 +170,8 @@ async function freshLoad(page, { clearStorage = false } = {}) {
     const cs = getComputedStyle(img);
     return {
       borderWidth: parseFloat(cs.borderTopWidth),
+      objectFit: cs.objectFit,
+      boxRatio: rImg.width / rImg.height,
       insetTopPct: ((rImg.top - rS.top) / rS.height) * 100,
       insetLeftPct: ((rImg.left - rS.left) / rS.width) * 100,
       insetBottomPct: ((rS.bottom - rImg.bottom) / rS.height) * 100,
@@ -177,6 +184,16 @@ async function freshLoad(page, { clearStorage = false } = {}) {
     !!framing &&
       framing.insetTopPct > 5 && framing.insetLeftPct > 5 &&
       framing.insetBottomPct > 5 && framing.insetRightPct > 5
+  );
+  // Regression guard for the reported left/right-cropping bug: the frame's
+  // own box ratio must match the deity images' natural ~2:3 ratio (all 5
+  // source images measure 0.665-0.690), and object-fit must be "contain"
+  // (not "cover") -- together these guarantee the whole image is always
+  // visible rather than being cropped to fill a mismatched box shape.
+  assert("deity image uses object-fit: contain (shows the whole image, never crops)", !!framing && framing.objectFit === "contain");
+  assert(
+    "frame's box ratio matches the deity images' ~2:3 aspect ratio (no more cropping)",
+    !!framing && Math.abs(framing.boxRatio - 2 / 3) < 0.02
   );
 
   // ── Splash screen rotation ─────────────────────────────────────────

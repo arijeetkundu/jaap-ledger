@@ -659,32 +659,47 @@ body {
    exact box, so they're all rendered at the same size regardless of
    which one is currently loaded. */
 #splash-screen img {
-  /* For a replaced element like <img>, setting all 4 inset offsets does
-     NOT stretch the box the way it would for a normal block element —
-     replaced elements fall back to intrinsic sizing unless width/height
-     are given explicitly, so top/left + explicit width/height (rather
-     than bottom/right) is what actually reproduces the measured 20/12
-     top/bottom and 13/13 left/right insets (74% × 68% of the screen). */
+  /* aspect-ratio ~2:3 matches the 5 deity source images' own ratio
+     (measured 0.665-0.690) so object-fit: contain shows each one in
+     full with no side-cropping (a fixed independent width+height, tried
+     first, forced a ~0.50 box ratio that cropped the left/right edges
+     to fill it). Width stays a deliberate 74% (not measured from the
+     art — keeps the frame off the screen edges); height is derived from
+     the ratio, which works out to roughly 51% of viewport height on a
+     typical phone — comfortably inside the ~20%-88% "wall" zone
+     measured from the background art. Centered on that zone's vertical
+     midpoint (~54%) via top/left + transform, rather than the previous
+     fixed insets, since height is no longer a fixed percentage. */
   position: absolute;
-  top: 20%;
-  left: 13%;
+  top: 54%;
+  left: 50%;
   width: 74%;
-  height: 68%;
-  object-fit: cover;
+  aspect-ratio: 2 / 3;
+  /* Static fallback so centering still holds if the animation is disabled
+     (prefers-reduced-motion below sets animation: none, which would
+     otherwise drop this transform along with the animation). */
+  transform: translate(-50%, -50%);
+  object-fit: contain;
   object-position: center;
+  background-color: var(--surface);
   border: 7px solid var(--gold);
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
   animation: splash-entrance 0.9s var(--ease-premium) both;
 }
 
+/* The centering translate(-50%, -50%) has to be folded into every
+   keyframe (not left as a separate static transform) — CSS's single
+   `transform` property means the animation would otherwise replace it
+   entirely for the animation's duration, leaving the image mispositioned
+   once splash-entrance finishes. */
 @keyframes splash-entrance {
   from {
     opacity: 0;
-    transform: scale(1.08) translateY(8px);
+    transform: translate(-50%, -50%) scale(1.08) translateY(8px);
   }
   to {
     opacity: 1;
-    transform: scale(1) translateY(0);
+    transform: translate(-50%, -50%) scale(1) translateY(0);
   }
 }
 
