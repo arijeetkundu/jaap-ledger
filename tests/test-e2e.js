@@ -60,6 +60,13 @@ async function freshLoad(page, { clearStorage = false } = {}) {
     await dialog.accept();
   });
 
+  // ── Accessibility: pinch-to-zoom is not disabled ─────────────────────
+  console.log("\n=== Accessibility ===");
+  await freshLoad(page, { clearStorage: true });
+  const viewportContent = await page.$eval('meta[name="viewport"]', el => el.getAttribute("content"));
+  assert("viewport meta does not disable user scaling", !viewportContent.includes("user-scalable=no"));
+  assert("viewport meta does not cap maximum-scale", !viewportContent.includes("maximum-scale"));
+
   // ── Background theme: default & persistence ───────────────────────
   console.log("\n=== Background theme ===");
   await freshLoad(page, { clearStorage: true });
@@ -281,6 +288,15 @@ async function freshLoad(page, { clearStorage = false } = {}) {
 
   // ── Today Card update ────────────────────────────────────────────────
   console.log("\n=== Today Card update ===");
+  const todayCardWidths = await page.evaluate(() => ({
+    jaap: document.getElementById("today-jaap").getBoundingClientRect().width,
+    notes: document.getElementById("today-notes").getBoundingClientRect().width,
+  }));
+  assert(
+    "Notes textarea spans the same width as the Jaap input",
+    Math.abs(todayCardWidths.jaap - todayCardWidths.notes) < 1
+  );
+
   const todayJaapField = await page.$("#today-jaap");
   await todayJaapField.click({ clickCount: 3 });
   await todayJaapField.type("216");

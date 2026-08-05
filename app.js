@@ -1198,6 +1198,7 @@ function renderTodayCard(entry) {
       Notes<br>
       <textarea
         id="today-notes"
+        class="edit-notes"
         rows="3"
         placeholder="Notes (optional)"
       >${entry.notes || ""}</textarea>
