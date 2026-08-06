@@ -268,7 +268,7 @@ async function freshLoad(page, { clearStorage = false } = {}) {
     cb.dispatchEvent(new Event("change"));
   });
   const jaapLabelAfter = await page.$eval("#today-card label", el => el.textContent.trim().split("\n")[0]);
-  assert("switching Mala View changes the Today Card input label to Malas", jaapLabelAfter.startsWith("Malas"));
+  assert("switching Mala View changes the Today Card input label to Mala Count", jaapLabelAfter.startsWith("Mala"));
   assert(
     "Mala View preference persists to localStorage",
     await page.evaluate(() => localStorage.getItem("malaViewEnabled")) === "true"
@@ -277,7 +277,7 @@ async function freshLoad(page, { clearStorage = false } = {}) {
   await page.reload({ waitUntil: "networkidle0" });
   await new Promise(r => setTimeout(r, SPLASH_WAIT_MS));
   const jaapLabelAfterReload = await page.$eval("#today-card label", el => el.textContent.trim().split("\n")[0]);
-  assert("Mala View setting survives reload", jaapLabelAfterReload.startsWith("Malas"));
+  assert("Mala View setting survives reload", jaapLabelAfterReload.startsWith("Mala"));
 
   // Switch back off for the rest of the suite (Today Card update below assumes Jaap mode).
   await page.evaluate(() => {

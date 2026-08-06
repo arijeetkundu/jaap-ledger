@@ -178,6 +178,17 @@ function formatDate(isoDate) {
   return `${day} ${MONTHS[month - 1]} ${year}`;
 }
 
+// Format YYYY-MM-DD → "Weekday, D Month YYYY" (e.g. "Thursday, 6 August 2026")
+// Today Card only — every other date display keeps the shorter formatDate().
+// Hand-rolled (not toLocaleDateString) to stay deterministic across devices/locales.
+const WEEKDAYS = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
+const MONTHS_FULL = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+function formatDateLong(isoDate) {
+  const [year, month, day] = isoDate.split("-").map(Number);
+  const weekday = WEEKDAYS[new Date(year, month - 1, day).getDay()];
+  return `${weekday}, ${day} ${MONTHS_FULL[month - 1]} ${year}`;
+}
+
 // ---------- Sumiran-Lite: shared constants & helpers ----------
 
 const CRORE = 10_000_000;
@@ -672,7 +683,7 @@ function renderJaapInputField(entry, opts = {}) {
     const malaValue = entry.jaap == null ? "" : jaapToMala(entry.jaap);
     return `
       <label>
-        Malas<br>
+        Mala Count<br>
         <input type="number" step="1"${idAttr} class="${className}" value="${malaValue}" placeholder="Enter malas">
       </label>
     `;
@@ -680,7 +691,7 @@ function renderJaapInputField(entry, opts = {}) {
 
   return `
     <label>
-      Jaap<br>
+      Jaap Count<br>
       <input type="number"${idAttr} class="${className}" value="${entry.jaap ?? ""}" placeholder="Enter jaap count">
     </label>
   `;
@@ -855,15 +866,15 @@ function renderReflectionSummary() {
   container.innerHTML = `
     <div class="reflection-box">
 
+      <div class="reflection-line">
+        <strong>Lifetime Jaap:</strong>
+        ${formatTotal(cumulative)}
+      </div>
+
 	<div class="reflection-line">
   <strong>${CURRENT_YEAR} Total:</strong>
   ${formatTotal(currentYearTotal)}
 </div>
-
-      <div class="reflection-line">
-        <strong>Total Jaap:</strong>
-        ${formatTotal(cumulative)}
-      </div>
 
       <div class="reflection-line">
         <strong>Next Milestone:</strong> ${currentCrore + 1} Crore
@@ -897,7 +908,7 @@ function renderReflectionSummary() {
     <div class="reflection-subtitle">Milestones</div>
     ${milestoneHistory.map(m => `
       <div class="milestone-line">
-        ${m.crore} Crore — ${formatDate(m.date)}
+        🪔 ${m.crore} Crore — ${formatDate(m.date)}
         ${m.daysSincePrevious !== null
           ? `<span class="milestone-gap">(+${m.daysSincePrevious} days)</span>`
           : ""}
@@ -909,7 +920,7 @@ function renderReflectionSummary() {
 	  <div class="legend">
   🏵️ Crore Milestone &nbsp;&nbsp; 🌕 Poornima &nbsp;&nbsp; 🔴 Sunday &nbsp;&nbsp; ▸ Notes
 </div>
-  
+
     </div>
   `;
 }
@@ -1116,7 +1127,7 @@ function renderTodayCard(entry) {
   container.innerHTML = `
     <h2>Today${hasExplicitPoornima(entry.notes) ? " 🌕" : ""}</h2>
 
-    <p><strong>Date:</strong> ${formatDate(entry.date)}</p>
+    <p><strong>${formatDateLong(entry.date)}</strong></p>
 
     ${renderJaapInputField(entry, { id: "today-jaap" })}
 
@@ -1135,7 +1146,7 @@ function renderTodayCard(entry) {
     <br>
 
     ${entry.date === todayISO || isWithinLastNDays(entry.date, 7)
-  ? `<button id="update-today">Update</button>`
+  ? `<button id="update-today">Save</button>`
   : `<p><em>This entry is locked (older than 7 days).</em></p>`
 }
 

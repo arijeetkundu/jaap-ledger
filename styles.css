@@ -1,6 +1,33 @@
+/* Self-hosted fonts (no CDN — this app must keep working fully offline).
+   Both files are variable fonts; a single @font-face per family with a
+   font-weight range lets the browser select any weight in that range from
+   the one file, rather than needing a separate file per weight. */
+@font-face {
+  font-family: "Playfair Display";
+  font-style: normal;
+  font-weight: 400 700;
+  font-display: swap;
+  src: url("fonts/PlayfairDisplay-Variable.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "Inter";
+  font-style: normal;
+  font-weight: 400 700;
+  font-display: swap;
+  src: url("fonts/Inter-Variable.woff2") format("woff2");
+}
+
 /* Base reset */
 * {
   box-sizing: border-box;
+}
+
+/* Form controls don't inherit body font-family by default in browser UA
+   stylesheets (they use the platform's UI font instead) — without this,
+   jaap/mala counts and button labels would silently stay off Inter. */
+input, button, textarea, select {
+  font-family: inherit;
 }
 
 /* ---------- Design tokens: Temple Gold & Maroon ---------- */
@@ -16,7 +43,8 @@
   --gold: #c9a227;
   --gold-hairline: #dcb865;
   --gold-light: #f1cf85;
-  --font-heading: Georgia, "Iowan Old Style", "Palatino Linotype", Palatino, serif;
+  --font-heading: "Playfair Display", Georgia, "Iowan Old Style", "Palatino Linotype", Palatino, serif;
+  --font-body: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   --ease-premium: cubic-bezier(0.22, 1, 0.36, 1);
 }
 
@@ -34,8 +62,7 @@ body {
   margin: 0;
   padding: 16px;
   padding-top: calc(env(safe-area-inset-top, 0px) + 16px);
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI",
-               Roboto, Helvetica, Arial, sans-serif;
+  font-family: var(--font-body);
   background-color: var(--cream);
   color: var(--ink);
   line-height: 1.5;
@@ -116,6 +143,13 @@ p {
 /* Today text */
 #today-card p {
   margin: 6px 0;
+}
+
+/* A little breathing room between each field's label text and its input —
+   the <br> alone left them looking too tightly packed. */
+#today-card label input,
+#today-card label textarea {
+  margin-top: 6px;
 }
 
 /* Buttons (Edit / Save later) */
@@ -892,13 +926,22 @@ body.loading {
   box-shadow: 0 0 0 2px rgba(52, 199, 89, 0.4);
 }
 
-/* Reflection Card predictions */
+/* Reflection Card predictions — a visually distinct inset panel, not just
+   loose lines, so the pace predictions read as their own contained block. */
 .reflection-predictions {
-  margin-top: 8px;
+  margin-top: 10px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: rgba(108, 28, 39, 0.06);
+  border: 1px solid rgba(108, 28, 39, 0.12);
 }
 
 .prediction-line {
   font-size: 0.9rem;
+}
+
+.prediction-line:not(:last-child) {
+  margin-bottom: 4px;
 }
 
 .prediction-pace {
