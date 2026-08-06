@@ -423,13 +423,19 @@ function renderSparklineSVG(points) {
 
   const width = 72, height = 28, pad = 3;
   const usable = height - pad * 2;
+  // Horizontal padding must clear the endpoint dot's radius (3px, see the
+  // <circle> below) on both sides, or the last point's dot bleeds past the
+  // viewBox and gets clipped by the SVG's own edge — previously only 2px,
+  // 1px short of the 3px radius.
+  const padX = 4;
+  const usableX = width - padX * 2;
   const n = points.length;
   const values = points.map(p => p.jaap);
   const lo = Math.min(...values);
   const hi = Math.max(...values);
 
   const coords = points.map((p, i) => {
-    const x = n === 1 ? 36 : 2 + i * (68 / (n - 1));
+    const x = n === 1 ? width / 2 : padX + i * (usableX / (n - 1));
     const y = hi === lo ? height / 2 : pad + ((hi - p.jaap) / (hi - lo)) * usable;
     return { x, y };
   });
