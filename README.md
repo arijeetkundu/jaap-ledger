@@ -1,6 +1,6 @@
 # Sumiran Lite
 
-Sumiran Lite is an offline-first Progressive Web App (PWA) for logging daily "jaap" (mantra repetition count) as part of a personal spiritual practice. It's a single-page vanilla JavaScript app with no framework and no build step — it runs directly from static files served over HTTP, styled in a "Temple Gold & Maroon" visual theme.
+Sumiran Lite is an offline-first Progressive Web App (PWA) for logging daily "jaap" (mantra repetition count) as part of a personal spiritual practice. It's a single-page vanilla JavaScript app with no framework and no build step — it runs directly from static files served over HTTP, styled in a "Temple Gold & Maroon" visual theme with self-hosted Playfair Display (headings) and Inter (body/UI) fonts.
 
 Live app: https://arijeetkundu.github.io/jaap-ledger/
 
@@ -41,6 +41,7 @@ jaap-ledger/
 ├── styles.css                          All styling (Temple Gold & Maroon design tokens)
 ├── data.json                           Local-testing fixture only — never loaded into a real user's ledger
 ├── manifest.json                       PWA manifest
+├── fonts/                              Self-hosted Playfair Display + Inter (variable .woff2, no CDN)
 ├── splash/
 │   ├── hanuman-splash.png/.webp        Fixed default splash image (locked, never replaceable)
 │   ├── splash-background.webp          Splash screen backdrop art (wall/frame setting)
@@ -75,7 +76,7 @@ python -m http.server 3333   # in one terminal
 npm test                     # in another
 ```
 
-`npm test` runs the full suite (181 assertions, as of this revision) against a running instance of the app: `tests/test.js` (structural smoke tests), `tests/test-unit.js` (pure-logic unit tests, calling app.js's global functions directly), `tests/test-e2e.js` (full user-flow E2E tests — Sankalpa, Import/Export, Restore from Backup, Background themes, and more), `tests/test-redesign.js` (premium redesign: design tokens, milestone celebration, splash entrance animation, motion polish), and `tests/test-splash-custom.js` (custom splash images: upload pipeline guards, adaptive frame, rotation, per-slot/remove-all deletes, corrupt-data resilience). Each file can also be run individually, e.g. `node tests/test-unit.js`.
+`npm test` runs the full suite (184 assertions, as of this revision) against a running instance of the app: `tests/test.js` (structural smoke tests), `tests/test-unit.js` (pure-logic unit tests, calling app.js's global functions directly), `tests/test-e2e.js` (full user-flow E2E tests — Sankalpa, Import/Export, Restore from Backup, Background themes, and more), `tests/test-redesign.js` (premium redesign: design tokens, milestone celebration, splash entrance animation, motion polish), and `tests/test-splash-custom.js` (custom splash images: upload pipeline guards, adaptive frame, rotation, per-slot/remove-all deletes, corrupt-data resilience). Each file can also be run individually, e.g. `node tests/test-unit.js`.
 
 ## Deployment
 
