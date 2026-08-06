@@ -505,19 +505,17 @@ body {
   -webkit-user-select: none;
   -webkit-tap-highlight-color: transparent;
 }
-.ledger-year-header {
-  margin-top: 16px;
-  padding: 6px 4px;
-  font-weight: 600;
-  color: var(--maroon);
-  border-bottom: 1px solid var(--gold-hairline);
-}
+/* Was two separate rules (same selector) — the second's padding/margin-top
+   and its `border` shorthand silently overrode almost everything in the
+   first, leaving only `color` actually in effect. Consolidated to what
+   actually renders, keeping that one surviving property. */
 .ledger-year-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
   padding: 10px;
   margin-top: 12px;
+  color: var(--maroon);
   background: var(--surface);
   border: 1px solid var(--gold-hairline);
   border-radius: 8px;
@@ -825,13 +823,22 @@ body.loading {
 
   width: 44px;
   height: 44px;
+  /* The global `button { padding: 10px 16px }` rule was squeezing the gear
+     glyph into a tiny, off-center content box inside this circle — reset
+     it and center via flex instead so the icon sits true-center regardless
+     of its own glyph metrics. */
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 
   border-radius: 50%;
   border: 1px solid var(--gold-hairline);
 
   background: var(--surface);
   color: var(--maroon);
-  font-size: 1.2rem;
+  font-size: 1.6rem;
+  line-height: 1;
   cursor: pointer;
 
   z-index: 9100;

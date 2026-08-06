@@ -102,6 +102,8 @@ function showToast(message = "Saved") {
   const toast = document.createElement("div");
   toast.id = "toast";
   toast.className = "toast";
+  toast.setAttribute("role", "status");
+  toast.setAttribute("aria-live", "polite");
   toast.textContent = message;
   document.body.appendChild(toast);
 
@@ -274,8 +276,8 @@ function getCroreMilestone(dateISO) {
   const prevTotal = prevDate ? getCumulativeJaapUpTo(prevDate) : 0;
   const currentTotal = getCumulativeJaapUpTo(dateISO);
 
-  const prevCrore = Math.floor(prevTotal / 10000000);
-  const currentCrore = Math.floor(currentTotal / 10000000);
+  const prevCrore = Math.floor(prevTotal / CRORE);
+  const currentCrore = Math.floor(currentTotal / CRORE);
 
   if (currentCrore > prevCrore) {
     return currentCrore;
@@ -495,23 +497,19 @@ function ensureTodayEntryExists() {
       notes: ""
     };
     ledgerData.push(entry);
-    // ❌ DO NOT save to localStorage here
+    // In-memory only — not persisted to IndexedDB until the user actually
+    // enters a value and saves (via updateTodayEntry()).
   }
 
   return entry;
 }
 
 function ensureRecentEntriesExist(days = 7) {
-	const existingDates = new Set(ledgerData.map(e => e.date));
-	
-	for (let i = 0; i < days; i++) {
-    const d = new Date();
-    d.setDate(d.getDate() - i);
+  const existingDates = new Set(ledgerData.map(e => e.date));
+  const today = getTodayISO();
 
-    const iso =
-      d.getFullYear() + "-" +
-      String(d.getMonth() + 1).padStart(2, "0") + "-" +
-      String(d.getDate()).padStart(2, "0");
+  for (let i = 0; i < days; i++) {
+    const iso = addDaysISO(today, -i);
 
     if (!existingDates.has(iso)) {
       ledgerData.push({
@@ -593,7 +591,10 @@ function groupEntriesByYear(entries) {
 }
 
 
-const todayISO = getTodayISO();
+// Refreshed at the top of every renderToday() call (the app's single
+// re-render entry point) rather than only once at script load, so a tab
+// left open across midnight doesn't drift out of sync with the real date.
+let todayISO = getTodayISO();
 console.log("Today (ISO):", todayISO);
 
 // ---------- IndexedDB Storage ----------
@@ -842,6 +843,7 @@ async function restoreFromBackup() {
 
 // ---------- Rendering ----------
 function renderToday() {
+  todayISO = getTodayISO();
   const entry = ensureTodayEntryExists();
   renderTodayCard(entry);
   renderReflectionSummary();   // ← add this
@@ -934,7 +936,10 @@ function renderReflectionSummary() {
 
 function renderLedgerList() {
   const container = document.getElementById("ledger-list");
-  const todayISO = getTodayISO();
+  // Uses the module-level todayISO (refreshed at the top of renderToday()) —
+  // previously this shadowed it with its own fresh copy, which meant Today
+  // Card (stale) and the Ledger List (fresh) could silently disagree about
+  // what "today" was after a midnight rollover in a long-lived tab.
   const CURRENT_YEAR = todayISO.slice(0, 4);
 
   const filtered = ledgerData.filter(entry => entry.date <= todayISO);
@@ -943,6 +948,13 @@ function renderLedgerList() {
 
   // Precompute once so each row's sparkline is an O(1) lookup instead of an O(n) scan.
   const sparklineMap = buildDateJaapMap(ledgerData);
+  // Same idea for milestone crossings: getCroreMilestone() re-derives the
+  // whole milestone history from scratch on every call (O(n log n)), and
+  // was previously called 3x per row — O(n^2 log n) just to render the
+  // markers. getMilestoneHistory() already computes this in one O(n log n)
+  // pass (renderReflectionSummary() uses it the same way); build a lookup
+  // once and reuse it per row instead.
+  const milestoneByDate = new Map(getMilestoneHistory(ledgerData).map(m => [m.date, m.crore]));
 
   container.innerHTML = "";
 
@@ -1038,6 +1050,7 @@ yearHeader.addEventListener("click", () => {
       const isUnsavedToday = entry.date === todayISO && (entry.jaap === null || entry.jaap === undefined);
       const sparklinePoints = getRollingWindowFromMap(sparklineMap, entry.date);
       const sparklineHTML = isUnsavedToday ? "" : renderSparklineSVG(sparklinePoints);
+      const crossedCrore = milestoneByDate.get(entry.date) || null;
 
       row.innerHTML = `
         <div class="ledger-main">
@@ -1045,7 +1058,7 @@ yearHeader.addEventListener("click", () => {
 
           <span class="ledger-date">
             ${formatDate(entry.date)}
-            ${getCroreMilestone(entry.date) ? " 🏵️" : ""}
+            ${crossedCrore ? " 🏵️" : ""}
             ${hasExplicitPoornima(entry.notes) ? " 🌕" : ""}
           </span>
 
@@ -1056,9 +1069,9 @@ yearHeader.addEventListener("click", () => {
 
         <div class="ledger-notes">
           ${
-            getCroreMilestone(entry.date)
+            crossedCrore
               ? `<div class="milestone">
-                   ◈ ${getCroreMilestone(entry.date)} Crore Jaap Completed
+                   ◈ ${crossedCrore} Crore Jaap Completed
                  </div>`
               : ""
           }
@@ -1072,7 +1085,7 @@ yearHeader.addEventListener("click", () => {
 
                 <label>
                   Notes<br>
-                  <textarea class="edit-notes" rows="3">${entry.notes || ""}</textarea>
+                  <textarea class="edit-notes" rows="3">${escapeHTML(entry.notes || "")}</textarea>
                 </label>
 
                 <br>
@@ -1080,7 +1093,7 @@ yearHeader.addEventListener("click", () => {
                 <button class="save-entry">Update</button>
               `
               : `
-                ${entry.notes ? entry.notes : "<em>No notes</em>"}
+                ${entry.notes ? escapeHTML(entry.notes) : "<em>No notes</em>"}
                 <div class="locked-note">🔒 Entry locked</div>
               `
           }
@@ -1146,7 +1159,7 @@ function renderTodayCard(entry) {
         class="edit-notes"
         rows="3"
         placeholder="Notes (optional)"
-      >${entry.notes || ""}</textarea>
+      >${escapeHTML(entry.notes || "")}</textarea>
     </label>
 
     <br>
@@ -1193,6 +1206,28 @@ if (!isWithinLastNDays(entry.date, 7)) {
 }
 document.getElementById("restore-backup-btn")
   ?.addEventListener("click", restoreFromBackup);
+
+// ---------- Maintenance drawer open/close ----------
+// Moved here from an inline <script> in index.html so all app logic lives
+// in one place, per this file's own no-modules/single-scope convention.
+const maintenanceToggleBtn = document.getElementById("maintenance-toggle");
+const maintenanceDrawer = document.getElementById("maintenance-drawer");
+
+maintenanceToggleBtn?.addEventListener("click", () => {
+  const isOpen = maintenanceDrawer.classList.toggle("open");
+  maintenanceDrawer.setAttribute("aria-hidden", !isOpen);
+});
+
+document.addEventListener("click", (e) => {
+  if (
+    maintenanceDrawer?.classList.contains("open") &&
+    !maintenanceDrawer.contains(e.target) &&
+    e.target !== maintenanceToggleBtn
+  ) {
+    maintenanceDrawer.classList.remove("open");
+    maintenanceDrawer.setAttribute("aria-hidden", "true");
+  }
+});
 
 // ---------- Mala View toggle ----------
 
@@ -1349,7 +1384,7 @@ function renderSplashSlotUI() {
   const lockedBtn = document.createElement("button");
   lockedBtn.type = "button";
   lockedBtn.className = "splash-slot splash-slot-locked";
-  lockedBtn.title = "Hanuman is the default image and can't be changed";
+  lockedBtn.title = "Gurudev Hanuman Ji is the default image and can't be changed";
 
   const lockedImg = document.createElement("img");
   lockedImg.src = SPLASH_DEFAULT_IMAGE.webp;
@@ -1362,7 +1397,7 @@ function renderSplashSlotUI() {
   lockedBtn.appendChild(lockBadge);
 
   lockedBtn.addEventListener("click", () => {
-    showToast("Hanuman is the default image and can't be changed");
+    showToast("Gurudev Hanuman Ji is the default image and can't be changed");
   });
   wrap.appendChild(lockedBtn);
 
@@ -1652,9 +1687,12 @@ importInput?.addEventListener("change", async (event) => {
     }
 
     for (const entry of importedData) {
+      const jaapIsValid = entry.jaap === null || Number.isFinite(entry.jaap);
+      const dateIsValid = typeof entry.date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(entry.date);
       if (
-        typeof entry.date !== "string" ||
+        !dateIsValid ||
         !("jaap" in entry) ||
+        !jaapIsValid ||
         !("notes" in entry)
       ) {
         alert("Invalid ledger entry format detected.");

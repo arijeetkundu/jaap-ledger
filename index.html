@@ -35,6 +35,7 @@
   </picture>
 </div>
 
+  <main>
   <h1>Sumiran Lite</h1>
 
   <!-- Today Entry Card -->
@@ -44,7 +45,15 @@
 
   <!-- Reflection Summary -->
   <div id="reflection-summary"></div>
-  
+
+  <hr>
+
+  <!-- Ledger List -->
+  <section id="ledger-list">
+    <!-- Ledger rows rendered here -->
+  </section>
+  </main>
+
 <!-- Mala View Toggle -->
 <div id="mala-toggle-wrap" class="mala-toggle-wrap" title="Toggle Mala View">
   <span class="mala-toggle-icon mala-toggle-icon-off" aria-hidden="true">🔢</span>
@@ -103,7 +112,7 @@
     </div>
 
     <h3>Splash Images</h3>
-    <p class="maintenance-hint">Hanuman is always included. Add up to 4 of your own pictures to join the rotation.</p>
+    <p class="maintenance-hint">Gurudev Hanuman Ji is always included. Add up to 4 of your own pictures to join the rotation.</p>
     <div id="splash-slot-wrap" class="splash-slot-wrap">
       <!-- Rendered by app.js -->
     </div>
@@ -124,34 +133,7 @@
   <!-- Filled by app.js -->
 </div>
 
-
-  <hr>
-
-  <!-- Ledger List -->
-  <section id="ledger-list">
-    <!-- Ledger rows rendered here -->
-  </section>
-
   <!-- App logic -->
-  <script>
-  const toggleBtn = document.getElementById("maintenance-toggle");
-  const drawer = document.getElementById("maintenance-drawer");
-
-  toggleBtn.addEventListener("click", () => {
-    const isOpen = drawer.classList.toggle("open");
-    drawer.setAttribute("aria-hidden", !isOpen);
-  });
-  document.addEventListener("click", (e) => {
-  if (
-    drawer.classList.contains("open") &&
-    !drawer.contains(e.target) &&
-    e.target !== toggleBtn
-  ) {
-    drawer.classList.remove("open");
-    drawer.setAttribute("aria-hidden", "true");
-  }
-});
-</script>
   <script src="app.js"></script>
 </body>
 </html>

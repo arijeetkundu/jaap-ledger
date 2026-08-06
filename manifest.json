@@ -4,8 +4,8 @@
   "description": "Offline Jaap Sadhana Ledger",
   "start_url": "./index.html",
   "display": "standalone",
-  "background_color": "#f9f4e8",
-  "theme_color": "#d8cfa8",
+  "background_color": "#fbf1de",
+  "theme_color": "#6c1c27",
   "orientation": "portrait",
   "icons": [
     {

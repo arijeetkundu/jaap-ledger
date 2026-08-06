@@ -241,6 +241,50 @@ async function measureFraming(page) {
   fs.unlinkSync(oversizedFixture);
   fs.unlinkSync(nonImageFixture);
 
+  // ── Quota-exceeded rollback ───────────────────────────────────────────
+  // Exercises setCustomSplashImage() directly (rather than through the full
+  // upload UI) to simulate a localStorage.setItem quota error on the first
+  // write and confirm the previous value is restored, not left half-written.
+  console.log("\n=== Quota-exceeded rollback ===");
+  const quotaRollbackResult = await page.evaluate(() => {
+    const key = "splashImage:custom3";
+    const previousValue = "data:image/png;base64,PREVIOUS";
+    localStorage.setItem(key, previousValue);
+
+    const originalSetItem = localStorage.setItem.bind(localStorage);
+    let callCount = 0;
+    localStorage.setItem = (k, v) => {
+      callCount++;
+      if (k === key && callCount === 1) {
+        throw new DOMException("Quota exceeded", "QuotaExceededError");
+      }
+      return originalSetItem(k, v);
+    };
+
+    let threw = false;
+    let errorMessage = "";
+    try {
+      setCustomSplashImage(3, "data:image/png;base64,NEWVALUE");
+    } catch (e) {
+      threw = true;
+      errorMessage = e.message;
+    }
+
+    localStorage.setItem = originalSetItem;
+
+    return { threw, errorMessage, valueAfter: localStorage.getItem(key) };
+  });
+  assert("a quota error during setCustomSplashImage throws", quotaRollbackResult.threw);
+  assert(
+    "the thrown error has an actionable message",
+    quotaRollbackResult.errorMessage.toLowerCase().includes("storage")
+  );
+  assert(
+    "the previous value is rolled back after a quota error, not left half-written",
+    quotaRollbackResult.valueAfter === "data:image/png;base64,PREVIOUS"
+  );
+  await page.evaluate(() => localStorage.removeItem("splashImage:custom3"));
+
   await page.click("#maintenance-toggle"); // close drawer
 
   // ── Section B: deterministic selection (Math.random mocked) ─────────

@@ -108,6 +108,48 @@ function assert(label, condition) {
     multiCroreJump.length === 1 && multiCroreJump[0].crore === 2
   );
 
+  // ── getCroreMilestone ────────────────────────────────────────────
+  // Reads the global ledgerData directly (unlike getMilestoneHistory, which
+  // takes entries as a parameter) — set it per-case, since no other test in
+  // this file depends on it.
+  console.log("\n=== getCroreMilestone ===");
+  const noCrossing = await page.evaluate(() => {
+    ledgerData = [
+      { date: "2026-01-01", jaap: 1000000, notes: "" },
+      { date: "2026-01-02", jaap: 1000000, notes: "" },
+    ];
+    return getCroreMilestone("2026-01-02");
+  });
+  assert("a date that doesn't cross a Crore boundary returns null", noCrossing === null);
+
+  const singleCrossing = await page.evaluate(() => {
+    ledgerData = [
+      { date: "2026-01-01", jaap: 9000000, notes: "" },
+      { date: "2026-01-02", jaap: 2000000, notes: "" },
+    ];
+    return getCroreMilestone("2026-01-02");
+  });
+  assert("a date crossing exactly one Crore boundary returns that crore number", singleCrossing === 1);
+
+  const multiCrossing = await page.evaluate(() => {
+    ledgerData = [
+      { date: "2026-01-01", jaap: 25000000, notes: "" },
+    ];
+    return getCroreMilestone("2026-01-01");
+  });
+  assert(
+    "a date crossing multiple Crore boundaries at once returns the final bracket reached (consistent with getMilestoneHistory)",
+    multiCrossing === 2
+  );
+
+  const noMatchingEntry = await page.evaluate(() => {
+    ledgerData = [
+      { date: "2026-01-01", jaap: 5000000, notes: "" },
+    ];
+    return getCroreMilestone("2026-01-05");
+  });
+  assert("a date with no matching ledger entry returns null", noMatchingEntry === null);
+
   // ── sumJaapInRange ───────────────────────────────────────────────
   console.log("\n=== sumJaapInRange ===");
   const rangeResult = await page.evaluate(() => sumJaapInRange(

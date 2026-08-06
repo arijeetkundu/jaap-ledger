@@ -53,11 +53,17 @@ async function freshLoad(page, { clearStorage = false } = {}) {
     if (msg.type() === "error") pageErrors.push(msg.text());
   });
 
-  // Accept every alert()/confirm() dialog throughout the suite — every flow
-  // exercised here is the "proceed" path (establish, rewrite, import,
-  // restore); none of the happy-path assertions depend on a decline.
+  // Most flows here are the "proceed" path (establish, rewrite, import,
+  // restore), so dialogs are accepted by default. A shared flag lets one
+  // test flip to "decline" temporarily (see Restore from Backup below)
+  // without needing a second, competing dialog listener.
+  let shouldAcceptDialogs = true;
   page.on("dialog", async (dialog) => {
-    await dialog.accept();
+    if (shouldAcceptDialogs) {
+      await dialog.accept();
+    } else {
+      await dialog.dismiss();
+    }
   });
 
   // ── Accessibility: pinch-to-zoom is not disabled ─────────────────────
@@ -404,6 +410,44 @@ async function freshLoad(page, { clearStorage = false } = {}) {
 
   fs.unlinkSync(tmpFile);
 
+  // ── Import validation: malformed input is rejected, ledger untouched ──
+  console.log("\n=== Import validation ===");
+  const rowCountBeforeBadImports = await page.$$eval(".ledger-row", els => els.length);
+
+  const badShapeFile = path.join(os.tmpdir(), `jaap-import-badshape-${Date.now()}.json`);
+  fs.writeFileSync(badShapeFile, JSON.stringify({ not: "an array" }));
+  await importInput.uploadFile(badShapeFile);
+  await new Promise(r => setTimeout(r, 500));
+  assert(
+    "a non-array import file is rejected without changing the ledger",
+    (await page.$$eval(".ledger-row", els => els.length)) === rowCountBeforeBadImports
+  );
+  fs.unlinkSync(badShapeFile);
+
+  const badEntryFile = path.join(os.tmpdir(), `jaap-import-badentry-${Date.now()}.json`);
+  fs.writeFileSync(badEntryFile, JSON.stringify([
+    { date: "2020-01-01", jaap: "not-a-number", notes: "" },
+  ]));
+  await importInput.uploadFile(badEntryFile);
+  await new Promise(r => setTimeout(r, 500));
+  assert(
+    "an entry with a non-numeric jaap value is rejected without changing the ledger",
+    (await page.$$eval(".ledger-row", els => els.length)) === rowCountBeforeBadImports
+  );
+  fs.unlinkSync(badEntryFile);
+
+  const badDateFile = path.join(os.tmpdir(), `jaap-import-baddate-${Date.now()}.json`);
+  fs.writeFileSync(badDateFile, JSON.stringify([
+    { date: "01-01-2020", jaap: 100, notes: "" },
+  ]));
+  await importInput.uploadFile(badDateFile);
+  await new Promise(r => setTimeout(r, 500));
+  assert(
+    "an entry with a malformed date is rejected without changing the ledger",
+    (await page.$$eval(".ledger-row", els => els.length)) === rowCountBeforeBadImports
+  );
+  fs.unlinkSync(badDateFile);
+
   // ── Restore from Backup ────────────────────────────────────────────
   console.log("\n=== Restore from Backup ===");
   // A backup is written automatically at bootstrap and after every save
@@ -417,6 +461,18 @@ async function freshLoad(page, { clearStorage = false } = {}) {
     await new Promise(r => setTimeout(r, 400));
   }
   await page.waitForSelector("#restore-backup-btn", { visible: true });
+
+  // Declining the confirm() dialog must leave the ledger untouched.
+  const rowCountBeforeDeclinedRestore = await page.$$eval(".ledger-row", els => els.length);
+  shouldAcceptDialogs = false;
+  await page.click("#restore-backup-btn");
+  await new Promise(r => setTimeout(r, 500));
+  shouldAcceptDialogs = true;
+  assert(
+    "declining the Restore from Backup confirmation leaves the ledger unchanged",
+    (await page.$$eval(".ledger-row", els => els.length)) === rowCountBeforeDeclinedRestore
+  );
+
   await page.click("#restore-backup-btn");
   await new Promise(r => setTimeout(r, 500)); // confirm() + alert() dialogs auto-accepted
 
