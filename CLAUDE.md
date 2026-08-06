@@ -29,7 +29,7 @@ node tests/test-redesign.js     # design tokens, milestone celebration, motion
 node tests/test-splash-custom.js # custom splash image upload/rotation/delete
 ```
 
-There is no build step, linter, or CI pipeline — `npm test` must be run locally before pushing. 184 assertions across the 5 suites as of this writing.
+There is no build step, linter, or CI pipeline — `npm test` must be run locally before pushing. 195 assertions across the 5 suites as of this writing.
 
 ## Architecture
 
@@ -47,6 +47,12 @@ There is no build step, linter, or CI pipeline — `npm test` must be run locall
 
 **Bootstrap sequence** (`initApp()`, async IIFE in `app.js`): request persistent storage (best-effort) → `loadLedgerFromDB()` (live store → latest backup → empty array, never seeded from `data.json` — that file is a local-testing fixture only, deliberately never auto-loaded into a real user's ledger) → `ensureRecentEntriesExist(7)` backfills null placeholders for the last 7 days → persist + fresh backup → `renderToday()`. `renderToday()` is the single entry point that re-renders Today Card + Reflection Summary + Ledger List; call it after every mutation rather than patching the DOM piecemeal. Poornima detection is entirely keyword-based (`hasExplicitPoornima()`) — a previous static-calendar fallback (`poornima.json`) was dead code (its only caller was unreachable) and has been removed.
 
+**`todayISO` is a module-level `let`, refreshed at the top of `renderToday()`** — not a `const` computed once at script load. It used to be exactly that, and `renderLedgerList()` separately shadowed it with its own always-fresh local copy; a tab left open across midnight could then show Today Card and the Ledger List disagreeing about what "today" was. Don't reintroduce a local shadow — read the module-level one.
+
+**Notes are HTML-escaped via `escapeHTML()` everywhere they're rendered** (Today Card, ledger row edit, locked ledger row view) since they're interpolated into template strings set via `innerHTML`. The `<textarea>` cases matter most: an unescaped note containing a literal `</textarea>` would close the element early and inject real markup, not just inert text in a `<div>`.
+
+**Milestone-crossing lookups are precomputed once per `renderLedgerList()` call**, not per row — `getCroreMilestone(dateISO)` re-derives the whole milestone history from scratch on every call (O(n log n)), so calling it 3× per row was O(n² log n) just for markers. Build a `Map<date, crore>` via `getMilestoneHistory(ledgerData)` once and look up per row instead; `getCroreMilestone()` itself is still fine for one-off calls (e.g. `updateTodayEntry()`'s single post-save check).
+
 **7-day editable window** is enforced via `isEditableEntry()` / `isWithinLastNDays()`, checked independently in two places (`app.js`) — keep both in sync when touching this logic, there's no shared constant.
 
 **Mala View is a presentation-layer toggle only** (`computeJaapFromInput()` handles the conversion both ways) — it never mutates stored jaap values. Exports always emit raw jaap regardless of the toggle. Watch the precision guard: if a user leaves a pre-filled floored mala value unchanged but the original stored jaap wasn't an exact multiple of 108 (a legacy fractional entry), the original is preserved exactly rather than being recomputed and silently truncated.
@@ -62,7 +68,7 @@ There is no build step, linter, or CI pipeline — `npm test` must be run locall
 - Puppeteer-driven, run against a real served instance — no mocking of the DOM or storage.
 - Fixed phone viewport (390×844) is set explicitly in `test-e2e.js`; Puppeteer's 800×600 default breaks viewport-relative layout assertions (e.g. the splash frame).
 - Tests needing deterministic image selection mock `Math.random` via `page.evaluateOnNewDocument` in an isolated `browser.createBrowserContext()`, so the override and localStorage state never leak into other sections sharing the main page.
-- `confirm()`/`alert()` dialogs are auto-accepted via `page.on("dialog", ...)` for flows that need it (import, restore, Sankalpa rewrite).
+- `confirm()`/`alert()` dialogs default to auto-accepted via a single `page.on("dialog", ...)` handler gated on a shared mutable flag (`shouldAcceptDialogs` in `test-e2e.js`) — a test that needs to exercise a declined dialog flips the flag temporarily rather than registering a second, competing listener.
 - File uploads use `elementHandle.uploadFile(tmpPath)` against the real (hidden) `<input type="file">`, with fixture images generated at test time via `sharp` (a devDependency, also used for asset prep).
 - Top-level `function`/`let` declarations in `app.js` are reachable from `page.evaluate()` even though it's a classic (non-module) script — tests call app.js internals directly (e.g. `pendingSplashSlot`, milestone/formatting functions) rather than only driving the UI.
 
