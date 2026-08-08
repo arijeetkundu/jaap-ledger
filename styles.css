@@ -1185,4 +1185,92 @@ body.loading {
   pointer-events: none;
 }
 
+/* ---------- Sunday Backup Reminder modal ---------- */
+/* A centered card + backdrop, not a full-screen slide-up (.fullscreen-page)
+   or a side drawer — this is a brief, dismissible nudge, not a destination
+   page. Sits below the splash screen (z-index 9999) so if the app opens on
+   a Sunday, the splash fade reveals the modal already in place underneath,
+   rather than the modal flashing in ahead of the splash. */
+.backup-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 9800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+
+  background: rgba(43, 24, 16, 0.55);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s var(--ease-premium);
+}
+
+.backup-modal.open {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.backup-modal-box {
+  position: relative;
+  width: 100%;
+  max-width: 360px;
+  background: linear-gradient(180deg, var(--surface), var(--surface-2));
+  border: 1px solid var(--gold-hairline);
+  border-radius: 16px;
+  padding: 24px 20px 20px;
+  box-shadow: 0 20px 40px -12px rgba(43, 24, 16, 0.45);
+
+  text-align: center;
+  transform: scale(0.92) translateY(8px);
+  transition: transform 0.3s var(--ease-premium);
+}
+
+.backup-modal.open .backup-modal-box {
+  transform: scale(1) translateY(0);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .backup-modal,
+  .backup-modal-box {
+    transition: none;
+  }
+}
+
+.backup-modal-box h2 {
+  margin: 0 0 8px;
+  padding-right: 30px;
+  font-family: var(--font-heading);
+  font-size: 1.1rem;
+  color: var(--maroon);
+}
+
+.backup-modal-box p {
+  margin: 0 0 12px;
+}
+
+.backup-modal-privacy {
+  font-size: 0.82rem;
+  color: var(--ink-muted);
+}
+
+.backup-modal-box .save-entry,
+.backup-modal-box .maintenance-btn {
+  width: 100%;
+}
+
+.backup-modal-close {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 1px solid var(--gold-hairline);
+  background: var(--surface);
+  color: var(--maroon);
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
 

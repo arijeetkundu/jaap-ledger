@@ -82,6 +82,9 @@
 		⬇️ Export Ledger (JSON)
 	</button>
 
+    <button id="drive-backup-btn" class="maintenance-btn">
+      ☁️ Back Up to Google Drive
+    </button>
 
 	<button id="import-json-btn" class="maintenance-btn">
 		⬆️ Import Ledger (JSON)
@@ -131,6 +134,18 @@
 <!-- Sankalpa Page (full-screen) -->
 <div id="sankalpa-page" class="fullscreen-page" aria-hidden="true">
   <!-- Filled by app.js -->
+</div>
+
+<!-- Sunday Backup Reminder Modal -->
+<div id="sunday-backup-modal" class="backup-modal" aria-hidden="true" role="dialog" aria-labelledby="sunday-backup-title">
+  <div class="backup-modal-box">
+    <button id="sunday-backup-close-btn" class="backup-modal-close" aria-label="Close">✕</button>
+    <h2 id="sunday-backup-title">🙏 Sunday Backup Reminder</h2>
+    <p>A gentle nudge to back up your ledger before the week begins.</p>
+    <p class="backup-modal-privacy">Each sadhak signs into their own Google account — your data goes to your own Drive only. Nothing is shared with anyone else.</p>
+    <button id="sunday-backup-primary-btn" class="save-entry">Back Up to Google Drive</button>
+    <button id="sunday-backup-dismiss-btn" class="maintenance-btn">Remind me next Sunday</button>
+  </div>
 </div>
 
   <!-- App logic -->

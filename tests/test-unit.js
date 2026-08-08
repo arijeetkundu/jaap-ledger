@@ -266,6 +266,65 @@ function assert(label, condition) {
     if (cb.checked) { cb.checked = false; cb.dispatchEvent(new Event("change")); }
   });
 
+  // ── shouldShowSundayBackupReminder ─────────────────────────────────
+  console.log("\n=== shouldShowSundayBackupReminder ===");
+  // 2026-08-09 is a Sunday; 2026-08-10 (Monday) and 2026-08-16 (next Sunday) anchor the rest.
+  assert(
+    "a Sunday with no prior prompt date shows the reminder",
+    await page.evaluate(() => shouldShowSundayBackupReminder("2026-08-09", null)) === true
+  );
+  assert(
+    "a Sunday with an older prompt date still shows the reminder",
+    await page.evaluate(() => shouldShowSundayBackupReminder("2026-08-09", "2026-08-02")) === true
+  );
+  assert(
+    "a non-Sunday never shows the reminder, prompt date or not",
+    await page.evaluate(() => shouldShowSundayBackupReminder("2026-08-10", null)) === false
+  );
+  assert(
+    "a Sunday whose prompt date already matches it does not show again the same day",
+    await page.evaluate(() => shouldShowSundayBackupReminder("2026-08-09", "2026-08-09")) === false
+  );
+  assert(
+    "the next Sunday shows again even though last week's Sunday is stored",
+    await page.evaluate(() => shouldShowSundayBackupReminder("2026-08-16", "2026-08-09")) === true
+  );
+
+  // ── buildLedgerExportPayload ────────────────────────────────────────
+  console.log("\n=== buildLedgerExportPayload ===");
+  const exportPayload = await page.evaluate(() => {
+    ledgerData = [
+      { date: "2026-01-01", jaap: 500, notes: "hello" },
+      { date: "2026-01-02", jaap: null, notes: "" },
+      { date: "2026-01-03" }, // missing jaap/notes entirely
+    ];
+    return buildLedgerExportPayload();
+  });
+  assert("export payload has one entry per ledger entry", exportPayload.length === 3);
+  assert(
+    "export payload preserves date/jaap/notes for a normal entry",
+    exportPayload[0].date === "2026-01-01" && exportPayload[0].jaap === 500 && exportPayload[0].notes === "hello"
+  );
+  assert("export payload preserves an explicit null jaap", exportPayload[1].jaap === null);
+  assert(
+    "export payload defaults missing jaap/notes to null/empty string rather than undefined",
+    exportPayload[2].jaap === null && exportPayload[2].notes === ""
+  );
+
+  // ── buildDriveUploadRequest ──────────────────────────────────────────
+  console.log("\n=== buildDriveUploadRequest ===");
+  const createRequest = await page.evaluate(() => buildDriveUploadRequest(null, '{"a":1}'));
+  assert("no existing file -> POST to the multipart create endpoint", createRequest.method === "POST");
+  assert("create request targets uploadType=multipart", createRequest.url.includes("uploadType=multipart"));
+  assert("create request body embeds the payload JSON", createRequest.body.includes('{"a":1}'));
+  assert("create request body embeds the fixed backup filename", createRequest.body.includes("sumiran-lite-backup.json"));
+
+  const updateRequest = await page.evaluate(() => buildDriveUploadRequest("existing-file-id-123", '{"b":2}'));
+  assert("an existing file id -> PATCH to the media update endpoint", updateRequest.method === "PATCH");
+  assert("update request URL embeds the existing file id", updateRequest.url.includes("existing-file-id-123"));
+  assert("update request URL targets uploadType=media", updateRequest.url.includes("uploadType=media"));
+  assert("update request body is the payload JSON directly (no multipart wrapping)", updateRequest.body === '{"b":2}');
+
   console.log("\n=== Console errors ===");
   assert("no JS errors on page", pageErrors.length === 0);
   if (pageErrors.length > 0) console.log("  errors:", pageErrors);
