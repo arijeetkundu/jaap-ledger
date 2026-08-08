@@ -1677,7 +1677,7 @@ document.getElementById("lang-settings-wrap")?.addEventListener("click", (e) => 
 // must expand an image to a raw width*height*4-byte bitmap before it can
 // downscale it), while the megapixel guard catches highly-compressed files
 // that are small on disk but huge in pixels. Everything downstream targets
-// a small, consistent stored size (~100-150KB) regardless of input size.
+// a small, consistent stored size (~250KB, see SPLASH_TARGET_BYTES) regardless of input size.
 const SPLASH_MAX_FILE_BYTES = 5 * 1024 * 1024; // 5MB
 const SPLASH_MAX_MEGAPIXELS = 40 * 1000 * 1000; // ~40MP
 const SPLASH_MAX_EDGE = 900; // longest stored edge, in px
