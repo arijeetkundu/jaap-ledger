@@ -1760,7 +1760,7 @@ importInput?.addEventListener("change", async (event) => {
 // Client ID, add this app's origins as Authorized JavaScript origins, and
 // add each sadhak's Gmail as a Test User while the app is in OAuth Testing
 // status — Google's own consent screen blocks anyone not on that list).
-const GOOGLE_DRIVE_CLIENT_ID = "REPLACE_WITH_YOUR_CLIENT_ID";
+const GOOGLE_DRIVE_CLIENT_ID = "579557768188-cnt9lvkrf96bglng9hv8vqno8e2h7s3n.apps.googleusercontent.com";
 const GOOGLE_DRIVE_SCOPE = "https://www.googleapis.com/auth/drive.file";
 const SUNDAY_BACKUP_FILENAME = "sumiran-lite-backup.json";
 
