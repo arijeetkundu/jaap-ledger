@@ -69,6 +69,10 @@ async function measureFraming(page) {
 
   // ── Section A: default rotation, upload pipeline, deletes, guards ────
   const page = await browser.newPage();
+  // Survives every localStorage.clear() + reload() in this file — re-runs
+  // before app.js on each navigation, so the first-run language picker
+  // never appears and intercepts these tests' clicks.
+  await page.evaluateOnNewDocument(() => localStorage.setItem("appLanguage", "en"));
   await page.setViewport({ width: 390, height: 844 });
   trackErrors(page);
   page.on("dialog", async (dialog) => { await dialog.accept(); });
@@ -293,6 +297,7 @@ async function measureFraming(page) {
   console.log("\n=== <picture> trap & adaptive frame (custom image) ===");
   const contextB = await browser.createBrowserContext();
   const pageB = await contextB.newPage();
+  await pageB.evaluateOnNewDocument(() => localStorage.setItem("appLanguage", "en"));
   await pageB.setViewport({ width: 390, height: 844 });
   trackErrors(pageB);
   // With the pool [hanuman, custom0] (length 2), floor(0.99 * 2) = 1 picks
@@ -364,6 +369,7 @@ async function measureFraming(page) {
   console.log("\n=== Rotation invariant (Hanuman + custom images mixed in) ===");
   const contextC = await browser.createBrowserContext();
   const pageC = await contextC.newPage();
+  await pageC.evaluateOnNewDocument(() => localStorage.setItem("appLanguage", "en"));
   await pageC.setViewport({ width: 390, height: 844 });
   trackErrors(pageC);
   await pageC.goto(BASE, { waitUntil: "networkidle0", timeout: 15000 });

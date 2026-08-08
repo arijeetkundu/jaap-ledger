@@ -55,38 +55,38 @@
   </main>
 
 <!-- Mala View Toggle -->
-<div id="mala-toggle-wrap" class="mala-toggle-wrap" title="Toggle Mala View">
+<div id="mala-toggle-wrap" class="mala-toggle-wrap" data-i18n-title="toggleMalaAria" title="Toggle Mala View">
   <span class="mala-toggle-icon mala-toggle-icon-off" aria-hidden="true">🔢</span>
   <label class="mala-toggle-switch">
-    <input type="checkbox" id="mala-toggle" aria-label="Toggle Mala View">
+    <input type="checkbox" id="mala-toggle" data-i18n-aria="toggleMalaAria" aria-label="Toggle Mala View">
     <span class="mala-toggle-slider"></span>
   </label>
   <span class="mala-toggle-icon mala-toggle-icon-on" aria-hidden="true">📿</span>
 </div>
 
 <!-- Maintenance Toggle -->
-<button id="maintenance-toggle" aria-label="Settings">
+<button id="maintenance-toggle" data-i18n-aria="settingsGearAria" aria-label="Settings">
   ⚙︎
 </button>
 
 <!-- Maintenance Drawer -->
 <div id="maintenance-drawer">
   <div class="maintenance-panel">
-    <h3>Settings</h3>
+    <h3 data-i18n="settingsHeading">Settings</h3>
 
-    <button id="sankalpa-open-btn" class="maintenance-btn">
+    <button id="sankalpa-open-btn" class="maintenance-btn" data-i18n="settingsSankalpaBtn">
 		🕉️ Sankalpa
 	</button>
 
-    <button id="export-json-btn" class="maintenance-btn">
+    <button id="export-json-btn" class="maintenance-btn" data-i18n="settingsExportBtn">
 		⬇️ Export Ledger (JSON)
 	</button>
 
-    <button id="drive-backup-btn" class="maintenance-btn">
+    <button id="drive-backup-btn" class="maintenance-btn" data-i18n="settingsDriveBackupBtn">
       ☁️ Back Up to Google Drive
     </button>
 
-	<button id="import-json-btn" class="maintenance-btn">
+	<button id="import-json-btn" class="maintenance-btn" data-i18n="settingsImportBtn">
 		⬆️ Import Ledger (JSON)
 	</button>
 
@@ -97,25 +97,32 @@
 		style="display:none"
 	/>
 
-    <button id="restore-backup-btn" class="maintenance-btn">
+    <button id="restore-backup-btn" class="maintenance-btn" data-i18n="settingsRestoreBtn">
       Restore from Backup
     </button>
 
-    <h3>Background</h3>
+    <h3 data-i18n="langSettingsHeading">Language</h3>
+    <div id="lang-settings-wrap" class="lang-settings-wrap">
+      <button type="button" class="lang-settings-btn" data-lang="en" aria-pressed="false">English</button>
+      <button type="button" class="lang-settings-btn" data-lang="hi" aria-pressed="false">हिन्दी</button>
+      <button type="button" class="lang-settings-btn" data-lang="bn" aria-pressed="false">বাংলা</button>
+    </div>
+
+    <h3 data-i18n="settingsBackgroundHeading">Background</h3>
     <div id="background-swatch-wrap" class="background-swatch-wrap">
-      <button type="button" class="background-swatch" id="bg-swatch-alpana" data-bg="alpana" aria-label="Alpana background" title="Alpana">
+      <button type="button" class="background-swatch" id="bg-swatch-alpana" data-bg="alpana" data-i18n-aria="bgAriaAlpana" data-i18n-title="bgNameAlpana" aria-label="Alpana background" title="Alpana">
         <img src="icons/bg-alpana.webp" alt="">
       </button>
-      <button type="button" class="background-swatch" id="bg-swatch-mandala" data-bg="mandala" aria-label="Mandala background" title="Mandala">
+      <button type="button" class="background-swatch" id="bg-swatch-mandala" data-bg="mandala" data-i18n-aria="bgAriaMandala" data-i18n-title="bgNameMandala" aria-label="Mandala background" title="Mandala">
         <img src="icons/bg-mandala.webp" alt="">
       </button>
-      <button type="button" class="background-swatch" id="bg-swatch-jharokha" data-bg="jharokha" aria-label="Jharokha background" title="Jharokha">
+      <button type="button" class="background-swatch" id="bg-swatch-jharokha" data-bg="jharokha" data-i18n-aria="bgAriaJharokha" data-i18n-title="bgNameJharokha" aria-label="Jharokha background" title="Jharokha">
         <img src="icons/bg-jharokha.webp" alt="">
       </button>
     </div>
 
-    <h3>Splash Images</h3>
-    <p class="maintenance-hint">Gurudev Hanuman Ji is always included. Add up to 4 of your own pictures to join the rotation.</p>
+    <h3 data-i18n="settingsSplashHeading">Splash Images</h3>
+    <p class="maintenance-hint" data-i18n="settingsSplashHint">Gurudev Hanuman Ji is always included. Add up to 4 of your own pictures to join the rotation.</p>
     <div id="splash-slot-wrap" class="splash-slot-wrap">
       <!-- Rendered by app.js -->
     </div>
@@ -125,9 +132,32 @@
       accept="image/*"
       style="display:none"
     />
-    <button id="splash-images-reset-btn" class="maintenance-btn">
+    <button id="splash-images-reset-btn" class="maintenance-btn" data-i18n="settingsRemoveAllImagesBtn">
       Remove All Custom Images
     </button>
+  </div>
+</div>
+
+<!-- Language Picker (first-run + Settings switcher) -->
+<div id="language-picker" class="lang-picker" aria-hidden="true" role="dialog" aria-labelledby="lang-picker-title">
+  <div class="lang-picker-box">
+    <div class="lang-picker-mark" aria-hidden="true">🕉️</div>
+    <h2 id="lang-picker-title" data-i18n="langPickerTitle">Select Language</h2>
+    <p class="lang-picker-sub" data-i18n="langPickerSubtitle">Sumiran Lite will use this language throughout the app.</p>
+    <div class="lang-picker-options" id="lang-picker-options" role="radiogroup" aria-labelledby="lang-picker-title">
+      <button type="button" class="lang-option" data-lang="en" role="radio" aria-checked="false">
+        <span class="lang-radio"></span>
+        <span class="lang-labels"><span class="lang-primary">English</span></span>
+      </button>
+      <button type="button" class="lang-option" data-lang="hi" role="radio" aria-checked="false">
+        <span class="lang-radio"></span>
+        <span class="lang-labels"><span class="lang-primary">Hindi</span><span class="lang-native">हिन्दी</span></span>
+      </button>
+      <button type="button" class="lang-option" data-lang="bn" role="radio" aria-checked="false">
+        <span class="lang-radio"></span>
+        <span class="lang-labels"><span class="lang-primary">Bangla</span><span class="lang-native">বাংলা</span></span>
+      </button>
+    </div>
   </div>
 </div>
 
@@ -139,12 +169,12 @@
 <!-- Sunday Backup Reminder Modal -->
 <div id="sunday-backup-modal" class="backup-modal" aria-hidden="true" role="dialog" aria-labelledby="sunday-backup-title">
   <div class="backup-modal-box">
-    <button id="sunday-backup-close-btn" class="backup-modal-close" aria-label="Close">✕</button>
-    <h2 id="sunday-backup-title">🙏 Sunday Backup Reminder</h2>
-    <p>A gentle nudge to back up your ledger before the week begins.</p>
-    <p class="backup-modal-privacy">Each sadhak signs into their own Google account — your data goes to your own Drive only. Nothing is shared with anyone else.</p>
-    <button id="sunday-backup-primary-btn" class="save-entry">Back Up to Google Drive</button>
-    <button id="sunday-backup-dismiss-btn" class="maintenance-btn">Remind me next Sunday</button>
+    <button id="sunday-backup-close-btn" class="backup-modal-close" data-i18n-aria="commonCloseAria" aria-label="Close">✕</button>
+    <h2 id="sunday-backup-title" data-i18n="backupModalTitle">🙏 Sunday Backup Reminder</h2>
+    <p data-i18n="backupModalBody">A gentle nudge to back up your ledger before the week begins.</p>
+    <p class="backup-modal-privacy" data-i18n="backupPrivacyLine">Each sadhak signs into their own Google account — your data goes to your own Drive only. Nothing is shared with anyone else.</p>
+    <button id="sunday-backup-primary-btn" class="save-entry" data-i18n="settingsDriveBackupBtn">☁️ Back Up to Google Drive</button>
+    <button id="sunday-backup-dismiss-btn" class="maintenance-btn" data-i18n="backupRemindNextSunday">Remind me next Sunday</button>
   </div>
 </div>
 

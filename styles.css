@@ -1273,4 +1273,171 @@ body.loading {
   cursor: pointer;
 }
 
+/* ---------- Language Picker ---------- */
+/* Full-screen overlay shown once on first launch (no language chosen yet),
+   and reused (via applyAppLanguage()) when switched from Settings. Sits
+   above the Sunday Backup modal (z-index 9900 vs 9800) since it can appear
+   on top of it if both are triggered on the same first Sunday launch. */
+.lang-picker {
+  position: fixed;
+  inset: 0;
+  z-index: 9900;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+
+  background: radial-gradient(120% 90% at 50% 0%, var(--surface-2), var(--cream) 60%);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s var(--ease-premium);
+}
+
+.lang-picker.open {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.lang-picker-box {
+  width: 100%;
+  max-width: 340px;
+  text-align: center;
+}
+
+.lang-picker-mark {
+  font-size: 2rem;
+  margin-bottom: 8px;
+}
+
+.lang-picker-box h2 {
+  font-family: var(--font-heading);
+  color: var(--maroon);
+  font-size: 1.4rem;
+  margin: 0 0 6px;
+}
+
+.lang-picker-sub {
+  color: var(--ink-muted);
+  font-size: 0.85rem;
+  margin: 0 0 24px;
+}
+
+.lang-picker-options {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.lang-option {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 14px 16px;
+  border-radius: 14px;
+  border: 1px solid var(--gold-hairline);
+  background: linear-gradient(180deg, var(--surface), var(--surface-2));
+  cursor: pointer;
+  font-family: inherit;
+  text-align: left;
+  transition: border-color 0.25s var(--ease-premium), transform 0.15s var(--ease-premium), box-shadow 0.25s var(--ease-premium);
+}
+
+.lang-option:hover {
+  border-color: var(--gold);
+}
+
+.lang-option:active {
+  transform: scale(0.98);
+}
+
+.lang-option.selected {
+  border-color: var(--gold);
+  box-shadow: 0 0 0 1px var(--gold);
+}
+
+.lang-radio {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 2px solid var(--gold-hairline);
+  flex: none;
+  position: relative;
+  transition: border-color 0.25s var(--ease-premium);
+}
+
+.lang-option.selected .lang-radio {
+  border-color: var(--maroon);
+}
+
+.lang-radio::after {
+  content: "";
+  position: absolute;
+  inset: 3px;
+  border-radius: 50%;
+  background: var(--maroon);
+  transform: scale(0);
+  transition: transform 0.2s var(--ease-premium);
+}
+
+.lang-option.selected .lang-radio::after {
+  transform: scale(1);
+}
+
+.lang-labels {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.lang-primary {
+  font-weight: 600;
+  color: var(--ink);
+  font-size: 1rem;
+}
+
+.lang-native {
+  color: var(--ink-muted);
+  font-size: 0.85rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lang-picker,
+  .lang-option,
+  .lang-radio,
+  .lang-radio::after {
+    transition: none;
+  }
+}
+
+/* Settings drawer language switcher — compact pill group, distinct from the
+   full-screen picker above (same underlying applyAppLanguage() call). */
+.lang-settings-wrap {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.lang-settings-btn {
+  flex: 1;
+  padding: 8px 6px;
+  font-size: 0.85rem;
+  border-radius: 8px;
+  border: 1px solid var(--gold-hairline);
+  background-color: var(--surface);
+  color: var(--maroon);
+  cursor: pointer;
+  transition: background-color 0.2s var(--ease-premium), border-color 0.2s var(--ease-premium);
+}
+
+.lang-settings-btn:hover {
+  background-color: var(--surface-2);
+}
+
+.lang-settings-btn.active {
+  border-color: var(--gold);
+  background-color: var(--surface-2);
+  font-weight: 600;
+}
+
 

@@ -76,7 +76,16 @@ async function mockGoogleDriveApis(page) {
       },
     };
 
+    const realFetch = window.fetch.bind(window);
     window.fetch = async (url, opts) => {
+      // Only intercept Google/Drive calls — everything else (notably this
+      // app's own same-origin i18n/translations.json load) must reach the
+      // real network, or TRANSLATIONS ends up populated with mock Drive
+      // JSON instead of the actual dictionary.
+      if (!String(url).includes("googleapis.com")) {
+        return realFetch(url, opts);
+      }
+
       const method = (opts && opts.method) || "GET";
       window.__fetchCalls.push({ url: String(url), method });
 
@@ -112,6 +121,10 @@ async function newMockedPage(browser, { dateISO, mockGoogle = true }) {
   });
   await mockPageDate(page, `${dateISO}T10:00:00`);
   if (mockGoogle) await mockGoogleDriveApis(page);
+  // Pre-seed a chosen language (persists across reload, like the Date/Google
+  // mocks above) so the first-run language picker never appears on top of
+  // — and steals clicks from — the Sunday Backup modal under test here.
+  await page.evaluateOnNewDocument(() => localStorage.setItem("appLanguage", "en"));
   await page.goto(BASE, { waitUntil: "networkidle0", timeout: 15000 });
   await page.evaluate(() => localStorage.clear());
   return { context, page, errors };

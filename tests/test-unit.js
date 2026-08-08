@@ -29,6 +29,7 @@ function assert(label, condition) {
 (async () => {
   const browser = await puppeteer.launch({ headless: true, args: ["--no-sandbox"] });
   const page = await browser.newPage();
+  await page.evaluateOnNewDocument(() => localStorage.setItem("appLanguage", "en"));
 
   const pageErrors = [];
   page.on("pageerror", err => pageErrors.push(err.message));
@@ -213,6 +214,7 @@ function assert(label, condition) {
   assert("lowercase 'poornima'", await page.evaluate(() => hasExplicitPoornima("poornima today")) === true);
   assert("mixed case 'Purnima'", await page.evaluate(() => hasExplicitPoornima("Purnima vrat")) === true);
   assert("Devanagari पूर्णिमा", await page.evaluate(() => hasExplicitPoornima("आज पूर्णिमा है")) === true);
+  assert("Bangla পূর্ণিমা", await page.evaluate(() => hasExplicitPoornima("আজ পূর্ণিমা")) === true);
   assert("no keyword -> false", await page.evaluate(() => hasExplicitPoornima("regular practice day")) === false);
   assert("null notes -> false", await page.evaluate(() => hasExplicitPoornima(null)) === false);
   assert("empty string notes -> false", await page.evaluate(() => hasExplicitPoornima("")) === false);
@@ -324,6 +326,108 @@ function assert(label, condition) {
   assert("update request URL embeds the existing file id", updateRequest.url.includes("existing-file-id-123"));
   assert("update request URL targets uploadType=media", updateRequest.url.includes("uploadType=media"));
   assert("update request body is the payload JSON directly (no multipart wrapping)", updateRequest.body === '{"b":2}');
+
+  // ── i18n: t() lookup, fallback, and interpolation ────────────────────
+  console.log("\n=== i18n: t() ===");
+  assert("TRANSLATIONS loaded by bootstrap", await page.evaluate(() => !!TRANSLATIONS && Object.keys(TRANSLATIONS).length > 0));
+  assert("t() returns English by default", await page.evaluate(() => t("todayHeading")) === "Today");
+  assert("t() with a missing key falls back to returning the key itself", await page.evaluate(() => t("thisKeyDoesNotExist")) === "thisKeyDoesNotExist");
+  assert("t() interpolates a single {param}", await page.evaluate(() => t("sankalpaEstablishedDate", { date: "1 Jan 2026" })) === "Established 1 Jan 2026");
+  const restoreConfirmText = await page.evaluate(() => t("ledgerRestoreConfirm", { date: "1 Jan 2026", count: 5 }));
+  assert("t() interpolates multiple {params} in one template", restoreConfirmText.includes("1 Jan 2026") && restoreConfirmText.includes("5"));
+
+  await page.evaluate(() => applyAppLanguage("hi"));
+  assert("switching to Hindi changes t() output", await page.evaluate(() => t("todayHeading")) === "आज");
+  assert("switching to Hindi re-renders the Today Card heading live", await page.evaluate(() => document.querySelector("#today-card h2").textContent.includes("आज")));
+  assert("a missing key still falls back to the key itself in Hindi", await page.evaluate(() => t("thisKeyDoesNotExist")) === "thisKeyDoesNotExist");
+  assert("localStorage persists the chosen language", await page.evaluate(() => localStorage.getItem("appLanguage")) === "hi");
+
+  await page.evaluate(() => applyAppLanguage("bn"));
+  assert("switching to Bangla changes t() output", await page.evaluate(() => t("todayHeading")) === "আজ");
+
+  // Simulate a translations.json entry missing one language (e.g. a string
+  // added after Bangla review) — must fall back to English, not crash/blank.
+  const partialFallback = await page.evaluate(() => {
+    const saved = TRANSLATIONS.commonCancelBtn;
+    TRANSLATIONS.commonCancelBtn = { en: "Cancel" }; // no hi/bn
+    const result = t("commonCancelBtn");
+    TRANSLATIONS.commonCancelBtn = saved; // restore
+    return result;
+  });
+  assert("a key missing the active language falls back to English", partialFallback === "Cancel");
+
+  // A dictionary entry missing BOTH the active language and "en" must not
+  // crash t()'s params interpolation (previously: undefined.split() threw).
+  const totallyMissingResult = await page.evaluate(() => {
+    const saved = TRANSLATIONS.commonCancelBtn;
+    TRANSLATIONS.commonCancelBtn = {}; // no en, no hi, no bn
+    let result, threw = false;
+    try {
+      result = t("commonCancelBtn", { x: 1 }); // params force the interpolation code path
+    } catch (e) {
+      threw = true;
+    }
+    TRANSLATIONS.commonCancelBtn = saved; // restore
+    return { result, threw };
+  });
+  assert("a fully-empty dictionary entry does not crash t() even with params", !totallyMissingResult.threw);
+  assert("a fully-empty dictionary entry falls back to the key itself", totallyMissingResult.result === "commonCancelBtn");
+
+  // Dictionary integrity: every key must have complete en/hi/bn, and any
+  // {placeholder} tokens must match exactly across all three languages —
+  // guards the hand-maintained i18n/translations.json going forward.
+  const dictionaryIssues = await page.evaluate(() => {
+    const issues = [];
+    const tokenPattern = /\{(\w+)\}/g;
+    Object.keys(TRANSLATIONS).forEach((key) => {
+      const entry = TRANSLATIONS[key];
+      ["en", "hi", "bn"].forEach((lang) => {
+        const value = entry[lang];
+        const isEmptyString = typeof value === "string" && value.trim() === "";
+        const isEmptyArray = Array.isArray(value) && value.length === 0;
+        if (value === undefined || value === null || isEmptyString || isEmptyArray) {
+          issues.push(`${key}.${lang} is missing/empty`);
+        }
+      });
+      if (typeof entry.en === "string") {
+        const enTokens = [...entry.en.matchAll(tokenPattern)].map((m) => m[1]).sort().join(",");
+        ["hi", "bn"].forEach((lang) => {
+          if (typeof entry[lang] === "string") {
+            const langTokens = [...entry[lang].matchAll(tokenPattern)].map((m) => m[1]).sort().join(",");
+            if (enTokens !== langTokens) {
+              issues.push(`${key}: {placeholder} mismatch en=[${enTokens}] ${lang}=[${langTokens}]`);
+            }
+          }
+        });
+      }
+    });
+    return issues;
+  });
+  assert("every dictionary key has complete en/hi/bn with matching {placeholder} tokens", dictionaryIssues.length === 0);
+  if (dictionaryIssues.length > 0) console.log("  dictionary issues:", dictionaryIssues);
+
+  // applyStaticTranslations() must leave already-correct baked-in HTML text
+  // alone when a key has no real translation, rather than overwriting it
+  // with t()'s raw-key fallback (the fix for the fetch-failure regression).
+  const staticFallbackResult = await page.evaluate(() => {
+    const heading = document.querySelector('#maintenance-drawer h3[data-i18n="settingsHeading"]');
+    const before = heading.textContent;
+    const saved = TRANSLATIONS.settingsHeading;
+    delete TRANSLATIONS.settingsHeading;
+    applyStaticTranslations();
+    const during = heading.textContent;
+    TRANSLATIONS.settingsHeading = saved;
+    applyStaticTranslations();
+    const after = heading.textContent;
+    return { before, during, after };
+  });
+  assert(
+    "a static element's baked-in text survives a missing translation instead of showing the raw key",
+    staticFallbackResult.during === staticFallbackResult.before && staticFallbackResult.during !== "settingsHeading"
+  );
+  assert("static text is correctly restored once the translation is available again", staticFallbackResult.after === staticFallbackResult.before);
+
+  await page.evaluate(() => applyAppLanguage("en")); // reset for any later suites sharing this origin
 
   console.log("\n=== Console errors ===");
   assert("no JS errors on page", pageErrors.length === 0);

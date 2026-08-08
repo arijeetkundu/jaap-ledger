@@ -26,6 +26,7 @@ function assert(label, condition) {
 (async () => {
   const browser = await puppeteer.launch({ headless: true, args: ["--no-sandbox"] });
   const page = await browser.newPage();
+  await page.evaluateOnNewDocument(() => localStorage.setItem("appLanguage", "en"));
 
   const pageErrors = [];
   page.on("pageerror", err => pageErrors.push(err.message));
