@@ -450,6 +450,59 @@ async function freshLoad(page, { clearStorage = false } = {}) {
     rowCountAfterImport === importFixture.length + 1
   );
 
+  // A regression that only wires buildYearRows()'s chevron/save handlers
+  // correctly for the eager (current-year) path — not the lazy path this
+  // section built via a header click above — would pass every assertion so
+  // far (DOM/row-count checks only) while leaving a lazily-built row's
+  // controls silently non-functional. Actually click a chevron and a save
+  // button inside the already-expanded 2020 container to rule that out.
+  // 2020-01-01 is far outside the real 7-day editable window, so it renders
+  // locked (no .edit-jaap/.save-entry at all) — temporarily stub
+  // isEditableEntry (a plain top-level `function`, so reachable/overridable
+  // via `window.`) to force it editable for this one row, then re-render and
+  // restore the real function afterward.
+  // (This save re-renders the whole Ledger List — 2020 collapses/unbuilds
+  // again afterward, same as any other save — so this must run after the
+  // row-count assertion above, not before it.)
+  await page.evaluate(() => {
+    window.__realIsEditableEntry = isEditableEntry;
+    window.isEditableEntry = () => true;
+    renderToday();
+  });
+  await page.click('.ledger-year-header[data-year="2020"]');
+  await new Promise(r => setTimeout(r, 300));
+
+  // Rows within a year render most-recent-first, so the first .ledger-row
+  // here is 2020-01-03, not 2020-01-01 — read its own displayed date back
+  // rather than assuming which fixture entry it is.
+  const lazyRow2020 = await page.evaluateHandle(() => {
+    const header = document.querySelector('.ledger-year-header[data-year="2020"]');
+    return header.nextElementSibling.querySelector(".ledger-row");
+  });
+  const lazyRowDate = await lazyRow2020.asElement().$eval(".ledger-date", el => el.textContent.trim());
+  await lazyRow2020.asElement().$eval(".ledger-chevron", (el) => el.click());
+  await new Promise(r => setTimeout(r, 300));
+  const lazyRowExpandedClass = await lazyRow2020.asElement().evaluate((el) => el.classList.contains("expanded"));
+  assert("a lazily-built row's chevron expands it just like an eagerly-built row's", lazyRowExpandedClass);
+
+  const lazyJaapInput = await lazyRow2020.asElement().$(".edit-jaap");
+  await lazyJaapInput.click({ clickCount: 3 });
+  await lazyJaapInput.type("999");
+  await lazyRow2020.asElement().$eval(".save-entry", (el) => el.click());
+  await new Promise(r => setTimeout(r, 1200)); // IndexedDB writes + rAF + transition
+
+  const lazyRowSavedJaap = await page.evaluate((dateText) => {
+    const entry = ledgerData.find((e) => dateText.includes(formatDate(e.date)));
+    return entry ? entry.jaap : null;
+  }, lazyRowDate);
+  assert("a lazily-built row's save button actually persists the edit", lazyRowSavedJaap === 999);
+
+  await page.evaluate(() => {
+    window.isEditableEntry = window.__realIsEditableEntry;
+    delete window.__realIsEditableEntry;
+    renderToday();
+  });
+
   fs.unlinkSync(tmpFile);
 
   // ── Import validation: malformed input is rejected, ledger untouched ──

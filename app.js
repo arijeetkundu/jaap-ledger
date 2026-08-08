@@ -1,5 +1,3 @@
-console.log("Sumiran Lite app.js loaded successfully");
-
 // ---------- Background Theme ----------
 let backgroundChoice = localStorage.getItem("backgroundChoice") || "mandala";
 
@@ -33,7 +31,13 @@ let TRANSLATIONS = null;
 
 // One retry on failure — this is normally a same-origin, near-instant
 // static-file fetch, so a single short-delay retry meaningfully narrows
-// the (already small) window where TRANSLATIONS ends up empty.
+// the (already small) window where TRANSLATIONS ends up empty. If BOTH
+// attempts fail, loadTranslations() hands off to a slower background retry
+// loop (see scheduleTranslationsRetry() below) rather than giving up for
+// the rest of the session — loadTranslations() itself is only ever called
+// once, at bootstrap, so without a background loop a transient failure
+// (a momentary network hiccup, a page loaded mid-deploy) would leave
+// TRANSLATIONS empty for the entire session with no way to ever recover.
 async function fetchTranslationsOnce() {
   const res = await fetch("i18n/translations.json");
   if (!res.ok) throw new Error("HTTP " + res.status);
@@ -49,10 +53,50 @@ async function loadTranslations() {
       await new Promise((resolve) => setTimeout(resolve, 500));
       TRANSLATIONS = await fetchTranslationsOnce();
     } catch (e2) {
-      console.error("Retry failed, falling back to baked-in English:", e2);
+      console.error("Retry failed, falling back to baked-in English for now:", e2);
       TRANSLATIONS = {};
+      scheduleTranslationsRetry();
     }
   }
+}
+
+// Same-origin static asset, small file — a slow retry cadence is plenty
+// responsive for "the network hiccuped" while staying cheap if something
+// is genuinely, persistently broken. Capped rather than infinite: after
+// TRANSLATIONS_RETRY_MAX_ATTEMPTS (~100s total), give up for the rest of
+// the session — static markup already degrades gracefully via
+// applyStaticTranslations()'s existing skip-if-missing behavior, and
+// dynamic sections falling back to raw keys becomes the documented,
+// accepted residual risk only in that genuinely-persistent-failure case.
+const TRANSLATIONS_RETRY_MS = 5000;
+const TRANSLATIONS_RETRY_MAX_ATTEMPTS = 20;
+let translationsRetryTimer = null;
+let translationsRetryAttempts = 0;
+
+function scheduleTranslationsRetry() {
+  if (translationsRetryTimer) return; // already scheduled
+  if (translationsRetryAttempts >= TRANSLATIONS_RETRY_MAX_ATTEMPTS) return;
+
+  translationsRetryTimer = setTimeout(async () => {
+    translationsRetryTimer = null;
+    translationsRetryAttempts++;
+    try {
+      const fresh = await fetchTranslationsOnce();
+      TRANSLATIONS = fresh;
+      // Re-render everything now visible with the real dictionary — static
+      // markup was already showing correct (if untranslated) English, so
+      // this is what upgrades it to the user's actual chosen language too.
+      applyStaticTranslations();
+      updateMalaToggleButton();
+      renderSplashSlotUI();
+      renderToday();
+      if (document.getElementById("sankalpa-page")?.classList.contains("open")) {
+        renderSankalpaPage();
+      }
+    } catch (e) {
+      scheduleTranslationsRetry();
+    }
+  }, TRANSLATIONS_RETRY_MS);
 }
 
 function getEffectiveLang() {
@@ -66,13 +110,18 @@ function hasTranslation(key) {
   return !!(TRANSLATIONS && TRANSLATIONS[key]);
 }
 
-// Before TRANSLATIONS loads, falls back to the key itself so nothing
-// throws; every call site that matters is re-invoked once translations
-// are ready (see applyAppLanguage() / initApp()). Also guards against a
-// dictionary entry that exists but is missing both the active language
-// and "en" (shouldn't happen with the current dictionary, but a future
-// edit could introduce one) — without this, params interpolation below
-// would throw on `undefined.split(...)`.
+// Before TRANSLATIONS loads (or if it's still empty because both attempts
+// in loadTranslations() failed and the background retry above hasn't
+// succeeded yet), falls back to the key itself so nothing throws — this is
+// the one dynamic-UI gap that isn't fully closed: while TRANSLATIONS is
+// genuinely empty, dynamic sections (rebuilt from scratch every render, no
+// prior DOM to preserve the way applyStaticTranslations() does for static
+// markup) do show raw key text until the background retry above succeeds
+// and re-renders everything. Also guards against a dictionary entry that
+// exists but is missing both the active language and "en" (shouldn't
+// happen with the current dictionary, but a future edit could introduce
+// one) — without this, params interpolation below would throw on
+// `undefined.split(...)`.
 function t(key, params) {
   const entry = TRANSLATIONS && TRANSLATIONS[key];
   let str = entry ? (entry[getEffectiveLang()] || entry.en) : key;
@@ -258,9 +307,17 @@ function showToast(message = "Saved") {
 // crosses a new Crore boundary (see updateTodayEntry). Purely decorative —
 // builds a batch of .petal-fly spans into #petal-overlay with randomized
 // fall paths, then removes them once the longest one has finished.
+// Tags each call's batch with an incrementing id so a still-animating
+// batch's petals can't be wiped by a second, faster-finishing batch's own
+// cleanup timeout — see the id check right before the clearing timeout
+// below.
+let celebrationBatchId = 0;
+
 function celebrateMilestone() {
   const overlay = document.getElementById("petal-overlay");
   if (!overlay) return;
+
+  const thisBatchId = ++celebrationBatchId;
 
   const PETAL_COUNT = 96;
   const MIN_DURATION = 4.5;
@@ -301,7 +358,13 @@ function celebrateMilestone() {
   }
 
   setTimeout(() => {
-    overlay.innerHTML = "";
+    // Only clear if no later call has started a newer batch in the
+    // meantime — otherwise this stale cleanup would wipe the newer batch's
+    // still-animating petals mid-flight. The newer batch's own cleanup
+    // timeout will clear everything once it finishes.
+    if (thisBatchId === celebrationBatchId) {
+      overlay.innerHTML = "";
+    }
   }, maxDurationMs + 200);
 }
 
@@ -356,6 +419,15 @@ function malaToJaap(malas) {
 // Pure formatting — never mutates stored data.
 function formatAsMala(jaap) {
   return `${formatIndianNumber(jaapToMala(jaap))} mala`;
+}
+
+// Shared by every jaap-count total shown in the UI (Reflection Summary's
+// lifetime/yearly totals and pace predictions, the Ledger List's per-year
+// total) — respects Mala View, unlike a bare toLocaleString() call, which
+// would silently ignore it and fall back to locale-default (not Indian)
+// digit grouping.
+function formatTotal(n) {
+  return malaViewEnabled ? formatAsMala(n) : formatIndianNumber(n);
 }
 
 // Add/subtract calendar days from an ISO date, local time
@@ -684,7 +756,6 @@ async function loadLedgerFromDB() {
   });
 
   if (ledger && Array.isArray(ledger)) {
-    console.log("Ledger loaded from IndexedDB");
     return ledger;
   }
 
@@ -701,7 +772,6 @@ async function loadLedgerFromDB() {
   });
 
   if (backup && Array.isArray(backup.entries)) {
-    console.log("Ledger restored from automatic backup");
     await saveLedger(backup.entries);
     return backup.entries;
   }
@@ -740,7 +810,6 @@ function groupEntriesByYear(entries) {
 // re-render entry point) rather than only once at script load, so a tab
 // left open across midnight doesn't drift out of sync with the real date.
 let todayISO = getTodayISO();
-console.log("Today (ISO):", todayISO);
 
 // ---------- IndexedDB Storage ----------
 
@@ -792,6 +861,14 @@ async function saveLedger(data) {
 
 // ---------- State ----------
 let ledgerData = [];
+// True once initApp()'s own initial load+save sequence has fully completed.
+// Restore-from-backup and Import both replace ledgerData wholesale and are
+// reachable (their listeners are wired at top-level script scope) before
+// that sequence finishes — without this guard, a fast user action right at
+// cold launch could let initApp()'s own pending saveLedger() call (holding
+// data captured before the restore/import) run afterward and silently
+// overwrite the just-restored/imported ledger.
+let appReady = false;
 // Display preference only — never mutates stored ledger data. Persisted in
 // localStorage (same tier as other display preferences), not IndexedDB.
 let malaViewEnabled = localStorage.getItem("malaViewEnabled") === "true";
@@ -901,13 +978,7 @@ function updateBackgroundSwatchButtons() {
   try {
 	  
 	if (navigator.storage && navigator.storage.persist) {
-  navigator.storage.persist().then(granted => {
-    console.log(
-      granted
-        ? "Persistent storage granted"
-        : "Persistent storage not granted"
-    );
-  });
+  navigator.storage.persist(); // best-effort; outcome doesn't change app behavior either way
 }
 
     await loadTranslations();
@@ -949,6 +1020,7 @@ ensureRecentEntriesExist(7);
 //Persist only if we added something
 await saveLedger(ledgerData);
 await saveAutomaticBackup(ledgerData);
+appReady = true;
 
     renderToday();
 
@@ -983,6 +1055,21 @@ document.addEventListener("visibilitychange", () => {
   }
 });
 
+// visibilitychange only fires on a background<->foreground *transition* —
+// a screen that stays continuously on and visible (no app-switch, no lock)
+// spanning a local midnight rollover never triggers it, so todayISO could
+// stay stale indefinitely on a device left open and awake. A low-frequency
+// interval catches that remaining case; the display self-corrects within
+// this interval even with zero user interaction. (updateTodayEntry() also
+// independently re-syncs todayISO immediately before acting, so a save
+// itself is never at risk of writing to the wrong day even in the window
+// before this interval next fires — see its own comment.)
+setInterval(() => {
+  if (document.visibilityState === "visible" && getTodayISO() !== todayISO) {
+    renderToday();
+  }
+}, 60000);
+
 async function saveAutomaticBackup(data) {
   const db = await openDB();
 
@@ -998,7 +1085,6 @@ async function saveAutomaticBackup(data) {
     store.put(payload, "latest");
 
     tx.oncomplete = () => {
-      console.log("Automatic backup saved");
       resolve();
     };
 
@@ -1023,6 +1109,11 @@ async function loadLatestBackup() {
 }
 
 async function restoreFromBackup() {
+  if (!appReady) {
+    showToast(t("appNotReadyYet"));
+    return;
+  }
+
   const backup = await loadLatestBackup();
 
   if (!backup || !backup.entries) {
@@ -1053,13 +1144,18 @@ async function restoreFromBackup() {
 function renderToday() {
   todayISO = getTodayISO();
   const entry = ensureTodayEntryExists();
+  // Computed once here and threaded through — renderReflectionSummary() and
+  // renderLedgerList() previously each called getMilestoneHistory(ledgerData)
+  // independently (same input, same O(n log n) result, computed twice per
+  // render pass).
+  const milestoneHistory = getMilestoneHistory(ledgerData);
   renderTodayCard(entry);
-  renderReflectionSummary();   // ← add this
-  renderLedgerList();
+  renderReflectionSummary(milestoneHistory);
+  renderLedgerList(milestoneHistory);
 }
 
 
-function renderReflectionSummary() {
+function renderReflectionSummary(milestoneHistory) {
   const container = document.getElementById("reflection-summary");
 
   const yearlyTotals = getYearlyTotals();
@@ -1071,13 +1167,12 @@ function renderReflectionSummary() {
   const progressInCrore = cumulative - currentCrore * CRORE;
   const percent = Math.floor(getMilestoneProgress(cumulative));
 
-  const milestoneHistory = getMilestoneHistory(ledgerData);
   const pred30 = predictNextMilestone(ledgerData);
   const predYTD = predictNextMilestoneYTD(ledgerData);
 
-  // Lifetime/yearly totals respect Mala View; Crore/progress numbers stay in jaap terms
-  // (Crore is the domain unit for milestones, not malas — per spec §4.5).
-  const formatTotal = n => malaViewEnabled ? formatAsMala(n) : formatIndianNumber(n);
+  // Lifetime/yearly totals respect Mala View (via the shared formatTotal());
+  // Crore/progress numbers stay in jaap terms (Crore is the domain unit for
+  // milestones, not malas — per spec §4.5).
 
   container.innerHTML = `
     <div class="reflection-box">
@@ -1277,7 +1372,7 @@ function buildYearRows(yearContainer, entries, { sparklineMap, milestoneByDate }
 // years of daily history rebuilt thousands of already-hidden DOM nodes and
 // re-attached thousands of listeners just to update the one row that
 // changed.
-function renderLedgerList() {
+function renderLedgerList(milestoneHistory) {
   const container = document.getElementById("ledger-list");
   // Uses the module-level todayISO (refreshed at the top of renderToday()) —
   // previously this shadowed it with its own fresh copy, which meant Today
@@ -1294,10 +1389,10 @@ function renderLedgerList() {
   // Same idea for milestone crossings: getCroreMilestone() re-derives the
   // whole milestone history from scratch on every call (O(n log n)), and
   // was previously called 3x per row — O(n^2 log n) just to render the
-  // markers. getMilestoneHistory() already computes this in one O(n log n)
-  // pass (renderReflectionSummary() uses it the same way); build a lookup
-  // once and reuse it per row instead.
-  const milestoneByDate = new Map(getMilestoneHistory(ledgerData).map(m => [m.date, m.crore]));
+  // markers. milestoneHistory is computed once per renderToday() pass (by
+  // the caller, shared with renderReflectionSummary()) — build a lookup
+  // once here and reuse it per row.
+  const milestoneByDate = new Map(milestoneHistory.map(m => [m.date, m.crore]));
   const rowDeps = { sparklineMap, milestoneByDate };
 
   container.innerHTML = "";
@@ -1349,9 +1444,13 @@ function renderLedgerList() {
     yearHeader.className = "ledger-year-header";
     yearHeader.dataset.year = year;
 
-    const yearTotal = groupedByYear[year]
-      .reduce((sum, e) => sum + (e.jaap || 0), 0)
-      .toLocaleString();
+    // formatTotal(), not a bare toLocaleString() — the latter ignores Mala
+    // View (always showed raw jaap even when every row underneath read "X
+    // mala") and uses the browser's default locale grouping instead of the
+    // Indian digit grouping every other total in the app uses.
+    const yearTotal = formatTotal(
+      groupedByYear[year].reduce((sum, e) => sum + (e.jaap || 0), 0)
+    );
 
     yearHeader.innerHTML = `
       <span class="year-left">
@@ -1435,13 +1534,24 @@ async function updateTodayEntry() {
   const jaapInput = document.getElementById("today-jaap").value;
   const notesInput = document.getElementById("today-notes").value;
 
-const entry = ledgerData.find(e => e.date === todayISO);
-if (!entry) return;
+  // Re-sync todayISO immediately before acting, independent of the
+  // visibilitychange listener / periodic interval elsewhere in this file —
+  // those keep the *display* accurate, but a save must never trust a
+  // possibly-stale module-level todayISO for which entry it's writing to.
+  // Without this, a continuously-open tab spanning midnight would look up
+  // ledgerData.find(e => e.date === todayISO) against yesterday's date and
+  // silently overwrite yesterday's already-recorded entry instead of
+  // creating today's. ensureTodayEntryExists() (not a plain .find()) also
+  // creates today's placeholder if the day just rolled over and nothing
+  // has backfilled it yet.
+  todayISO = getTodayISO();
+  const entry = ensureTodayEntryExists();
 
-if (!isWithinLastNDays(entry.date, 7)) {
-  console.warn("Edit blocked: entry older than 7 days");
-  return;
-}
+  // (No isWithinLastNDays(entry.date, 7) guard here — this function only
+  // ever edits *today's* entry by construction, which is always within the
+  // window; a same-day comparison against itself can never be false, so a
+  // guard here was always dead code and has been removed rather than kept
+  // as false reassurance.)
 
   const newJaap = computeJaapFromInput(jaapInput, entry.jaap);
   if (!isValidJaapValue(newJaap)) {
@@ -1992,6 +2102,12 @@ importInput?.addEventListener("change", async (event) => {
   const file = event.target.files[0];
   if (!file) return;
 
+  if (!appReady) {
+    showToast(t("appNotReadyYet"));
+    event.target.value = "";
+    return;
+  }
+
   try {
     const text = await file.text();
     const importedData = JSON.parse(text);
@@ -2002,18 +2118,31 @@ importInput?.addEventListener("change", async (event) => {
       return;
     }
 
+    const seenDates = new Set();
     for (const entry of importedData) {
-      const jaapIsValid = entry.jaap === null || Number.isFinite(entry.jaap);
-      const dateIsValid = typeof entry.date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(entry.date);
+      // isValidJaapValue() is the same guard both live save paths (Today
+      // Card, Ledger row) already use — reject anything they'd reject,
+      // including negative numbers (Number.isFinite(-500) is true, so a
+      // plain finite check alone would have silently let negatives through
+      // to corrupt every downstream sum).
+      const jaapIsValid = isValidJaapValue(entry.jaap);
+      const dateIsValid = typeof entry.date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(entry.date) && entry.date <= todayISO;
+      // notes must actually be a string, not merely present — a truthy
+      // non-string (e.g. a hand-edited "notes": 123) crashes the very next
+      // render via hasExplicitPoornima()'s notes.toLowerCase() call, and by
+      // then the bad entry has already been persisted to IndexedDB.
+      const notesIsValid = typeof entry.notes === "string";
       if (
         !dateIsValid ||
         !("jaap" in entry) ||
         !jaapIsValid ||
-        !("notes" in entry)
+        !notesIsValid ||
+        seenDates.has(entry.date)
       ) {
         alert(t("ledgerInvalidEntryFormat"));
         return;
       }
+      seenDates.add(entry.date);
     }
 
     const confirmReplace = confirm(t("ledgerImportConfirm", { count: importedData.length }));
