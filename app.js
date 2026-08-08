@@ -255,6 +255,15 @@ function isSunday(dateISO) {
   return date.getDay() === 0; // 0 = Sunday
 }
 
+// Pure predicate for the Sunday Drive-backup reminder: show only on a
+// Sunday whose date doesn't already match the last shown/dismissed/
+// completed date. Naturally self-resolves to "next Sunday" with no extra
+// date math, since Sundays are 7 days apart and lastPromptDateISO only
+// ever matches the *current* day once it's been handled.
+function shouldShowSundayBackupReminder(dateISO, lastPromptDateISO) {
+  return isSunday(dateISO) && lastPromptDateISO !== dateISO;
+}
+
 // Calculate cumulative jaap up to a given date (inclusive)
 function getCumulativeJaapUpTo(dateISO) {
   return ledgerData
@@ -768,6 +777,13 @@ await saveLedger(ledgerData);
 await saveAutomaticBackup(ledgerData);
 
     renderToday();
+
+    // Checked once at app-open, not inside renderToday() itself (which also
+    // runs after every save) — the reminder is an app-open event, not a
+    // re-render event.
+    if (shouldShowSundayBackupReminder(todayISO, localStorage.getItem("lastSundayBackupPromptDate"))) {
+      openSundayBackupModal();
+    }
 
   } catch (err) {
     console.error("Initialization failed:", err);
@@ -1631,6 +1647,16 @@ document.getElementById("sankalpa-open-btn")
 
   // ---------- Export Ledger (JSON) ----------
 
+// Shared by the Export button and the Google Drive backup path — both need
+// the same clone-and-sanitize shaping of the raw ledger.
+function buildLedgerExportPayload() {
+  return ledgerData.map(e => ({
+    date: e.date,
+    jaap: e.jaap ?? null,
+    notes: e.notes || ""
+  }));
+}
+
 document.getElementById("export-json-btn")
   ?.addEventListener("click", async () => {
     if (!ledgerData || ledgerData.length === 0) {
@@ -1638,12 +1664,7 @@ document.getElementById("export-json-btn")
       return;
     }
 
-    // Clone & sanitize (future-proof)
-    const exportData = ledgerData.map(e => ({
-      date: e.date,
-      jaap: e.jaap ?? null,
-      notes: e.notes || ""
-    }));
+    const exportData = buildLedgerExportPayload();
 
     const blob = new Blob(
       [JSON.stringify(exportData, null, 2)],
@@ -1727,4 +1748,192 @@ importInput?.addEventListener("change", async (event) => {
     importInput.value = ""; // allow re-import of same file
   }
 });
+
+// ---------- Google Drive Backup (Sunday reminder + on-demand) ----------
+// The only feature in this app that talks to the network, and only when the
+// user actually engages with it (the Sunday modal or the Settings button) --
+// everything else stays fully offline-capable. A browser-app OAuth Client ID
+// is a public value (not a secret), so it's safe to hardcode here.
+//
+// REPLACE GOOGLE_DRIVE_CLIENT_ID before this feature can work — see
+// README.md / CLAUDE.md for setup (create or reuse a Google Cloud OAuth
+// Client ID, add this app's origins as Authorized JavaScript origins, and
+// add each sadhak's Gmail as a Test User while the app is in OAuth Testing
+// status — Google's own consent screen blocks anyone not on that list).
+const GOOGLE_DRIVE_CLIENT_ID = "REPLACE_WITH_YOUR_CLIENT_ID";
+const GOOGLE_DRIVE_SCOPE = "https://www.googleapis.com/auth/drive.file";
+const SUNDAY_BACKUP_FILENAME = "sumiran-lite-backup.json";
+
+let googleIdentityScriptPromise = null;
+
+// Lazily injects the Google Identity Services script (idempotent) — only
+// called when a backup is actually attempted, so users who never touch this
+// feature never load it.
+function loadGoogleIdentityScript() {
+  if (window.google && window.google.accounts && window.google.accounts.oauth2) {
+    return Promise.resolve();
+  }
+  if (googleIdentityScriptPromise) return googleIdentityScriptPromise;
+
+  googleIdentityScriptPromise = new Promise((resolve, reject) => {
+    const existing = document.querySelector("script[data-google-identity]");
+    if (existing) {
+      existing.addEventListener("load", () => resolve());
+      existing.addEventListener("error", () => reject(new Error("Could not load Google Sign-In. Check your internet connection.")));
+      return;
+    }
+    const script = document.createElement("script");
+    script.src = "https://accounts.google.com/gsi/client";
+    script.async = true;
+    script.defer = true;
+    script.dataset.googleIdentity = "true";
+    script.onload = () => resolve();
+    script.onerror = () => reject(new Error("Could not load Google Sign-In. Check your internet connection."));
+    document.head.appendChild(script);
+  });
+
+  return googleIdentityScriptPromise;
+}
+
+// Wraps the Google Identity Services token client (callback-based) in a
+// Promise. Rejects if the user closes the popup or sign-in otherwise fails.
+function requestGoogleDriveAccessToken() {
+  return new Promise((resolve, reject) => {
+    try {
+      const tokenClient = google.accounts.oauth2.initTokenClient({
+        client_id: GOOGLE_DRIVE_CLIENT_ID,
+        scope: GOOGLE_DRIVE_SCOPE,
+        callback: (tokenResponse) => {
+          if (tokenResponse && tokenResponse.access_token) {
+            resolve(tokenResponse.access_token);
+          } else {
+            reject(new Error("Google sign-in did not complete."));
+          }
+        },
+        error_callback: () => {
+          reject(new Error("Google sign-in was cancelled."));
+        },
+      });
+      tokenClient.requestAccessToken();
+    } catch (e) {
+      reject(e instanceof Error ? e : new Error("Failed to start Google sign-in."));
+    }
+  });
+}
+
+// Pure: decides the shape of the Drive upload request (method/URL/body)
+// given whether a backup file already exists — no network I/O of its own,
+// so this is directly unit-testable without mocking fetch at all.
+function buildDriveUploadRequest(existingFileId, payloadJSON) {
+  if (existingFileId) {
+    return {
+      method: "PATCH",
+      url: `https://www.googleapis.com/upload/drive/v3/files/${existingFileId}?uploadType=media`,
+      headers: { "Content-Type": "application/json" },
+      body: payloadJSON,
+    };
+  }
+
+  const boundary = "sumiran-lite-backup-boundary";
+  const metadata = JSON.stringify({ name: SUNDAY_BACKUP_FILENAME, mimeType: "application/json" });
+  const multipartBody =
+    `--${boundary}\r\n` +
+    `Content-Type: application/json; charset=UTF-8\r\n\r\n` +
+    `${metadata}\r\n` +
+    `--${boundary}\r\n` +
+    `Content-Type: application/json\r\n\r\n` +
+    `${payloadJSON}\r\n` +
+    `--${boundary}--`;
+
+  return {
+    method: "POST",
+    url: "https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart",
+    headers: { "Content-Type": `multipart/related; boundary=${boundary}` },
+    body: multipartBody,
+  };
+}
+
+// Searches for an existing sumiran-lite-backup.json (the drive.file scope
+// only ever sees files this app itself created, so a name match is enough).
+async function findExistingDriveBackupFileId(accessToken) {
+  const query = encodeURIComponent(`name='${SUNDAY_BACKUP_FILENAME}' and trashed=false`);
+  const res = await fetch(
+    `https://www.googleapis.com/drive/v3/files?q=${query}&spaces=drive&fields=files(id,name)`,
+    { headers: { Authorization: `Bearer ${accessToken}` } }
+  );
+  if (!res.ok) {
+    throw new Error("Could not check Google Drive for an existing backup.");
+  }
+  const data = await res.json();
+  const match = data.files && data.files[0];
+  return match ? match.id : null;
+}
+
+async function uploadLedgerBackupToDrive(accessToken) {
+  const payloadJSON = JSON.stringify(buildLedgerExportPayload(), null, 2);
+  const existingFileId = await findExistingDriveBackupFileId(accessToken);
+  const request = buildDriveUploadRequest(existingFileId, payloadJSON);
+
+  const res = await fetch(request.url, {
+    method: request.method,
+    headers: { ...request.headers, Authorization: `Bearer ${accessToken}` },
+    body: request.body,
+  });
+
+  if (!res.ok) {
+    throw new Error("Google Drive rejected the backup upload.");
+  }
+}
+
+function markSundayBackupHandled() {
+  localStorage.setItem("lastSundayBackupPromptDate", todayISO);
+}
+
+function openSundayBackupModal() {
+  const modal = document.getElementById("sunday-backup-modal");
+  if (!modal) return;
+  modal.classList.add("open");
+  modal.setAttribute("aria-hidden", "false");
+}
+
+function closeSundayBackupModal() {
+  const modal = document.getElementById("sunday-backup-modal");
+  if (!modal) return;
+  modal.classList.remove("open");
+  modal.setAttribute("aria-hidden", "true");
+}
+
+// "Remind me next Sunday", "✕", and backdrop click all funnel here — mark
+// today handled (so the modal won't reappear until next Sunday) without
+// uploading anything.
+function dismissSundayBackupReminder() {
+  markSundayBackupHandled();
+  closeSundayBackupModal();
+}
+
+// The primary action, wired to both the modal's "Back Up to Google Drive"
+// button and the on-demand Settings button. Every failure mode (network
+// down, popup closed, Drive API error) surfaces via showToast() with an
+// actionable message rather than failing silently.
+async function backupToGoogleDrive() {
+  try {
+    await loadGoogleIdentityScript();
+    const accessToken = await requestGoogleDriveAccessToken();
+    await uploadLedgerBackupToDrive(accessToken);
+    markSundayBackupHandled();
+    closeSundayBackupModal();
+    showToast("Backed up to Google Drive ✓");
+  } catch (err) {
+    console.error("Google Drive backup failed:", err);
+    showToast(err && err.message ? err.message : "Backup failed. Please try again.");
+  }
+}
+
+document.getElementById("sunday-backup-primary-btn")?.addEventListener("click", backupToGoogleDrive);
+document.getElementById("sunday-backup-dismiss-btn")?.addEventListener("click", dismissSundayBackupReminder);
+document.getElementById("sunday-backup-close-btn")?.addEventListener("click", dismissSundayBackupReminder);
+document.getElementById("sunday-backup-modal")?.addEventListener("click", (e) => {
+  if (e.target.id === "sunday-backup-modal") dismissSundayBackupReminder();
+});
+document.getElementById("drive-backup-btn")?.addEventListener("click", backupToGoogleDrive);
 
