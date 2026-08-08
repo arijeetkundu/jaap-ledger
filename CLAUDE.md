@@ -27,9 +27,10 @@ node tests/test-unit.js         # pure-logic unit tests
 node tests/test-e2e.js          # full user-flow E2E tests
 node tests/test-redesign.js     # design tokens, milestone celebration, motion
 node tests/test-splash-custom.js # custom splash image upload/rotation/delete
+node tests/test-sunday-backup.js # Sunday backup modal + Google Drive backup (mocked network)
 ```
 
-There is no build step, linter, or CI pipeline — `npm test` must be run locally before pushing. 195 assertions across the 5 suites as of this writing.
+There is no build step, linter, or CI pipeline — `npm test` must be run locally before pushing. 232 assertions across the 6 suites as of this writing.
 
 ## Architecture
 
@@ -62,6 +63,8 @@ There is no build step, linter, or CI pipeline — `npm test` must be run locall
 **Fonts are self-hosted, never CDN-linked** — Playfair Display (`--font-heading`) and Inter (`--font-body`) live as variable-font `.woff2` files under `fonts/`, each declared once via `@font-face` with a `font-weight: 400 700` range so a single file covers every weight in use (no CDN dependency, consistent with the app's fully-offline architecture). Form controls (`input`/`button`/`textarea`/`select`) don't inherit `body`'s font-family in browser UA stylesheets by default, so there's an explicit `font-family: inherit` reset for them — remove it and counts/labels/buttons silently fall back to the platform UI font.
 
 **Background themes** (Alpana/Mandala/Jharokha) render on a dedicated fixed `#app-background` element via `body.bg-*` classes — not `background-attachment: fixed` on `body`, which iOS Safari has historically degraded. The splash screen deliberately never applies the chosen background theme; it always uses its own dedicated backdrop.
+
+**Google Drive backup is the app's only network dependency**, and only when a user actually engages with it (`app.js`, "Google Drive Backup" section, near the end of the file). `loadGoogleIdentityScript()` lazily injects `https://accounts.google.com/gsi/client` (the app's only CDN script) on first use — the rest of the app stays fully offline-capable. `GOOGLE_DRIVE_CLIENT_ID` is a hardcoded, real, public OAuth Client ID (public by design — client IDs for browser apps aren't secrets); see [README.md#google-drive-backup-setup](README.md) if it ever needs to be recreated. The `drive.file` scope means the app can only see/manage files it created itself. Three logic pieces are deliberately pure and side-effect-free so they're directly unit-testable without mocking the network: `shouldShowSundayBackupReminder(dateISO, lastPromptDateISO)` (`isSunday(dateISO) && lastPromptDateISO !== dateISO`), `buildLedgerExportPayload()` (shared with the plain Export button), and `buildDriveUploadRequest(existingFileId, payloadJSON)` (decides PATCH-media-update vs. POST-multipart-create). `lastSundayBackupPromptDate` in localStorage is a display-state flag like `backgroundChoice`, not practice data — deliberately excluded from Export/Import/backup-restore. The bootstrap check lives in `initApp()` after the initial `renderToday()`, not inside `renderToday()` itself (which also runs after every save) — the reminder is an app-open event, not a re-render event.
 
 ## Testing conventions (see existing `tests/*.js` before adding new assertions)
 

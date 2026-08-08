@@ -14,6 +14,7 @@ Live app: https://arijeetkundu.github.io/jaap-ledger/
 - **Sankalpa** — a single, persistent record of your vow of intent.
 - **Poornima (full moon) detection** from notes keywords.
 - **Automatic backups** plus manual JSON import/export (ledger data only — splash images are device-local and not included).
+- **Google Drive backup** — a once-per-Sunday reminder modal (plus an on-demand button in Settings) backs up the ledger to your own Google Drive as `sumiran-lite-backup.json`, overwritten in place on each backup (no duplicates). Each user signs into their own Google account; nothing is shared with anyone else. See [Google Drive backup setup](#google-drive-backup-setup) below.
 - **Installable PWA** — add to home screen with a framed, gold-bordered splash screen and icons.
 - **Background themes** — switch the app's tiled/full-bleed background between Alpana, Mandala (default), and Jharokha from Settings.
 - **Customizable splash screen** — Hanuman is a fixed default image; up to 4 additional slots let you add your own pictures, which then rotate alongside Hanuman (never repeating the same image twice in a row). Uploads are validated, downscaled, and compressed client-side, so storage and startup performance stay unaffected by the original photo's size.
@@ -52,8 +53,9 @@ jaap-ledger/
 │   ├── test-unit.js                    Puppeteer-driven unit tests for pure logic functions
 │   ├── test-e2e.js                     Puppeteer full user-flow E2E tests
 │   ├── test-redesign.js                Premium redesign: design tokens, milestone celebration, motion
-│   └── test-splash-custom.js           Custom splash images: upload pipeline, guards, rotation, deletes
-├── package.json                        devDependencies: puppeteer, sharp; "test" script runs all 5 suites
+│   ├── test-splash-custom.js           Custom splash images: upload pipeline, guards, rotation, deletes
+│   └── test-sunday-backup.js           Sunday backup modal + Google Drive backup flow (mocked network)
+├── package.json                        devDependencies: puppeteer, sharp; "test" script runs all 6 suites
 └── package-lock.json
 ```
 
@@ -76,7 +78,19 @@ python -m http.server 3333   # in one terminal
 npm test                     # in another
 ```
 
-`npm test` runs the full suite (195 assertions, as of this revision) against a running instance of the app: `tests/test.js` (structural smoke tests), `tests/test-unit.js` (pure-logic unit tests, calling app.js's global functions directly), `tests/test-e2e.js` (full user-flow E2E tests — Sankalpa, Import/Export, Restore from Backup, Background themes, and more), `tests/test-redesign.js` (premium redesign: design tokens, milestone celebration, splash entrance animation, motion polish), and `tests/test-splash-custom.js` (custom splash images: upload pipeline guards, adaptive frame, rotation, per-slot/remove-all deletes, corrupt-data resilience). Each file can also be run individually, e.g. `node tests/test-unit.js`.
+`npm test` runs the full suite (232 assertions, as of this revision) against a running instance of the app: `tests/test.js` (structural smoke tests), `tests/test-unit.js` (pure-logic unit tests, calling app.js's global functions directly), `tests/test-e2e.js` (full user-flow E2E tests — Sankalpa, Import/Export, Restore from Backup, Background themes, and more), `tests/test-redesign.js` (premium redesign: design tokens, milestone celebration, splash entrance animation, motion polish), `tests/test-splash-custom.js` (custom splash images: upload pipeline guards, adaptive frame, rotation, per-slot/remove-all deletes, corrupt-data resilience), and `tests/test-sunday-backup.js` (Sunday backup modal timing/dismiss paths, and the Google sign-in + Drive upload flow with the network mocked — real Google sign-in can't run headless, so the actual OAuth/Drive calls are verified manually instead, see below). Each file can also be run individually, e.g. `node tests/test-unit.js`.
+
+## Google Drive backup setup
+
+The Sunday reminder modal and the Settings "Back Up to Google Drive" button both need a Google OAuth Client ID before they can sign a user in. The app ships with this wired up for the live site, but if you fork/redeploy it elsewhere, you'll need your own:
+
+1. In [Google Cloud Console](https://console.cloud.google.com/), create a project (or reuse one) and enable the **Google Drive API**.
+2. Under **Google Auth Platform**, configure the consent screen: App name, support email, **External** audience, and a developer contact email. Leave **Publishing status** as **Testing** unless you intend to submit for Google verification.
+3. Under **Google Auth Platform → Audience → Test users**, add the Gmail address of every person who should be able to sign in — Google blocks sign-in for anyone not on this list while the app is in Testing status.
+4. Under **Google Auth Platform → Clients**, create an OAuth client of type **Web application**, and add your deployed origin(s) as **Authorized JavaScript origins** (e.g. `https://arijeetkundu.github.io` and `http://localhost:3333` for local testing). No redirect URI is needed.
+5. Copy the resulting **Client ID** (a public value, not a secret) into `GOOGLE_DRIVE_CLIENT_ID` near the top of the "Google Drive Backup" section in `app.js`.
+
+The app only ever requests the `drive.file` scope — it can see and manage only the files it creates itself (`sumiran-lite-backup.json`), never the rest of a user's Drive.
 
 ## Deployment
 
