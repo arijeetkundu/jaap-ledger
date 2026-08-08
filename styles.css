@@ -57,7 +57,9 @@ html {
   }
 }
 
-/* Page */
+/* Page. Previously declared in 3 separate, non-adjacent blocks across this
+   file (the same fragmentation pattern already fixed once for
+   .ledger-year-header) — consolidated into one rule. */
 body {
   margin: 0;
   padding: 16px;
@@ -66,6 +68,10 @@ body {
   background-color: var(--cream);
   color: var(--ink);
   line-height: 1.5;
+  overscroll-behavior-y: contain;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  -webkit-tap-highlight-color: transparent;
 }
 
 /* Selectable background themes — rendered on a dedicated fixed element
@@ -191,9 +197,22 @@ p {
   background-color: #fffdf7;
 }
 
-/* Ledger date */
+/* Ledger date. Previously declared in several separate, non-adjacent
+   blocks across this file (the same fragmentation pattern already fixed
+   once for .ledger-year-header) — consolidated into one rule; grid-column
+   stays with it since that's this selector's own placement, not shared
+   with .ledger-chevron/.ledger-sparkline's. */
 .ledger-date {
+  grid-column: 2;
   color: var(--ink-muted);
+  font-weight: 500;
+  letter-spacing: 0.2px;
+  white-space: nowrap;
+  line-height: 1.2;
+}
+
+.ledger-date span {
+  line-height: 1.2;
 }
 
 /* Ledger jaap */
@@ -201,15 +220,6 @@ p {
   font-weight: 500;
 }
 
-/* Poornima moon */
-.ledger-date {
-  white-space: nowrap;
-}
-
-.ledger-date span,
-.ledger-date {
-  line-height: 1.2;
-}
 /* Ledger row container */
 .ledger-row {
   cursor: pointer;
@@ -236,10 +246,6 @@ p {
 
 .ledger-chevron {
   grid-column: 1;
-}
-
-.ledger-date {
-  grid-column: 2;
 }
 
 .ledger-sparkline {
@@ -281,11 +287,6 @@ p {
 
 .ledger-sparkline .sparkline {
   display: block;
-}
-.ledger-date {
-  font-weight: 500;
-  color: var(--ink-muted);
-  letter-spacing: 0.2px;
 }
 
 /* Sunday date only */
@@ -493,17 +494,9 @@ p {
 #today-card #update-today:active {
   background: var(--maroon-deep);
 }
-body {
-  overscroll-behavior-y: contain;
-}
 button {
   min-height: 44px;
   padding: 10px 16px;
-}
-body {
-  -webkit-touch-callout: none;
-  -webkit-user-select: none;
-  -webkit-tap-highlight-color: transparent;
 }
 /* Was two separate rules (same selector) — the second's padding/margin-top
    and its `border` shorthand silently overrode almost everything in the
@@ -645,7 +638,9 @@ body {
   font-weight: 500;
   opacity: 0;
   transition: opacity 0.25s var(--ease-premium), transform 0.25s var(--ease-premium);
-  z-index: 9500;
+  /* Above #petal-overlay (9600) — a "Saved" toast from the very save that
+     triggers a Crore celebration must not be obscured by falling petals. */
+  z-index: 9650;
   pointer-events: none;
   white-space: nowrap;
 }

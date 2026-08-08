@@ -4,6 +4,11 @@
     "hi": "माला दृश्य टॉगल करें",
     "bn": "মালা ভিউ পরিবর্তন করুন"
   },
+  "toggleMalaTitle": {
+    "en": "Toggle Mala View",
+    "hi": "माला दृश्य टॉगल करें",
+    "bn": "মালা ভিউ পরিবর্তন করুন"
+  },
   "malaViewOn": {
     "en": "Mala View: On",
     "hi": "माला दृश्य: चालू",
@@ -263,6 +268,11 @@
     "en": "No backup found to restore.",
     "hi": "पुनर्स्थापित करने के लिए कोई बैकअप नहीं मिला।",
     "bn": "পুনরুদ্ধারের জন্য কোনো ব্যাকআপ পাওয়া যায়নি।"
+  },
+  "appNotReadyYet": {
+    "en": "Still loading — please try again in a moment.",
+    "hi": "अभी लोड हो रहा है — कृपया थोड़ी देर बाद पुनः प्रयास करें।",
+    "bn": "এখনও লোড হচ্ছে — অনুগ্রহ করে একটু পরে আবার চেষ্টা করুন।"
   },
   "ledgerRestoreConfirm": {
     "en": "Restore ledger from backup?\n\nBackup date: {date}\nEntries: {count}\n\nThis will replace current ledger data.",

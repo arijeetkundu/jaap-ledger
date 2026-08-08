@@ -230,8 +230,67 @@ async function newFreshPage(browser) {
     }));
     assert("TRANSLATIONS ends up empty after both fetch attempts fail", result.translationsIsEmpty);
     assert("static Settings heading stays readable English, not the raw key", result.settingsHeading === "Settings");
-    assert("the dynamic Today Card heading still says something readable (not blank/undefined)", !!result.todayHeading && result.todayHeading.trim().length > 0);
+    // Honest, non-tautological assertion of the documented residual risk:
+    // dynamic sections (rebuilt from scratch every render, no prior DOM to
+    // preserve) DO show the raw key while TRANSLATIONS is genuinely empty —
+    // this locks in that known, accepted behavior rather than a vacuous
+    // truthy check that would also pass if this regressed to showing blank
+    // or some other placeholder.
+    assert("the dynamic Today Card heading shows the raw key while translations are unavailable (documented residual risk)", result.todayHeading === "todayHeading");
     assert("the language picker's own title stays readable English", result.pickerTitle === "Select Language");
+
+    allErrors.push(...errors);
+    await context.close();
+  }
+
+  // ── translations.json recovers once reachable again (background retry) ──
+  console.log("\n=== translations.json background retry recovers once reachable again ===");
+  {
+    const context = await browser.createBrowserContext();
+    const page = await context.newPage();
+    await page.setViewport({ width: 390, height: 844 });
+    const errors = [];
+    page.on("pageerror", (err) => errors.push(err.message));
+    page.on("console", (msg) => {
+      const text = msg.text();
+      const isExpected =
+        text.includes("Failed to load translations.json") ||
+        text.includes("Retry failed") ||
+        text.includes("Failed to load resource");
+      if (msg.type() === "error" && !isExpected) {
+        errors.push(text);
+      }
+    });
+
+    let shouldFail = true;
+    await page.setRequestInterception(true);
+    page.on("request", (req) => {
+      if (req.url().endsWith("/i18n/translations.json") && shouldFail) {
+        req.abort("failed");
+      } else {
+        req.continue();
+      }
+    });
+
+    await page.goto(BASE, { waitUntil: "networkidle0", timeout: 15000 });
+    // Outlast the splash + loadTranslations()'s own immediate retry — both
+    // attempts fail, so the background retry loop (every 5s) takes over.
+    await new Promise((r) => setTimeout(r, 3300));
+
+    const beforeRecovery = await page.evaluate(() => document.querySelector("#today-card h2")?.textContent);
+    assert("before recovery, the dynamic heading shows the raw key (sanity check on this test's setup)", beforeRecovery === "todayHeading");
+
+    // Let the file "become reachable" again, then wait for the background
+    // retry's ~5s interval to fire and pick it up.
+    shouldFail = false;
+    await new Promise((r) => setTimeout(r, 6000));
+
+    const afterRecovery = await page.evaluate(() => ({
+      translationsPopulated: !!TRANSLATIONS && Object.keys(TRANSLATIONS).length > 0,
+      todayHeading: document.querySelector("#today-card h2")?.textContent,
+    }));
+    assert("the background retry eventually repopulates TRANSLATIONS once the file is reachable again", afterRecovery.translationsPopulated);
+    assert("the dynamic Today Card heading self-corrects to real English without a reload", afterRecovery.todayHeading === "Today");
 
     allErrors.push(...errors);
     await context.close();

@@ -6,6 +6,8 @@
 // Each Puppeteer launch gets a fresh, isolated browser profile (a temp user
 // data dir), so these tests never touch a real user's browser data — writes
 // to IndexedDB/localStorage here are thrown away when the browser closes.
+// Real file downloads (triggered by the Export test) are separately routed
+// to a scratch temp dir via Page.setDownloadBehavior, for the same reason.
 //
 // Run with the app already being served (e.g. `python -m http.server 3333`).
 
@@ -41,6 +43,20 @@ async function freshLoad(page, { clearStorage = false } = {}) {
 (async () => {
   const browser = await puppeteer.launch({ headless: true, args: ["--no-sandbox"] });
   const page = await browser.newPage();
+
+  // The Import/Export test below clicks the real Export button, which
+  // triggers a real browser download (app.js's `a.download = ...` +
+  // a.click()). Puppeteer's isolated temp profile keeps IndexedDB/
+  // localStorage from touching a real user's browser data, but it does NOT
+  // by itself redirect Chrome's download directory — that's a separate
+  // Page.setDownloadBehavior setting, and without it downloads land in the
+  // OS's real Downloads folder even from a "throwaway" profile. Route them
+  // into a scratch temp dir instead so repeated local test runs never leave
+  // jaap-ledger-export-*.json files in a developer's actual Downloads folder.
+  const downloadDir = fs.mkdtempSync(path.join(os.tmpdir(), "jaap-ledger-test-downloads-"));
+  const cdpSession = await page.createCDPSession();
+  await cdpSession.send("Page.setDownloadBehavior", { behavior: "allow", downloadPath: downloadDir });
+
   await page.evaluateOnNewDocument(() => localStorage.setItem("appLanguage", "en"));
   // This app is a phone PWA; Puppeteer's 800x600 default is a desktop-ish
   // shape that doesn't reflect real usage and breaks viewport-relative
@@ -450,6 +466,59 @@ async function freshLoad(page, { clearStorage = false } = {}) {
     rowCountAfterImport === importFixture.length + 1
   );
 
+  // A regression that only wires buildYearRows()'s chevron/save handlers
+  // correctly for the eager (current-year) path — not the lazy path this
+  // section built via a header click above — would pass every assertion so
+  // far (DOM/row-count checks only) while leaving a lazily-built row's
+  // controls silently non-functional. Actually click a chevron and a save
+  // button inside the already-expanded 2020 container to rule that out.
+  // 2020-01-01 is far outside the real 7-day editable window, so it renders
+  // locked (no .edit-jaap/.save-entry at all) — temporarily stub
+  // isEditableEntry (a plain top-level `function`, so reachable/overridable
+  // via `window.`) to force it editable for this one row, then re-render and
+  // restore the real function afterward.
+  // (This save re-renders the whole Ledger List — 2020 collapses/unbuilds
+  // again afterward, same as any other save — so this must run after the
+  // row-count assertion above, not before it.)
+  await page.evaluate(() => {
+    window.__realIsEditableEntry = isEditableEntry;
+    window.isEditableEntry = () => true;
+    renderToday();
+  });
+  await page.click('.ledger-year-header[data-year="2020"]');
+  await new Promise(r => setTimeout(r, 300));
+
+  // Rows within a year render most-recent-first, so the first .ledger-row
+  // here is 2020-01-03, not 2020-01-01 — read its own displayed date back
+  // rather than assuming which fixture entry it is.
+  const lazyRow2020 = await page.evaluateHandle(() => {
+    const header = document.querySelector('.ledger-year-header[data-year="2020"]');
+    return header.nextElementSibling.querySelector(".ledger-row");
+  });
+  const lazyRowDate = await lazyRow2020.asElement().$eval(".ledger-date", el => el.textContent.trim());
+  await lazyRow2020.asElement().$eval(".ledger-chevron", (el) => el.click());
+  await new Promise(r => setTimeout(r, 300));
+  const lazyRowExpandedClass = await lazyRow2020.asElement().evaluate((el) => el.classList.contains("expanded"));
+  assert("a lazily-built row's chevron expands it just like an eagerly-built row's", lazyRowExpandedClass);
+
+  const lazyJaapInput = await lazyRow2020.asElement().$(".edit-jaap");
+  await lazyJaapInput.click({ clickCount: 3 });
+  await lazyJaapInput.type("999");
+  await lazyRow2020.asElement().$eval(".save-entry", (el) => el.click());
+  await new Promise(r => setTimeout(r, 1200)); // IndexedDB writes + rAF + transition
+
+  const lazyRowSavedJaap = await page.evaluate((dateText) => {
+    const entry = ledgerData.find((e) => dateText.includes(formatDate(e.date)));
+    return entry ? entry.jaap : null;
+  }, lazyRowDate);
+  assert("a lazily-built row's save button actually persists the edit", lazyRowSavedJaap === 999);
+
+  await page.evaluate(() => {
+    window.isEditableEntry = window.__realIsEditableEntry;
+    delete window.__realIsEditableEntry;
+    renderToday();
+  });
+
   fs.unlinkSync(tmpFile);
 
   // ── Import validation: malformed input is rejected, ledger untouched ──
@@ -543,6 +612,7 @@ async function freshLoad(page, { clearStorage = false } = {}) {
   if (pageErrors.length > 0) console.log("  errors:", pageErrors);
 
   await browser.close();
+  fs.rmSync(downloadDir, { recursive: true, force: true });
 
   console.log("\n" + "─".repeat(40));
   console.log(`Results: ${passed} passed, ${failed} failed`);
