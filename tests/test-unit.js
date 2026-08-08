@@ -213,6 +213,7 @@ function assert(label, condition) {
   assert("lowercase 'poornima'", await page.evaluate(() => hasExplicitPoornima("poornima today")) === true);
   assert("mixed case 'Purnima'", await page.evaluate(() => hasExplicitPoornima("Purnima vrat")) === true);
   assert("Devanagari पूर्णिमा", await page.evaluate(() => hasExplicitPoornima("आज पूर्णिमा है")) === true);
+  assert("Bangla পূর্ণিমা", await page.evaluate(() => hasExplicitPoornima("আজ পূর্ণিমা")) === true);
   assert("no keyword -> false", await page.evaluate(() => hasExplicitPoornima("regular practice day")) === false);
   assert("null notes -> false", await page.evaluate(() => hasExplicitPoornima(null)) === false);
   assert("empty string notes -> false", await page.evaluate(() => hasExplicitPoornima("")) === false);

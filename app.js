@@ -465,7 +465,7 @@ function renderSparklineSVG(points) {
 function hasExplicitPoornima(notes) {
   if (!notes) return false;
   const lower = notes.toLowerCase();
-  return notes.includes("पूर्णिमा") || lower.includes("poornima") || lower.includes("purnima");
+  return notes.includes("पूर्णिमा") || notes.includes("পূর্ণিমা") || lower.includes("poornima") || lower.includes("purnima");
 }
 
 // Check if a date is within the last N days (inclusive)
@@ -762,7 +762,9 @@ function updateBackgroundSwatchButtons() {
     );
   });
 }
- 
+
+    await loadTranslations();
+
     // Load ledger ONLY from IndexedDB — a fresh/empty ledger always starts
     // blank, never seeded from data.json (that file is a local-testing
     // fixture only, not real seed data for new users).
@@ -1936,4 +1938,35 @@ document.getElementById("sunday-backup-modal")?.addEventListener("click", (e) =>
   if (e.target.id === "sunday-backup-modal") dismissSundayBackupReminder();
 });
 document.getElementById("drive-backup-btn")?.addEventListener("click", backupToGoogleDrive);
+
+// ---------- i18n: Phase 1 (Hindi + Bangla) locked translation baseline ----------
+// The reviewed, locked dictionary lives in i18n/translations.json (every
+// user-facing string, each key with { en, hi, bn }; placeholders use
+// {name} tokens e.g. {year}/{date}/{crore}/{days}/{count}) rather than
+// inline here, keeping data separate from logic. Loaded once at bootstrap
+// via a same-origin fetch — this is a local static asset the app already
+// ships, not an external network dependency (same as loading styles.css
+// or a font file); it works offline once the page has loaded before.
+//
+// Deliberately NOT translated (decision, not an oversight): the short
+// "D MMM YYYY" date format (formatDate() — Ledger List rows, Pace
+// predictions, Milestones list, Sankalpa date) stays in English in every
+// app language. Only formatDateLong()'s weekday + full month name (Today
+// Card date line only) uses datesWeekdaysFull / datesMonthsFull from the
+// dictionary. Numerals stay Western (0-9) in every language, everywhere.
+//
+// Not yet wired into any render function — that's a separate, later change.
+let TRANSLATIONS = null;
+
+async function loadTranslations() {
+  try {
+    const res = await fetch("i18n/translations.json");
+    if (!res.ok) throw new Error("HTTP " + res.status);
+    TRANSLATIONS = await res.json();
+  } catch (e) {
+    console.error("Failed to load translations.json:", e);
+    TRANSLATIONS = {};
+  }
+}
+
 

@@ -1,0 +1,585 @@
+{
+  "toggleMalaAria": {
+    "en": "Toggle Mala View",
+    "hi": "माला दृश्य टॉगल करें",
+    "bn": "মালা ভিউ পরিবর্তন করুন"
+  },
+  "malaViewOn": {
+    "en": "Mala View: On",
+    "hi": "माला दृश्य: चालू",
+    "bn": "মালা ভিউ: চালু"
+  },
+  "malaViewOff": {
+    "en": "Mala View: Off",
+    "hi": "माला दृश्य: बंद",
+    "bn": "মালা ভিউ: বন্ধ"
+  },
+  "settingsGearAria": {
+    "en": "Settings",
+    "hi": "सेटिंग्स",
+    "bn": "সেটিংস"
+  },
+  "settingsHeading": {
+    "en": "Settings",
+    "hi": "सेटिंग्स",
+    "bn": "সেটিংস"
+  },
+  "settingsSankalpaBtn": {
+    "en": "🕉️ Sankalpa",
+    "hi": "🕉️ संकल्प",
+    "bn": "🕉️ সংকল্প"
+  },
+  "settingsExportBtn": {
+    "en": "⬇️ Export Ledger (JSON)",
+    "hi": "⬇️ लेजर निर्यात करें (JSON)",
+    "bn": "⬇️ লেজার এক্সপোর্ট করুন (JSON)"
+  },
+  "settingsDriveBackupBtn": {
+    "en": "☁️ Back Up to Google Drive",
+    "hi": "☁️ Google Drive पर बैकअप लें",
+    "bn": "☁️ Google Drive-এ ব্যাকআপ নিন"
+  },
+  "settingsImportBtn": {
+    "en": "⬆️ Import Ledger (JSON)",
+    "hi": "⬆️ लेजर आयात करें (JSON)",
+    "bn": "⬆️ লেজার ইম্পোর্ট করুন (JSON)"
+  },
+  "settingsRestoreBtn": {
+    "en": "Restore from Backup",
+    "hi": "बैकअप से पुनर्स्थापित करें",
+    "bn": "ব্যাকআপ থেকে পুনরুদ্ধার করুন"
+  },
+  "settingsBackgroundHeading": {
+    "en": "Background",
+    "hi": "पृष्ठभूमि",
+    "bn": "পটভূমি"
+  },
+  "bgNameAlpana": {
+    "en": "Alpana",
+    "hi": "अल्पना",
+    "bn": "আলপনা"
+  },
+  "bgNameMandala": {
+    "en": "Mandala",
+    "hi": "मंडला",
+    "bn": "মন্ডলা"
+  },
+  "bgNameJharokha": {
+    "en": "Jharokha",
+    "hi": "झरोखा",
+    "bn": "ঝরোখা"
+  },
+  "bgAriaSuffix": {
+    "en": "background",
+    "hi": "पृष्ठभूमि",
+    "bn": "পটভূমি"
+  },
+  "settingsSplashHeading": {
+    "en": "Splash Images",
+    "hi": "स्प्लैश तस्वीरें",
+    "bn": "স্প্ল্যাশ ছবি"
+  },
+  "settingsSplashHint": {
+    "en": "Gurudev Hanuman Ji is always included. Add up to 4 of your own pictures to join the rotation.",
+    "hi": "गुरुदेव हनुमान जी की तस्वीर हमेशा शामिल रहेगी। अपनी 4 तस्वीरें तक जोड़ें, जो एक-एक करके दिखाई देंगी।",
+    "bn": "গুরুদেব হনুমানজির ছবি সবসময় অন্তর্ভুক্ত থাকবে। আপনার নিজের সর্বোচ্চ ৪টি ছবি যোগ করুন, যেগুলি একটির পর একটি দেখা যাবে।"
+  },
+  "settingsRemoveAllImagesBtn": {
+    "en": "Remove All Custom Images",
+    "hi": "सभी कस्टम तस्वीरें हटाएँ",
+    "bn": "সমস্ত কাস্টম ছবি সরিয়ে দিন"
+  },
+  "splashHanumanAlt": {
+    "en": "Hanuman meditating",
+    "hi": "ध्यान करते हनुमान जी",
+    "bn": "ধ্যানরত হনুমান জি"
+  },
+  "splashCustomAlt": {
+    "en": "Your custom splash image",
+    "hi": "आपकी कस्टम स्प्लैश तस्वीर",
+    "bn": "আপনার কাস্টম স্প্ল্যাশ ছবি"
+  },
+  "splashHanumanLockedMsg": {
+    "en": "Gurudev Hanuman Ji is the default image and can't be changed",
+    "hi": "गुरुदेव हनुमान जी डिफ़ॉल्ट तस्वीर हैं और इन्हें बदला नहीं जा सकता।",
+    "bn": "গুরুদেব হনুমানজি ডিফল্ট ছবি এবং এটি পরিবর্তন করা যাবে না।"
+  },
+  "splashCustomTapReplace": {
+    "en": "Custom image — tap to replace",
+    "hi": "कस्टम तस्वीर — बदलने के लिए टैप करें",
+    "bn": "কাস্টম ছবি — পরিবর্তন করতে ট্যাপ করুন"
+  },
+  "splashRemoveImageTitle": {
+    "en": "Remove image",
+    "hi": "तस्वीर हटाएँ",
+    "bn": "ছবি মুছুন"
+  },
+  "splashAddPictureTitle": {
+    "en": "Add your own picture",
+    "hi": "अपनी तस्वीर जोड़ें",
+    "bn": "নিজের ছবি যোগ করুন"
+  },
+  "splashErrNotImage": {
+    "en": "Please choose an image file.",
+    "hi": "कृपया एक तस्वीर फ़ाइल चुनें।",
+    "bn": "অনুগ্রহ করে একটি ছবি ফাইল বেছে নিন।"
+  },
+  "splashErrTooLarge": {
+    "en": "Image is too large. Please choose a file under 5MB.",
+    "hi": "तस्वीर बहुत बड़ी है। कृपया 5MB से छोटी फ़ाइल चुनें।",
+    "bn": "ছবিটি খুব বড়। অনুগ্রহ করে 5MB-এর কম আকারের ফাইল বেছে নিন।"
+  },
+  "splashErrTooHighRes": {
+    "en": "Image resolution is too high. Please choose a smaller image.",
+    "hi": "तस्वीर का रिज़ॉल्यूशन बहुत अधिक है। कृपया एक छोटी तस्वीर चुनें।",
+    "bn": "ছবির রেজোলিউশন খুব বেশি। অনুগ্রহ করে ছোট ছবি বেছে নিন।"
+  },
+  "splashErrQuota": {
+    "en": "Not enough storage space to save this image.",
+    "hi": "इस तस्वीर को सहेजने के लिए पर्याप्त संग्रहण स्थान नहीं है।",
+    "bn": "এই ছবিটি সংরক্ষণ করার জন্য পর্যাপ্ত সংরক্ষণ স্থান নেই।"
+  },
+  "splashErrReadFile": {
+    "en": "Failed to read file.",
+    "hi": "फ़ाइल खुल नहीं सकी।",
+    "bn": "ফাইলটি খোলা যায়নি।"
+  },
+  "splashErrDecodeImage": {
+    "en": "Failed to decode image.",
+    "hi": "फ़ाइल खुल नहीं सकी।",
+    "bn": "ফাইলটি খোলা যায়নি।"
+  },
+  "splashErrProcessFallback": {
+    "en": "Failed to process image.",
+    "hi": "तस्वीर तैयार नहीं हो सकी।",
+    "bn": "ছবিটি প্রস্তুত করা যায়নি।"
+  },
+  "splashToastImageRemoved": {
+    "en": "Image removed",
+    "hi": "तस्वीर हटा दी गई",
+    "bn": "ছবি মুছে ফেলা হয়েছে"
+  },
+  "splashToastUpdated": {
+    "en": "Splash image updated ✓",
+    "hi": "स्प्लैश तस्वीर अपडेट की गई ✓",
+    "bn": "স্প্ল্যাশ ছবি আপডেট হয়েছে ✓"
+  },
+  "splashToastNoneToRemove": {
+    "en": "No custom images to remove",
+    "hi": "हटाने के लिए कोई कस्टम तस्वीर नहीं",
+    "bn": "মুছে ফেলার মতো কোনো কাস্টম ছবি নেই"
+  },
+  "splashToastAllRemoved": {
+    "en": "Custom images removed",
+    "hi": "कस्टम तस्वीरें हटा दी गईं",
+    "bn": "কাস্টম ছবি মুছে ফেলা হয়েছে"
+  },
+  "backupModalTitle": {
+    "en": "🙏 Sunday Backup Reminder",
+    "hi": "🙏 रविवार बैकअप अनुस्मारक",
+    "bn": "🙏 রবিবার ব্যাকআপ অনুস্মারক"
+  },
+  "backupModalBody": {
+    "en": "A gentle nudge to back up your ledger before the week begins.",
+    "hi": "हफ़्ता शुरू होने से पहले अपनी लेजर का बैकअप लेना न भूलें।",
+    "bn": "সপ্তাহ শুরু হওয়ার আগে আপনার লেজারের ব্যাকআপ নিতে ভুলবেন না।"
+  },
+  "backupPrivacyLine": {
+    "en": "Each sadhak signs into their own Google account — your data goes to your own Drive only. Nothing is shared with anyone else.",
+    "hi": "हर साधक अपने ही Google खाते से साइन इन करता है — आपका डेटा केवल आपके अपने Drive में जाता है। किसी और के साथ कुछ भी साझा नहीं किया जाता।",
+    "bn": "প্রত্যেক সাধক নিজের Google অ্যাকাউন্টে সাইন ইন করেন — আপনার তথ্য শুধুমাত্র আপনার নিজের Drive-এ যায়। অন্য কারো সাথে কিছুই শেয়ার করা হয় না।"
+  },
+  "backupRemindNextSunday": {
+    "en": "Remind me next Sunday",
+    "hi": "मुझे अगले रविवार याद दिलाएँ",
+    "bn": "আমাকে পরের রবিবার মনে করিয়ে দিন"
+  },
+  "commonCloseAria": {
+    "en": "Close",
+    "hi": "बंद करें",
+    "bn": "বন্ধ করুন"
+  },
+  "backupToastSuccess": {
+    "en": "Backed up to Google Drive ✓",
+    "hi": "Google Drive पर बैकअप हो गया ✓",
+    "bn": "Google Drive-এ ব্যাকআপ হয়েছে ✓"
+  },
+  "backupToastFailFallback": {
+    "en": "Backup failed. Please try again.",
+    "hi": "बैकअप विफल रहा। कृपया पुनः प्रयास करें।",
+    "bn": "ব্যাকআপ ব্যর্থ হয়েছে। আবার চেষ্টা করুন।"
+  },
+  "backupErrLoadGis": {
+    "en": "Could not load Google Sign-In. Check your internet connection.",
+    "hi": "Google साइन-इन लोड नहीं हो सका। अपना इंटरनेट कनेक्शन जाँचें।",
+    "bn": "Google সাইন-ইন লোড করা যায়নি। আপনার ইন্টারনেট সংযোগ পরীক্ষা করুন।"
+  },
+  "backupErrTokenIncomplete": {
+    "en": "Google sign-in did not complete.",
+    "hi": "Google साइन-इन पूरा नहीं हुआ।",
+    "bn": "Google সাইন-ইন সম্পূর্ণ হয়নি।"
+  },
+  "backupErrCancelled": {
+    "en": "Google sign-in was cancelled.",
+    "hi": "Google साइन-इन रद्द कर दिया गया।",
+    "bn": "Google সাইন-ইন বাতিল করা হয়েছে।"
+  },
+  "backupErrStartFailed": {
+    "en": "Failed to start Google sign-in.",
+    "hi": "Google साइन-इन शुरू करने में विफल।",
+    "bn": "Google সাইন-ইন শুরু করা যায়নি।"
+  },
+  "backupErrCheckExisting": {
+    "en": "Could not check Google Drive for an existing backup.",
+    "hi": "मौजूदा बैकअप के लिए Google Drive जाँचा नहीं जा सका।",
+    "bn": "বিদ্যমান ব্যাকআপের জন্য Google Drive পরীক্ষা করা যায়নি।"
+  },
+  "backupErrUploadRejected": {
+    "en": "Google Drive rejected the backup upload.",
+    "hi": "Google Drive ने बैकअप अपलोड अस्वीकार कर दिया।",
+    "bn": "Google Drive ব্যাকআপ আপলোড প্রত্যাখ্যান করেছে।"
+  },
+  "ledgerNoBackupFound": {
+    "en": "No backup found to restore.",
+    "hi": "पुनर्स्थापित करने के लिए कोई बैकअप नहीं मिला।",
+    "bn": "পুনরুদ্ধারের জন্য কোনো ব্যাকআপ পাওয়া যায়নি।"
+  },
+  "ledgerRestoreConfirm": {
+    "en": "Restore ledger from backup?\n\nBackup date: {date}\nEntries: {count}\n\nThis will replace current ledger data.",
+    "hi": "बैकअप से लेजर पुनर्स्थापित करेंगे?\n\nबैकअप तारीख़: {date}\nएंट्री: {count}\n\nयह वर्तमान लेजर डेटा को बदल देगा।",
+    "bn": "ব্যাকআপ থেকে লেজার পুনরুদ্ধার করবেন?\n\nব্যাকআপের তারিখ: {date}\nএন্ট্রি সংখ্যা: {count}\n\nএটি বর্তমান লেজার তথ্য প্রতিস্থাপন করবে।"
+  },
+  "ledgerRestoreSuccess": {
+    "en": "Ledger restored successfully from backup.",
+    "hi": "बैकअप से लेजर सफलतापूर्वक लाया गया।",
+    "bn": "ব্যাকআপ থেকে লেজার সফলভাবে ফিরিয়ে আনা হয়েছে।"
+  },
+  "ledgerEmptyExport": {
+    "en": "Ledger is empty. Nothing to export.",
+    "hi": "लेजर खाली है। निर्यात करने के लिए कुछ नहीं है।",
+    "bn": "লেজার খালি। এক্সপোর্ট করার মতো কিছু নেই।"
+  },
+  "ledgerInvalidFileFormat": {
+    "en": "Invalid file format: expected an array.",
+    "hi": "फ़ाइल का फ़ॉर्मैट सही नहीं है। कृपया सही फ़ॉर्मैट वाली फ़ाइल चुनें।",
+    "bn": "ফাইলের ফর্ম্যাট সঠিক নয়। অনুগ্রহ করে সঠিক ফর্ম্যাটের একটি ফাইল বেছে নিন।"
+  },
+  "ledgerInvalidEntryFormat": {
+    "en": "Invalid ledger entry format detected.",
+    "hi": "लेजर एंट्री का फ़ॉर्मैट सही नहीं है। कृपया सही फ़ॉर्मैट वाली फ़ाइल चुनें।",
+    "bn": "লেজার এন্ট্রির ফর্ম্যাট সঠিক নয়। অনুগ্রহ করে সঠিক ফর্ম্যাটের ফাইল বেছে নিন।"
+  },
+  "ledgerImportConfirm": {
+    "en": "Import {count} entries?\n\nThis will REPLACE your current ledger permanently.",
+    "hi": "{count} एंट्री आयात करें?\n\nइससे आपकी मौजूदा लेजर हमेशा के लिए बदल जाएगी।",
+    "bn": "{count}টি এন্ট্রি ইমপোর্ট করবেন?\n\nএর ফলে আপনার বর্তমান লেজারটি স্থায়ীভাবে পরিবর্তিত হবে।"
+  },
+  "ledgerImportSuccess": {
+    "en": "Ledger imported successfully.",
+    "hi": "लेजर सफलतापूर्वक आयात हो गया।",
+    "bn": "লেজার সফলভাবে ইম্পোর্ট হয়েছে।"
+  },
+  "ledgerImportFailed": {
+    "en": "Failed to import file. Please ensure it is a valid JSON ledger.",
+    "hi": "फ़ाइल आयात नहीं हो सकी। कृपया सुनिश्चित करें कि यह एक मान्य लेजर फ़ाइल है।",
+    "bn": "ফাইল ইমপোর্ট করা যায়নি। অনুগ্রহ করে নিশ্চিত করুন যে এটি একটি বৈধ লেজার ফাইল।"
+  },
+  "todayHeading": {
+    "en": "Today",
+    "hi": "आज",
+    "bn": "আজ"
+  },
+  "todayJaapLabel": {
+    "en": "Jaap Count",
+    "hi": "जाप संख्या",
+    "bn": "জপ সংখ্যা"
+  },
+  "todayJaapPlaceholder": {
+    "en": "Enter jaap count",
+    "hi": "जाप संख्या दर्ज करें",
+    "bn": "জপ সংখ্যা লিখুন"
+  },
+  "todayMalaLabel": {
+    "en": "Mala Count",
+    "hi": "माला संख्या",
+    "bn": "মালা সংখ্যা"
+  },
+  "todayMalaPlaceholder": {
+    "en": "Enter malas",
+    "hi": "माला दर्ज करें",
+    "bn": "মালা লিখুন"
+  },
+  "commonNotesLabel": {
+    "en": "Notes",
+    "hi": "टिप्पणियाँ",
+    "bn": "মন্তব্য"
+  },
+  "commonNotesPlaceholder": {
+    "en": "Notes (optional)",
+    "hi": "टिप्पणियाँ (वैकल्पिक)",
+    "bn": "মন্তব্য (ঐচ্ছিক)"
+  },
+  "todaySaveBtn": {
+    "en": "Save",
+    "hi": "सहेजें",
+    "bn": "সংরক্ষণ করুন"
+  },
+  "todayLockedMsg": {
+    "en": "This entry is locked (older than 7 days).",
+    "hi": "यह एंट्री लॉक है (7 दिन से पुरानी है)।",
+    "bn": "এই এন্ট্রিটি লক করা হয়েছে (৭ দিনের বেশি পুরোনো)।"
+  },
+  "ledgerListJumpToYear": {
+    "en": "Jump to year",
+    "hi": "वर्ष चुनें",
+    "bn": "বছর নির্বাচন করুন"
+  },
+  "ledgerListSelectPlaceholder": {
+    "en": "— select —",
+    "hi": "— चुनें —",
+    "bn": "— নির্বাচন করুন —"
+  },
+  "commonSavedToast": {
+    "en": "Saved ✓",
+    "hi": "सहेजा गया ✓",
+    "bn": "সংরক্ষিত ✓"
+  },
+  "ledgerListMilestoneBadge": {
+    "en": "◈ {crore} Crore Jaap Completed",
+    "hi": "◈ {crore} करोड़ जाप पूर्ण",
+    "bn": "◈ {crore} কোটি জপ সম্পন্ন"
+  },
+  "ledgerListUpdateBtn": {
+    "en": "Update",
+    "hi": "अपडेट करें",
+    "bn": "আপডেট করুন"
+  },
+  "ledgerListNoNotes": {
+    "en": "No notes",
+    "hi": "कोई टिप्पणी नहीं",
+    "bn": "কোনো মন্তব্য নেই"
+  },
+  "ledgerListEntryLocked": {
+    "en": "🔒 Entry locked",
+    "hi": "🔒 एंट्री लॉक है",
+    "bn": "🔒 এন্ট্রি লক করা"
+  },
+  "reflectionLifetimeJaap": {
+    "en": "Lifetime Jaap:",
+    "hi": "आजीवन जाप:",
+    "bn": "জীবনব্যাপী জপ:"
+  },
+  "reflectionYearTotal": {
+    "en": "{year} Total:",
+    "hi": "{year} कुल:",
+    "bn": "{year} মোট:"
+  },
+  "reflectionNextMilestone": {
+    "en": "Next Milestone:",
+    "hi": "अगला पड़ाव:",
+    "bn": "পরবর্তী মাইলফলক:"
+  },
+  "reflectionPace30Day": {
+    "en": "30-Day Pace:",
+    "hi": "30-दिवसीय गति:",
+    "bn": "৩০-দিনের গতি:"
+  },
+  "reflectionPaceYTD": {
+    "en": "YTD Pace:",
+    "hi": "इस वर्ष की गति:",
+    "bn": "চলতি বছরের গতি:"
+  },
+  "reflectionMilestonesHeading": {
+    "en": "Milestones",
+    "hi": "पड़ाव",
+    "bn": "মাইলফলক"
+  },
+  "reflectionMilestoneLine": {
+    "en": "🪔 {crore} Crore — {date}",
+    "hi": "🪔 {crore} करोड़ — {date}",
+    "bn": "🪔 {crore} কোটি — {date}"
+  },
+  "reflectionDaysSince": {
+    "en": "(+{days} days)",
+    "hi": "(+{days} दिन)",
+    "bn": "(+{days} দিন)"
+  },
+  "commonPerDaySuffix": {
+    "en": "/day",
+    "hi": "/दिन",
+    "bn": "/দিন"
+  },
+  "commonCroreWord": {
+    "en": "Crore",
+    "hi": "करोड़",
+    "bn": "কোটি"
+  },
+  "reflectionLegend": {
+    "en": "🏵️ Crore Milestone   🌕 Poornima   🔴 Sunday   ▸ Notes",
+    "hi": "🏵️ करोड़ पड़ाव   🌕 पूर्णिमा   🔴 रविवार   ▸ टिप्पणियाँ",
+    "bn": "🏵️ কোটি মাইলফলক   🌕 পূর্ণিমা   🔴 রবিবার   ▸ মন্তব্য"
+  },
+  "sankalpaHeading": {
+    "en": "Sankalpa",
+    "hi": "संकल्प",
+    "bn": "সংকল্প"
+  },
+  "sankalpaIntro": {
+    "en": "Establish your Sankalpa — a vow of intent for your practice.",
+    "hi": "अपना संकल्प निर्धारित करें — अपनी साधना के लिए एक दृढ़ संकल्प।",
+    "bn": "আপনার সংকল্প স্থির করুন — আপনার সাধনার জন্য একটি দৃঢ় অঙ্গীকার।"
+  },
+  "sankalpaVowPlaceholder": {
+    "en": "Your vow...",
+    "hi": "आपका संकल्प…",
+    "bn": "আপনার সংকল্প…"
+  },
+  "sankalpaContextLabel": {
+    "en": "Context (optional)",
+    "hi": "संदर्भ (वैकल्पिक)",
+    "bn": "প্রসঙ্গ (ঐচ্ছিক)"
+  },
+  "sankalpaContextPlaceholder": {
+    "en": "Guru, Devatā, occasion...",
+    "hi": "गुरु, देवता, अवसर...",
+    "bn": "গুরু, দেবতা, উপলক্ষ..."
+  },
+  "sankalpaEstablishBtn": {
+    "en": "Establish Sankalpa",
+    "hi": "संकल्प स्थापित करें",
+    "bn": "সংকল্প স্থাপন করুন"
+  },
+  "sankalpaEstablishedToast": {
+    "en": "Sankalpa established ✓",
+    "hi": "संकल्प स्थापित किया गया ✓",
+    "bn": "সংকল্প স্থাপিত হয়েছে ✓"
+  },
+  "sankalpaEstablishedDate": {
+    "en": "Established {date}",
+    "hi": "स्थापित {date}",
+    "bn": "স্থাপিত {date}"
+  },
+  "sankalpaRewriteBtn": {
+    "en": "Rewrite Sankalpa",
+    "hi": "संकल्प पुनः लिखें",
+    "bn": "সংকল্প পুনর্লিখন করুন"
+  },
+  "sankalpaRewriteConfirm": {
+    "en": "Rewrite Sankalpa? Your original date will be preserved.",
+    "hi": "संकल्प पुनः लिखें? आपकी मूल तारीख़ सुरक्षित रहेगी।",
+    "bn": "সংকল্প পুনর্লিখন করবেন? আপনার আসল তারিখ সংরক্ষিত থাকবে।"
+  },
+  "sankalpaConfirmRewriteBtn": {
+    "en": "Confirm Rewrite",
+    "hi": "पुनर्लेखन की पुष्टि करें",
+    "bn": "পুনর্লিখন নিশ্চিত করুন"
+  },
+  "commonCancelBtn": {
+    "en": "Cancel",
+    "hi": "रद्द करें",
+    "bn": "বাতিল করুন"
+  },
+  "sankalpaRewrittenToast": {
+    "en": "Sankalpa rewritten ✓",
+    "hi": "संकल्प पुनः लिखा गया ✓",
+    "bn": "সংকল্প পুনর্লিখিত হয়েছে ✓"
+  },
+  "datesWeekdaysFull": {
+    "en": [
+      "Sunday",
+      "Monday",
+      "Tuesday",
+      "Wednesday",
+      "Thursday",
+      "Friday",
+      "Saturday"
+    ],
+    "hi": [
+      "रविवार",
+      "सोमवार",
+      "मंगलवार",
+      "बुधवार",
+      "गुरुवार",
+      "शुक्रवार",
+      "शनिवार"
+    ],
+    "bn": [
+      "রবিবার",
+      "সোমবার",
+      "মঙ্গলবার",
+      "বুধবার",
+      "বৃহস্পতিবার",
+      "শুক্রবার",
+      "শনিবার"
+    ]
+  },
+  "datesMonthsFull": {
+    "en": [
+      "January",
+      "February",
+      "March",
+      "April",
+      "May",
+      "June",
+      "July",
+      "August",
+      "September",
+      "October",
+      "November",
+      "December"
+    ],
+    "hi": [
+      "जनवरी",
+      "फ़रवरी",
+      "मार्च",
+      "अप्रैल",
+      "मई",
+      "जून",
+      "जुलाई",
+      "अगस्त",
+      "सितंबर",
+      "अक्तूबर",
+      "नवंबर",
+      "दिसंबर"
+    ],
+    "bn": [
+      "জানুয়ারি",
+      "ফেব্রুয়ারি",
+      "মার্চ",
+      "এপ্রিল",
+      "মে",
+      "জুন",
+      "জুলাই",
+      "আগস্ট",
+      "সেপ্টেম্বর",
+      "অক্টোবর",
+      "নভেম্বর",
+      "ডিসেম্বর"
+    ]
+  },
+  "langPickerTitle": {
+    "en": "Select Language",
+    "hi": "भाषा चुनें",
+    "bn": "ভাষা নির্বাচন করুন"
+  },
+  "langPickerSubtitle": {
+    "en": "Sumiran Lite will use this language throughout the app.",
+    "hi": "सुमिरन लाइट पूरे ऐप में यही भाषा उपयोग करेगा।",
+    "bn": "সুমিরন লাইট পুরো অ্যাপে এই ভাষা ব্যবহার করবে।"
+  },
+  "langNameEnglish": {
+    "en": "English",
+    "hi": "English",
+    "bn": "English"
+  },
+  "langNameHindi": {
+    "en": "Hindi",
+    "hi": "हिन्दी",
+    "bn": "হিন্দি"
+  },
+  "langNameBangla": {
+    "en": "Bangla",
+    "hi": "बांग्ला",
+    "bn": "বাংলা"
+  }
+}
