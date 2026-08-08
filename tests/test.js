@@ -17,6 +17,9 @@ function assert(label, condition) {
 (async () => {
   const browser = await puppeteer.launch({ headless: true, args: ["--no-sandbox"] });
   const page = await browser.newPage();
+  // Pre-seed a chosen language so the first-run language picker never
+  // appears and intercepts clicks — these tests aren't about i18n.
+  await page.evaluateOnNewDocument(() => localStorage.setItem("appLanguage", "en"));
 
   // Capture console errors from the page
   const pageErrors = [];

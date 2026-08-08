@@ -2,6 +2,140 @@ console.log("Sumiran Lite app.js loaded successfully");
 
 // ---------- Background Theme ----------
 let backgroundChoice = localStorage.getItem("backgroundChoice") || "mandala";
+
+// ---------- i18n: language state ----------
+// null until the user has explicitly chosen (via the first-run picker or the
+// Settings switcher) — that's what gates the first-run picker from showing.
+// Lookups always fall back to "en" via t() below, so the app renders in
+// English before a choice is made.
+let currentAppLanguage = localStorage.getItem("appLanguage") || null;
+
+// The reviewed, locked dictionary lives in i18n/translations.json (every
+// user-facing string, each key with { en, hi, bn }; placeholders use
+// {name} tokens e.g. {year}/{date}/{crore}/{days}/{count}) rather than
+// inline here, keeping data separate from logic. Populated asynchronously
+// by loadTranslations() (called from initApp()) via a same-origin fetch —
+// a local static asset the app already ships, not an external network
+// dependency (same as loading styles.css or a font file); works offline
+// once the page has loaded before. Declared here (not further down the
+// file) deliberately: several top-level synchronous calls that happen
+// before initApp's first await (updateMalaToggleButton(),
+// renderSplashSlotUI()) already call t(), which reads this — declaring it
+// later in the file would leave those calls hitting the temporal dead zone.
+//
+// Deliberately NOT translated (decision, not an oversight): the short
+// "D MMM YYYY" date format (formatDate() — Ledger List rows, Pace
+// predictions, Milestones list, Sankalpa date) stays in English in every
+// app language. Only formatDateLong()'s weekday + full month name (Today
+// Card date line only) uses datesWeekdaysFull / datesMonthsFull from the
+// dictionary. Numerals stay Western (0-9) in every language, everywhere.
+let TRANSLATIONS = null;
+
+// One retry on failure — this is normally a same-origin, near-instant
+// static-file fetch, so a single short-delay retry meaningfully narrows
+// the (already small) window where TRANSLATIONS ends up empty.
+async function fetchTranslationsOnce() {
+  const res = await fetch("i18n/translations.json");
+  if (!res.ok) throw new Error("HTTP " + res.status);
+  return res.json();
+}
+
+async function loadTranslations() {
+  try {
+    TRANSLATIONS = await fetchTranslationsOnce();
+  } catch (e) {
+    console.error("Failed to load translations.json, retrying once:", e);
+    try {
+      await new Promise((resolve) => setTimeout(resolve, 500));
+      TRANSLATIONS = await fetchTranslationsOnce();
+    } catch (e2) {
+      console.error("Retry failed, falling back to baked-in English:", e2);
+      TRANSLATIONS = {};
+    }
+  }
+}
+
+function getEffectiveLang() {
+  return currentAppLanguage || "en";
+}
+
+// True only when TRANSLATIONS actually has a real entry for this key (not
+// just t()'s raw-key fallback) — lets callers distinguish "no translation
+// available" from "translated, and it happens to equal the key."
+function hasTranslation(key) {
+  return !!(TRANSLATIONS && TRANSLATIONS[key]);
+}
+
+// Before TRANSLATIONS loads, falls back to the key itself so nothing
+// throws; every call site that matters is re-invoked once translations
+// are ready (see applyAppLanguage() / initApp()). Also guards against a
+// dictionary entry that exists but is missing both the active language
+// and "en" (shouldn't happen with the current dictionary, but a future
+// edit could introduce one) — without this, params interpolation below
+// would throw on `undefined.split(...)`.
+function t(key, params) {
+  const entry = TRANSLATIONS && TRANSLATIONS[key];
+  let str = entry ? (entry[getEffectiveLang()] || entry.en) : key;
+  if (typeof str !== "string") str = key;
+  if (params) {
+    Object.keys(params).forEach((k) => {
+      str = str.split("{" + k + "}").join(params[k]);
+    });
+  }
+  return str;
+}
+
+// Walks every element carrying a data-i18n* attribute and applies the
+// current language's text/attribute — covers the static markup in
+// index.html (Settings drawer labels, Sunday Backup modal, etc.) that
+// isn't rebuilt from scratch on every render the way the dynamic sections
+// (Today Card, Ledger List, ...) are. Deliberately leaves an element's
+// existing text/attribute untouched when there's no real translation for
+// it (TRANSLATIONS still loading, or the load failed) — index.html's own
+// markup already has correct English baked in, and overwriting it with
+// t()'s raw-key fallback would make a translations.json failure look like
+// the whole UI broke, when the pre-i18n app never had that failure mode.
+function applyStaticTranslations() {
+  document.querySelectorAll("[data-i18n]").forEach((el) => {
+    if (hasTranslation(el.dataset.i18n)) el.textContent = t(el.dataset.i18n);
+  });
+  document.querySelectorAll("[data-i18n-aria]").forEach((el) => {
+    if (hasTranslation(el.dataset.i18nAria)) el.setAttribute("aria-label", t(el.dataset.i18nAria));
+  });
+  document.querySelectorAll("[data-i18n-title]").forEach((el) => {
+    if (hasTranslation(el.dataset.i18nTitle)) el.setAttribute("title", t(el.dataset.i18nTitle));
+  });
+  document.querySelectorAll("[data-i18n-placeholder]").forEach((el) => {
+    if (hasTranslation(el.dataset.i18nPlaceholder)) el.setAttribute("placeholder", t(el.dataset.i18nPlaceholder));
+  });
+}
+
+// Sets the active language, persists it, and refreshes every already-
+// rendered piece of UI in place — called by both the first-run picker and
+// the Settings switcher.
+function applyAppLanguage(lang) {
+  currentAppLanguage = lang;
+  // Unguarded (unlike setCustomSplashImage()'s explicit QuotaExceededError
+  // handling) this could throw and abort the rest of this function if
+  // localStorage is near its shared-origin quota (e.g. several custom
+  // splash images already stored) — the language would apply for this
+  // session but silently fail to persist, so the first-run picker would
+  // incorrectly reappear next load even though the user already chose.
+  try {
+    localStorage.setItem("appLanguage", lang);
+  } catch (e) {
+    console.error("Failed to persist appLanguage:", e);
+    showToast(t("langErrQuota"));
+  }
+  applyStaticTranslations();
+  updateMalaToggleButton();
+  renderSplashSlotUI();
+  renderToday();
+  if (document.getElementById("sankalpa-page")?.classList.contains("open")) {
+    renderSankalpaPage();
+  }
+  updateLanguagePickerSelection();
+}
 document.body.classList.add("bg-" + backgroundChoice);
 
 // ---------- Splash Screen Rotation ----------
@@ -187,8 +321,10 @@ const WEEKDAYS = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","S
 const MONTHS_FULL = ["January","February","March","April","May","June","July","August","September","October","November","December"];
 function formatDateLong(isoDate) {
   const [year, month, day] = isoDate.split("-").map(Number);
-  const weekday = WEEKDAYS[new Date(year, month - 1, day).getDay()];
-  return `${weekday}, ${day} ${MONTHS_FULL[month - 1]} ${year}`;
+  const dayIndex = new Date(year, month - 1, day).getDay();
+  const weekdays = (TRANSLATIONS && TRANSLATIONS.datesWeekdaysFull && TRANSLATIONS.datesWeekdaysFull[getEffectiveLang()]) || WEEKDAYS;
+  const months = (TRANSLATIONS && TRANSLATIONS.datesMonthsFull && TRANSLATIONS.datesMonthsFull[getEffectiveLang()]) || MONTHS_FULL;
+  return `${weekdays[dayIndex]}, ${day} ${months[month - 1]} ${year}`;
 }
 
 // ---------- Sumiran-Lite: shared constants & helpers ----------
@@ -699,16 +835,16 @@ function renderJaapInputField(entry, opts = {}) {
     const malaValue = entry.jaap == null ? "" : jaapToMala(entry.jaap);
     return `
       <label>
-        Mala Count<br>
-        <input type="number" step="1"${idAttr} class="${className}" value="${malaValue}" placeholder="Enter malas">
+        ${t("todayMalaLabel")}<br>
+        <input type="number" step="1"${idAttr} class="${className}" value="${malaValue}" placeholder="${t("todayMalaPlaceholder")}">
       </label>
     `;
   }
 
   return `
     <label>
-      Jaap Count<br>
-      <input type="number"${idAttr} class="${className}" value="${entry.jaap ?? ""}" placeholder="Enter jaap count">
+      ${t("todayJaapLabel")}<br>
+      <input type="number"${idAttr} class="${className}" value="${entry.jaap ?? ""}" placeholder="${t("todayJaapPlaceholder")}">
     </label>
   `;
 }
@@ -738,7 +874,7 @@ function updateMalaToggleButton() {
   const input = document.getElementById("mala-toggle");
   if (!input) return;
   input.checked = malaViewEnabled;
-  input.title = malaViewEnabled ? "Mala View: On" : "Mala View: Off";
+  input.title = malaViewEnabled ? t("malaViewOn") : t("malaViewOff");
 
   const wrap = document.getElementById("mala-toggle-wrap");
   if (wrap) wrap.classList.toggle("mala-view-on", malaViewEnabled);
@@ -765,6 +901,31 @@ function updateBackgroundSwatchButtons() {
 
     await loadTranslations();
 
+    // renderSplashSlotUI() and updateMalaToggleButton() already ran once,
+    // synchronously, before this await resolved — refresh them now that
+    // TRANSLATIONS is actually populated, along with every static
+    // data-i18n-marked element in the Settings drawer / Sunday modal.
+    applyStaticTranslations();
+    updateMalaToggleButton();
+    renderSplashSlotUI();
+    updateLanguagePickerSelection();
+
+    // The splash screen's own <img alt> was set synchronously by the
+    // chooseSplashImage() IIFE at the very top of this file, long before
+    // translations could have loaded — correct it now, in the (typical)
+    // case where the splash is still on screen. lastSplashImage records
+    // which image was actually chosen ("hanuman" or "customN").
+    const splashImgEl = document.getElementById("splash-img");
+    if (splashImgEl) {
+      const lastSplashId = localStorage.getItem("lastSplashImage");
+      const splashAltKey = lastSplashId && lastSplashId !== "hanuman" ? "splashCustomAlt" : "splashHanumanAlt";
+      // Only overwrite if a real translation exists — the element's current
+      // alt is already correct English (baked into SPLASH_DEFAULT_IMAGE /
+      // the custom-pool literal), so leave it alone rather than replacing
+      // it with t()'s raw-key fallback if TRANSLATIONS never loaded.
+      if (hasTranslation(splashAltKey)) splashImgEl.alt = t(splashAltKey);
+    }
+
     // Load ledger ONLY from IndexedDB — a fresh/empty ledger always starts
     // blank, never seeded from data.json (that file is a local-testing
     // fixture only, not real seed data for new users).
@@ -785,6 +946,12 @@ await saveAutomaticBackup(ledgerData);
     // re-render event.
     if (shouldShowSundayBackupReminder(todayISO, localStorage.getItem("lastSundayBackupPromptDate"))) {
       openSundayBackupModal();
+    }
+
+    // First-run only — once a language is chosen (even explicitly English),
+    // this is skipped on every subsequent load.
+    if (!currentAppLanguage) {
+      showLanguagePicker();
     }
 
   } catch (err) {
@@ -836,15 +1003,15 @@ async function restoreFromBackup() {
   const backup = await loadLatestBackup();
 
   if (!backup || !backup.entries) {
-    alert("No backup found to restore.");
+    alert(t("ledgerNoBackupFound"));
     return;
   }
 
   const confirmRestore = confirm(
-    `Restore ledger from backup?\n\n` +
-    `Backup date: ${new Date(backup.backedUpAt).toLocaleString()}\n` +
-    `Entries: ${backup.entries.length}\n\n` +
-    `This will replace current ledger data.`
+    t("ledgerRestoreConfirm", {
+      date: new Date(backup.backedUpAt).toLocaleString(),
+      count: backup.entries.length,
+    })
   );
 
   if (!confirmRestore) return;
@@ -853,7 +1020,7 @@ async function restoreFromBackup() {
 
   await saveLedger(ledgerData);
 
-  alert("Ledger restored successfully from backup.");
+  alert(t("ledgerRestoreSuccess"));
 
   renderToday();
 }
@@ -893,17 +1060,17 @@ function renderReflectionSummary() {
     <div class="reflection-box">
 
       <div class="reflection-line">
-        <strong>Lifetime Jaap:</strong>
+        <strong>${t("reflectionLifetimeJaap")}</strong>
         ${formatTotal(cumulative)}
       </div>
 
 	<div class="reflection-line">
-  <strong>${CURRENT_YEAR} Total:</strong>
+  <strong>${t("reflectionYearTotal", { year: CURRENT_YEAR })}</strong>
   ${formatTotal(currentYearTotal)}
 </div>
 
       <div class="reflection-line">
-        <strong>Next Milestone:</strong> ${currentCrore + 1} Crore
+        <strong>${t("reflectionNextMilestone")}</strong> ${currentCrore + 1} ${t("commonCroreWord")}
       </div>
       <div class="progress-track">
         <div class="progress-fill" style="width: ${percent}%"></div>
@@ -916,14 +1083,14 @@ function renderReflectionSummary() {
   <div class="reflection-predictions">
     ${pred30 ? `
       <div class="reflection-line prediction-line">
-        <strong>30-Day Pace:</strong> ${formatDate(pred30.predictedDate)}
-        <span class="prediction-pace">(${formatTotal(Math.round(pred30.dailyPace))}/day)</span>
+        <strong>${t("reflectionPace30Day")}</strong> ${formatDate(pred30.predictedDate)}
+        <span class="prediction-pace">(${formatTotal(Math.round(pred30.dailyPace))}${t("commonPerDaySuffix")})</span>
       </div>
     ` : ""}
     ${predYTD ? `
       <div class="reflection-line prediction-line">
-        <strong>YTD Pace:</strong> ${formatDate(predYTD.predictedDate)}
-        <span class="prediction-pace">(${formatTotal(Math.round(predYTD.dailyPace))}/day)</span>
+        <strong>${t("reflectionPaceYTD")}</strong> ${formatDate(predYTD.predictedDate)}
+        <span class="prediction-pace">(${formatTotal(Math.round(predYTD.dailyPace))}${t("commonPerDaySuffix")})</span>
       </div>
     ` : ""}
   </div>
@@ -931,12 +1098,12 @@ function renderReflectionSummary() {
 
 	  ${milestoneHistory.length > 0 ? `
   <div class="reflection-milestones">
-    <div class="reflection-subtitle">Milestones</div>
+    <div class="reflection-subtitle">${t("reflectionMilestonesHeading")}</div>
     ${milestoneHistory.map(m => `
       <div class="milestone-line">
-        🪔 ${m.crore} Crore — ${formatDate(m.date)}
+        ${t("reflectionMilestoneLine", { crore: m.crore, date: formatDate(m.date) })}
         ${m.daysSincePrevious !== null
-          ? `<span class="milestone-gap">(+${m.daysSincePrevious} days)</span>`
+          ? `<span class="milestone-gap">${t("reflectionDaysSince", { days: m.daysSincePrevious })}</span>`
           : ""}
       </div>
     `).join("")}
@@ -944,7 +1111,7 @@ function renderReflectionSummary() {
 ` : ""}
 
 	  <div class="legend">
-  🏵️ Crore Milestone &nbsp;&nbsp; 🌕 Poornima &nbsp;&nbsp; 🔴 Sunday &nbsp;&nbsp; ▸ Notes
+  ${t("reflectionLegend")}
 </div>
 
     </div>
@@ -980,9 +1147,9 @@ function renderLedgerList() {
   const jumpBar = document.createElement("div");
   jumpBar.className = "jump-bar";
   jumpBar.innerHTML = `
-    <label class="jump-label" for="jump-year">Jump to year</label>
+    <label class="jump-label" for="jump-year">${t("ledgerListJumpToYear")}</label>
     <select id="jump-year" class="jump-select">
-      <option value="">— select —</option>
+      <option value="">${t("ledgerListSelectPlaceholder")}</option>
       ${years.map(y => `<option value="${y}">${y}</option>`).join("")}
     </select>
   `;
@@ -1089,7 +1256,7 @@ yearHeader.addEventListener("click", () => {
           ${
             crossedCrore
               ? `<div class="milestone">
-                   ◈ ${crossedCrore} Crore Jaap Completed
+                   ${t("ledgerListMilestoneBadge", { crore: crossedCrore })}
                  </div>`
               : ""
           }
@@ -1102,17 +1269,17 @@ yearHeader.addEventListener("click", () => {
                 <br><br>
 
                 <label>
-                  Notes<br>
+                  ${t("commonNotesLabel")}<br>
                   <textarea class="edit-notes" rows="3">${escapeHTML(entry.notes || "")}</textarea>
                 </label>
 
                 <br>
 
-                <button class="save-entry">Update</button>
+                <button class="save-entry">${t("ledgerListUpdateBtn")}</button>
               `
               : `
-                ${entry.notes ? escapeHTML(entry.notes) : "<em>No notes</em>"}
-                <div class="locked-note">🔒 Entry locked</div>
+                ${entry.notes ? escapeHTML(entry.notes) : `<em>${t("ledgerListNoNotes")}</em>`}
+                <div class="locked-note">${t("ledgerListEntryLocked")}</div>
               `
           }
         </div>
@@ -1132,7 +1299,7 @@ yearHeader.addEventListener("click", () => {
           await saveLedger(ledgerData);
           await saveAutomaticBackup(ledgerData);
           renderToday();
-          showToast("Saved ✓");
+          showToast(t("commonSavedToast"));
         });
       }
 
@@ -1162,7 +1329,7 @@ function renderTodayCard(entry) {
   const container = document.getElementById("today-card");
 
   container.innerHTML = `
-    <h2>Today${hasExplicitPoornima(entry.notes) ? " 🌕" : ""}</h2>
+    <h2>${t("todayHeading")}${hasExplicitPoornima(entry.notes) ? " 🌕" : ""}</h2>
 
     <p><strong>${formatDateLong(entry.date)}</strong></p>
 
@@ -1171,20 +1338,20 @@ function renderTodayCard(entry) {
     <br><br>
 
     <label>
-      Notes<br>
+      ${t("commonNotesLabel")}<br>
       <textarea
         id="today-notes"
         class="edit-notes"
         rows="3"
-        placeholder="Notes (optional)"
+        placeholder="${t("commonNotesPlaceholder")}"
       >${escapeHTML(entry.notes || "")}</textarea>
     </label>
 
     <br>
 
     ${entry.date === todayISO || isWithinLastNDays(entry.date, 7)
-  ? `<button id="update-today">Save</button>`
-  : `<p><em>This entry is locked (older than 7 days).</em></p>`
+  ? `<button id="update-today">${t("todaySaveBtn")}</button>`
+  : `<p><em>${t("todayLockedMsg")}</em></p>`
 }
 
 
@@ -1216,7 +1383,7 @@ if (!isWithinLastNDays(entry.date, 7)) {
   await saveLedger(ledgerData);
   await saveAutomaticBackup(ledgerData);
   renderToday();
-  showToast("Saved ✓");
+  showToast(t("commonSavedToast"));
 
   if (crossedNewMilestone) {
     celebrateMilestone();
@@ -1274,6 +1441,53 @@ document.querySelectorAll(".background-swatch").forEach((btn) => {
 
 updateBackgroundSwatchButtons();
 
+// ---------- Language Picker (first-run) + Settings switcher ----------
+// Both surfaces call the same applyAppLanguage() — the full-screen picker
+// only ever appears once (first run, no language chosen yet); the Settings
+// drawer buttons are always available to switch languages afterward.
+const languagePickerEl = document.getElementById("language-picker");
+
+function showLanguagePicker() {
+  if (!languagePickerEl) return;
+  languagePickerEl.classList.add("open");
+  languagePickerEl.setAttribute("aria-hidden", "false");
+}
+
+function hideLanguagePicker() {
+  if (!languagePickerEl) return;
+  languagePickerEl.classList.remove("open");
+  languagePickerEl.setAttribute("aria-hidden", "true");
+}
+
+// Reflects the active language as a filled radio (picker) / highlighted pill
+// (Settings) — called after every language change and once at bootstrap.
+function updateLanguagePickerSelection() {
+  const lang = getEffectiveLang();
+  document.querySelectorAll("#lang-picker-options .lang-option").forEach((btn) => {
+    const isSelected = btn.dataset.lang === lang;
+    btn.classList.toggle("selected", isSelected);
+    btn.setAttribute("aria-checked", String(isSelected));
+  });
+  document.querySelectorAll("#lang-settings-wrap .lang-settings-btn").forEach((btn) => {
+    const isActive = btn.dataset.lang === lang;
+    btn.classList.toggle("active", isActive);
+    btn.setAttribute("aria-pressed", String(isActive));
+  });
+}
+
+document.getElementById("lang-picker-options")?.addEventListener("click", (e) => {
+  const btn = e.target.closest(".lang-option");
+  if (!btn) return;
+  applyAppLanguage(btn.dataset.lang);
+  hideLanguagePicker();
+});
+
+document.getElementById("lang-settings-wrap")?.addEventListener("click", (e) => {
+  const btn = e.target.closest(".lang-settings-btn");
+  if (!btn) return;
+  applyAppLanguage(btn.dataset.lang);
+});
+
 // ---------- Custom splash image upload pipeline ----------
 // Two limits matter here: file size protects decode-time RAM (a browser
 // must expand an image to a raw width*height*4-byte bitmap before it can
@@ -1289,7 +1503,7 @@ function readFileAsDataURL(file) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = () => resolve(reader.result);
-    reader.onerror = () => reject(reader.error || new Error("Failed to read file."));
+    reader.onerror = () => reject(reader.error || new Error(t("splashErrReadFile")));
     reader.readAsDataURL(file);
   });
 }
@@ -1298,17 +1512,17 @@ function loadImageElement(src) {
   return new Promise((resolve, reject) => {
     const img = new Image();
     img.onload = () => resolve(img);
-    img.onerror = () => reject(new Error("Failed to decode image."));
+    img.onerror = () => reject(new Error(t("splashErrDecodeImage")));
     img.src = src;
   });
 }
 
 async function processSplashImage(file) {
   if (!file || !file.type || file.type.indexOf("image/") !== 0) {
-    throw new Error("Please choose an image file.");
+    throw new Error(t("splashErrNotImage"));
   }
   if (file.size > SPLASH_MAX_FILE_BYTES) {
-    throw new Error("Image is too large. Please choose a file under 5MB.");
+    throw new Error(t("splashErrTooLarge"));
   }
 
   let bitmap = null;
@@ -1329,7 +1543,7 @@ async function processSplashImage(file) {
     const dataUrl = await readFileAsDataURL(file);
     const imgEl = await loadImageElement(dataUrl);
     if (imgEl.naturalWidth * imgEl.naturalHeight > SPLASH_MAX_MEGAPIXELS) {
-      throw new Error("Image resolution is too high. Please choose a smaller image.");
+      throw new Error(t("splashErrTooHighRes"));
     }
     bitmap = imgEl;
   }
@@ -1377,7 +1591,7 @@ function setCustomSplashImage(slotIndex, dataUrl) {
     if (previousDataUrl !== null) {
       try { localStorage.setItem(key, previousDataUrl); } catch (e2) {}
     }
-    throw new Error("Not enough storage space to save this image.");
+    throw new Error(t("splashErrQuota"));
   }
 }
 
@@ -1402,7 +1616,7 @@ function renderSplashSlotUI() {
   const lockedBtn = document.createElement("button");
   lockedBtn.type = "button";
   lockedBtn.className = "splash-slot splash-slot-locked";
-  lockedBtn.title = "Gurudev Hanuman Ji is the default image and can't be changed";
+  lockedBtn.title = t("splashHanumanLockedMsg");
 
   const lockedImg = document.createElement("img");
   lockedImg.src = SPLASH_DEFAULT_IMAGE.webp;
@@ -1415,7 +1629,7 @@ function renderSplashSlotUI() {
   lockedBtn.appendChild(lockBadge);
 
   lockedBtn.addEventListener("click", () => {
-    showToast("Gurudev Hanuman Ji is the default image and can't be changed");
+    showToast(t("splashHanumanLockedMsg"));
   });
   wrap.appendChild(lockedBtn);
 
@@ -1428,7 +1642,7 @@ function renderSplashSlotUI() {
 
     if (slot.filled) {
       btn.classList.add("splash-slot-custom");
-      btn.title = "Custom image — tap to replace";
+      btn.title = t("splashCustomTapReplace");
 
       const img = document.createElement("img");
       img.src = slot.dataUrl;
@@ -1438,17 +1652,17 @@ function renderSplashSlotUI() {
       const removeBadge = document.createElement("span");
       removeBadge.className = "splash-slot-reset";
       removeBadge.textContent = "✕";
-      removeBadge.title = "Remove image";
+      removeBadge.title = t("splashRemoveImageTitle");
       removeBadge.addEventListener("click", (e) => {
         e.stopPropagation();
         removeCustomSplashImage(i);
         renderSplashSlotUI();
-        showToast("Image removed");
+        showToast(t("splashToastImageRemoved"));
       });
       btn.appendChild(removeBadge);
     } else {
       btn.classList.add("splash-slot-empty");
-      btn.title = "Add your own picture";
+      btn.title = t("splashAddPictureTitle");
       btn.textContent = "+";
     }
 
@@ -1477,10 +1691,10 @@ document.getElementById("splash-image-input")?.addEventListener("change", async 
     const dataUrl = await processSplashImage(file);
     setCustomSplashImage(slotIndex, dataUrl);
     renderSplashSlotUI();
-    showToast("Splash image updated ✓");
+    showToast(t("splashToastUpdated"));
   } catch (err) {
     console.error("Splash image upload failed:", err);
-    showToast(err && err.message ? err.message : "Failed to process image.");
+    showToast(err && err.message ? err.message : t("splashErrProcessFallback"));
   } finally {
     input.value = "";
   }
@@ -1489,12 +1703,12 @@ document.getElementById("splash-image-input")?.addEventListener("change", async 
 document.getElementById("splash-images-reset-btn")?.addEventListener("click", () => {
   const anyFilled = resolveSplashCustomSlots().some((slot) => slot.filled);
   if (!anyFilled) {
-    showToast("No custom images to remove");
+    showToast(t("splashToastNoneToRemove"));
     return;
   }
   removeAllCustomSplashImages();
   renderSplashSlotUI();
-  showToast("Custom images removed");
+  showToast(t("splashToastAllRemoved"));
 });
 
 renderSplashSlotUI();
@@ -1525,27 +1739,27 @@ async function renderSankalpaPage() {
   if (!sankalpa) {
     page.innerHTML = `
       <div class="fullscreen-header">
-        <h2>Sankalpa</h2>
-        <button id="sankalpa-close" class="fullscreen-close" aria-label="Close">✕</button>
+        <h2>${t("sankalpaHeading")}</h2>
+        <button id="sankalpa-close" class="fullscreen-close" aria-label="${t("commonCloseAria")}">✕</button>
       </div>
       <div class="sankalpa-body">
-        <p class="sankalpa-intro">Establish your Sankalpa — a vow of intent for your practice.</p>
+        <p class="sankalpa-intro">${t("sankalpaIntro")}</p>
 
         <label>
-          Sankalpa<br>
-          <textarea id="sankalpa-text" class="edit-notes" rows="4" placeholder="Your vow..."></textarea>
+          ${t("sankalpaHeading")}<br>
+          <textarea id="sankalpa-text" class="edit-notes" rows="4" placeholder="${t("sankalpaVowPlaceholder")}"></textarea>
         </label>
 
         <br><br>
 
         <label>
-          Context (optional)<br>
-          <input type="text" id="sankalpa-context" class="edit-jaap" placeholder="Guru, Devatā, occasion...">
+          ${t("sankalpaContextLabel")}<br>
+          <input type="text" id="sankalpa-context" class="edit-jaap" placeholder="${t("sankalpaContextPlaceholder")}">
         </label>
 
         <br><br>
 
-        <button id="sankalpa-establish" class="save-entry" disabled>Establish Sankalpa</button>
+        <button id="sankalpa-establish" class="save-entry" disabled>${t("sankalpaEstablishBtn")}</button>
       </div>
     `;
 
@@ -1564,7 +1778,7 @@ async function renderSankalpaPage() {
 
       const context = page.querySelector("#sankalpa-context").value.trim();
       await saveSankalpa({ text, context, date: getTodayISO() });
-      showToast("Sankalpa established ✓");
+      showToast(t("sankalpaEstablishedToast"));
       renderSankalpaPage();
     });
 
@@ -1574,36 +1788,40 @@ async function renderSankalpaPage() {
 
   page.innerHTML = `
     <div class="fullscreen-header">
-      <h2>Sankalpa</h2>
-      <button id="sankalpa-close" class="fullscreen-close" aria-label="Close">✕</button>
+      <h2>${t("sankalpaHeading")}</h2>
+      <button id="sankalpa-close" class="fullscreen-close" aria-label="${t("commonCloseAria")}">✕</button>
     </div>
     <div class="sankalpa-body">
       <div class="sankalpa-view">
         <p class="sankalpa-text-display">${escapeHTML(sankalpa.text)}</p>
         ${sankalpa.context ? `<p class="sankalpa-context-display"><em>${escapeHTML(sankalpa.context)}</em></p>` : ""}
-        <p class="sankalpa-date-display">Established ${formatDate(sankalpa.date)}</p>
+        <p class="sankalpa-date-display">${t("sankalpaEstablishedDate", { date: formatDate(sankalpa.date) })}</p>
       </div>
 
-      <button id="sankalpa-rewrite-btn" class="maintenance-btn">Rewrite Sankalpa</button>
+      <button id="sankalpa-rewrite-btn" class="maintenance-btn">${t("sankalpaRewriteBtn")}</button>
 
       <div id="sankalpa-rewrite-form" style="display:none;">
         <br>
         <label>
-          Sankalpa<br>
+          ${t("sankalpaHeading")}<br>
           <textarea id="sankalpa-text-edit" class="edit-notes" rows="4">${escapeHTML(sankalpa.text)}</textarea>
         </label>
 
         <br><br>
 
         <label>
-          Context (optional)<br>
-          <input type="text" id="sankalpa-context-edit" class="edit-jaap" value="${escapeHTML(sankalpa.context || "")}">
+          ${t("sankalpaContextLabel")}<br>
+          <input type="text" id="sankalpa-context-edit" class="edit-jaap">
+          <!-- value set via JS property assignment below, not interpolated into
+               this attribute — escapeHTML() only escapes &/</>, not \", so a
+               context containing a literal " would otherwise break out of a
+               value="..." attribute and corrupt the rest of this template. -->
         </label>
 
         <br><br>
 
-        <button id="sankalpa-confirm-rewrite" class="save-entry" disabled>Confirm Rewrite</button>
-        <button id="sankalpa-cancel-rewrite" class="maintenance-btn">Cancel</button>
+        <button id="sankalpa-confirm-rewrite" class="save-entry" disabled>${t("sankalpaConfirmRewriteBtn")}</button>
+        <button id="sankalpa-cancel-rewrite" class="maintenance-btn">${t("commonCancelBtn")}</button>
       </div>
     </div>
   `;
@@ -1614,6 +1832,7 @@ async function renderSankalpaPage() {
   const rewriteForm = page.querySelector("#sankalpa-rewrite-form");
   const textEdit = page.querySelector("#sankalpa-text-edit");
   const confirmBtn = page.querySelector("#sankalpa-confirm-rewrite");
+  page.querySelector("#sankalpa-context-edit").value = sankalpa.context || "";
 
   rewriteBtn.addEventListener("click", () => {
     rewriteForm.style.display = "block";
@@ -1633,13 +1852,13 @@ async function renderSankalpaPage() {
     const text = textEdit.value.trim();
     if (!text) return;
 
-    const confirmed = confirm("Rewrite Sankalpa? Your original date will be preserved.");
+    const confirmed = confirm(t("sankalpaRewriteConfirm"));
     if (!confirmed) return;
 
     const context = page.querySelector("#sankalpa-context-edit").value.trim();
     // date is always preserved from the original record — never reset to today.
     await saveSankalpa({ text, context, date: sankalpa.date });
-    showToast("Sankalpa rewritten ✓");
+    showToast(t("sankalpaRewrittenToast"));
     renderSankalpaPage();
   });
 }
@@ -1662,7 +1881,7 @@ function buildLedgerExportPayload() {
 document.getElementById("export-json-btn")
   ?.addEventListener("click", async () => {
     if (!ledgerData || ledgerData.length === 0) {
-      alert("Ledger is empty. Nothing to export.");
+      alert(t("ledgerEmptyExport"));
       return;
     }
 
@@ -1705,7 +1924,7 @@ importInput?.addEventListener("change", async (event) => {
 
     // ---- Validation ----
     if (!Array.isArray(importedData)) {
-      alert("Invalid file format: expected an array.");
+      alert(t("ledgerInvalidFileFormat"));
       return;
     }
 
@@ -1718,15 +1937,12 @@ importInput?.addEventListener("change", async (event) => {
         !jaapIsValid ||
         !("notes" in entry)
       ) {
-        alert("Invalid ledger entry format detected.");
+        alert(t("ledgerInvalidEntryFormat"));
         return;
       }
     }
 
-    const confirmReplace = confirm(
-      `Import ${importedData.length} entries?\n\n` +
-      `This will REPLACE your current ledger permanently.`
-    );
+    const confirmReplace = confirm(t("ledgerImportConfirm", { count: importedData.length }));
 
     if (!confirmReplace) {
       importInput.value = ""; // reset
@@ -1739,13 +1955,13 @@ importInput?.addEventListener("change", async (event) => {
     await saveLedger(ledgerData);
     await saveAutomaticBackup(ledgerData);
 
-    alert("Ledger imported successfully.");
+    alert(t("ledgerImportSuccess"));
 
     renderToday();
 
   } catch (err) {
     console.error("Import failed:", err);
-    alert("Failed to import file. Please ensure it is a valid JSON ledger.");
+    alert(t("ledgerImportFailed"));
   } finally {
     importInput.value = ""; // allow re-import of same file
   }
@@ -1781,7 +1997,7 @@ function loadGoogleIdentityScript() {
     const existing = document.querySelector("script[data-google-identity]");
     if (existing) {
       existing.addEventListener("load", () => resolve());
-      existing.addEventListener("error", () => reject(new Error("Could not load Google Sign-In. Check your internet connection.")));
+      existing.addEventListener("error", () => reject(new Error(t("backupErrLoadGis"))));
       return;
     }
     const script = document.createElement("script");
@@ -1790,7 +2006,7 @@ function loadGoogleIdentityScript() {
     script.defer = true;
     script.dataset.googleIdentity = "true";
     script.onload = () => resolve();
-    script.onerror = () => reject(new Error("Could not load Google Sign-In. Check your internet connection."));
+    script.onerror = () => reject(new Error(t("backupErrLoadGis")));
     document.head.appendChild(script);
   });
 
@@ -1809,16 +2025,16 @@ function requestGoogleDriveAccessToken() {
           if (tokenResponse && tokenResponse.access_token) {
             resolve(tokenResponse.access_token);
           } else {
-            reject(new Error("Google sign-in did not complete."));
+            reject(new Error(t("backupErrTokenIncomplete")));
           }
         },
         error_callback: () => {
-          reject(new Error("Google sign-in was cancelled."));
+          reject(new Error(t("backupErrCancelled")));
         },
       });
       tokenClient.requestAccessToken();
     } catch (e) {
-      reject(e instanceof Error ? e : new Error("Failed to start Google sign-in."));
+      reject(e instanceof Error ? e : new Error(t("backupErrStartFailed")));
     }
   });
 }
@@ -1864,7 +2080,7 @@ async function findExistingDriveBackupFileId(accessToken) {
     { headers: { Authorization: `Bearer ${accessToken}` } }
   );
   if (!res.ok) {
-    throw new Error("Could not check Google Drive for an existing backup.");
+    throw new Error(t("backupErrCheckExisting"));
   }
   const data = await res.json();
   const match = data.files && data.files[0];
@@ -1883,7 +2099,7 @@ async function uploadLedgerBackupToDrive(accessToken) {
   });
 
   if (!res.ok) {
-    throw new Error("Google Drive rejected the backup upload.");
+    throw new Error(t("backupErrUploadRejected"));
   }
 }
 
@@ -1924,10 +2140,10 @@ async function backupToGoogleDrive() {
     await uploadLedgerBackupToDrive(accessToken);
     markSundayBackupHandled();
     closeSundayBackupModal();
-    showToast("Backed up to Google Drive ✓");
+    showToast(t("backupToastSuccess"));
   } catch (err) {
     console.error("Google Drive backup failed:", err);
-    showToast(err && err.message ? err.message : "Backup failed. Please try again.");
+    showToast(err && err.message ? err.message : t("backupToastFailFallback"));
   }
 }
 
@@ -1938,35 +2154,5 @@ document.getElementById("sunday-backup-modal")?.addEventListener("click", (e) =>
   if (e.target.id === "sunday-backup-modal") dismissSundayBackupReminder();
 });
 document.getElementById("drive-backup-btn")?.addEventListener("click", backupToGoogleDrive);
-
-// ---------- i18n: Phase 1 (Hindi + Bangla) locked translation baseline ----------
-// The reviewed, locked dictionary lives in i18n/translations.json (every
-// user-facing string, each key with { en, hi, bn }; placeholders use
-// {name} tokens e.g. {year}/{date}/{crore}/{days}/{count}) rather than
-// inline here, keeping data separate from logic. Loaded once at bootstrap
-// via a same-origin fetch — this is a local static asset the app already
-// ships, not an external network dependency (same as loading styles.css
-// or a font file); it works offline once the page has loaded before.
-//
-// Deliberately NOT translated (decision, not an oversight): the short
-// "D MMM YYYY" date format (formatDate() — Ledger List rows, Pace
-// predictions, Milestones list, Sankalpa date) stays in English in every
-// app language. Only formatDateLong()'s weekday + full month name (Today
-// Card date line only) uses datesWeekdaysFull / datesMonthsFull from the
-// dictionary. Numerals stay Western (0-9) in every language, everywhere.
-//
-// Not yet wired into any render function — that's a separate, later change.
-let TRANSLATIONS = null;
-
-async function loadTranslations() {
-  try {
-    const res = await fetch("i18n/translations.json");
-    if (!res.ok) throw new Error("HTTP " + res.status);
-    TRANSLATIONS = await res.json();
-  } catch (e) {
-    console.error("Failed to load translations.json:", e);
-    TRANSLATIONS = {};
-  }
-}
 
 

@@ -69,10 +69,25 @@
     "hi": "झरोखा",
     "bn": "ঝরোখা"
   },
-  "bgAriaSuffix": {
-    "en": "background",
-    "hi": "पृष्ठभूमि",
-    "bn": "পটভূমি"
+  "bgAriaAlpana": {
+    "en": "Alpana background",
+    "hi": "अल्पना पृष्ठभूमि",
+    "bn": "আলপনা পটভূমি"
+  },
+  "bgAriaMandala": {
+    "en": "Mandala background",
+    "hi": "मंडला पृष्ठभूमि",
+    "bn": "মন্ডলা পটভূমি"
+  },
+  "bgAriaJharokha": {
+    "en": "Jharokha background",
+    "hi": "झरोखा पृष्ठभूमि",
+    "bn": "ঝরোখা পটভূমি"
+  },
+  "langSettingsHeading": {
+    "en": "Language",
+    "hi": "भाषा",
+    "bn": "ভাষা"
   },
   "settingsSplashHeading": {
     "en": "Splash Images",
@@ -138,6 +153,11 @@
     "en": "Not enough storage space to save this image.",
     "hi": "इस तस्वीर को सहेजने के लिए पर्याप्त संग्रहण स्थान नहीं है।",
     "bn": "এই ছবিটি সংরক্ষণ করার জন্য পর্যাপ্ত সংরক্ষণ স্থান নেই।"
+  },
+  "langErrQuota": {
+    "en": "Language changed for this session, but couldn't be saved (storage full).",
+    "hi": "इस सत्र के लिए भाषा बदल दी गई है, लेकिन सहेजी नहीं जा सकी (संग्रहण भरा हुआ है)।",
+    "bn": "এই সেশনের জন্য ভাষা পরিবর্তন হয়েছে, কিন্তু সংরক্ষণ করা যায়নি (সংরক্ষণস্থান পূর্ণ)।"
   },
   "splashErrReadFile": {
     "en": "Failed to read file.",
@@ -566,20 +586,5 @@
     "en": "Sumiran Lite will use this language throughout the app.",
     "hi": "सुमिरन लाइट पूरे ऐप में यही भाषा उपयोग करेगा।",
     "bn": "সুমিরন লাইট পুরো অ্যাপে এই ভাষা ব্যবহার করবে।"
-  },
-  "langNameEnglish": {
-    "en": "English",
-    "hi": "English",
-    "bn": "English"
-  },
-  "langNameHindi": {
-    "en": "Hindi",
-    "hi": "हिन्दी",
-    "bn": "হিন্দি"
-  },
-  "langNameBangla": {
-    "en": "Bangla",
-    "hi": "बांग्ला",
-    "bn": "বাংলা"
   }
 }

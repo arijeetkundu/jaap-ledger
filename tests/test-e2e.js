@@ -41,6 +41,7 @@ async function freshLoad(page, { clearStorage = false } = {}) {
 (async () => {
   const browser = await puppeteer.launch({ headless: true, args: ["--no-sandbox"] });
   const page = await browser.newPage();
+  await page.evaluateOnNewDocument(() => localStorage.setItem("appLanguage", "en"));
   // This app is a phone PWA; Puppeteer's 800x600 default is a desktop-ish
   // shape that doesn't reflect real usage and breaks viewport-relative
   // layout assertions (e.g. the splash screen's portrait-framed deity
