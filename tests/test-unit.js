@@ -268,6 +268,19 @@ function assert(label, condition) {
     if (cb.checked) { cb.checked = false; cb.dispatchEvent(new Event("change")); }
   });
 
+  // ── isValidJaapValue (NaN/negative guard) ───────────────────────────
+  console.log("\n=== isValidJaapValue ===");
+  assert("null (no entry) is valid", await page.evaluate(() => isValidJaapValue(null)) === true);
+  assert("zero is valid", await page.evaluate(() => isValidJaapValue(0)) === true);
+  assert("a positive integer is valid", await page.evaluate(() => isValidJaapValue(10000000)) === true);
+  assert("NaN is invalid", await page.evaluate(() => isValidJaapValue(NaN)) === false);
+  assert("a negative number is invalid", await page.evaluate(() => isValidJaapValue(-5)) === false);
+  assert("Infinity is invalid", await page.evaluate(() => isValidJaapValue(Infinity)) === false);
+  assert(
+    "computeJaapFromInput() on garbage input feeds isValidJaapValue() a rejectable NaN",
+    await page.evaluate(() => isValidJaapValue(computeJaapFromInput("not-a-number", 500))) === false
+  );
+
   // ── shouldShowSundayBackupReminder ─────────────────────────────────
   console.log("\n=== shouldShowSundayBackupReminder ===");
   // 2026-08-09 is a Sunday; 2026-08-10 (Monday) and 2026-08-16 (next Sunday) anchor the rest.

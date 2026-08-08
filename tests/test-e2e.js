@@ -354,6 +354,17 @@ async function freshLoad(page, { clearStorage = false } = {}) {
   await page.click("#sankalpa-close");
   await page.click("#maintenance-toggle"); // close drawer
 
+  // ── todayISO staleness: refreshed when the app returns to the foreground ──
+  console.log("\n=== todayISO staleness (visibilitychange refresh) ===");
+  const staleRefresh = await page.evaluate(() => {
+    todayISO = "2000-01-01"; // force a stale value, as if the tab sat open across midnight
+    Object.defineProperty(document, "visibilityState", { value: "visible", configurable: true });
+    document.dispatchEvent(new Event("visibilitychange"));
+    return { after: todayISO, realToday: getTodayISO() };
+  });
+  assert("becoming visible again refreshes a stale todayISO to the real current date", staleRefresh.after === staleRefresh.realToday);
+  assert("the refresh actually corrected staleness, not a no-op", staleRefresh.after !== "2000-01-01");
+
   // ── Import / Export ──────────────────────────────────────────────────
   console.log("\n=== Import / Export ===");
   await page.evaluateOnNewDocument(() => {
@@ -400,9 +411,39 @@ async function freshLoad(page, { clearStorage = false } = {}) {
   await importInput.uploadFile(tmpFile);
   await new Promise(r => setTimeout(r, 800)); // file read + confirm()/alert() dialog round-trip + re-render
 
+  // ── Lazy year build: a non-current year's rows aren't built until expanded ──
+  console.log("\n=== Ledger List lazy year build (performance) ===");
+  const yearStateBeforeExpand = await page.evaluate(() => {
+    const header = document.querySelector('.ledger-year-header[data-year="2020"]');
+    const container = header.nextElementSibling;
+    return {
+      built: container.dataset.built,
+      rowCount: container.querySelectorAll(".ledger-row").length,
+      hidden: container.style.display === "none",
+    };
+  });
+  assert("a non-current year's container starts marked not-built", yearStateBeforeExpand.built === "false");
+  assert("a non-current year's container has no row DOM until expanded", yearStateBeforeExpand.rowCount === 0);
+  assert("a non-current year's container starts collapsed", yearStateBeforeExpand.hidden === true);
+
   // Importing replaces the ledger with the 3 fixture entries, but renderToday()
   // always ensures today has an entry (ensureTodayEntryExists) — since none of
   // the fixture's 2020 dates is "today", one extra row is auto-created.
+  // 2020 isn't the current year, so its rows are lazily un-built until
+  // expanded (see renderLedgerList()'s lazy year-build) — expand it via its
+  // year header (additive, unlike jump-to-year which collapses everything
+  // else) so both the imported rows and the auto-created today row count.
+  await page.click('.ledger-year-header[data-year="2020"]');
+  await new Promise(r => setTimeout(r, 300));
+
+  const yearStateAfterExpand = await page.evaluate(() => {
+    const header = document.querySelector('.ledger-year-header[data-year="2020"]');
+    const container = header.nextElementSibling;
+    return { built: container.dataset.built, rowCount: container.querySelectorAll(".ledger-row").length };
+  });
+  assert("expanding a year builds and marks it built", yearStateAfterExpand.built === "true");
+  assert("expanding 2020 builds exactly its 3 imported rows", yearStateAfterExpand.rowCount === 3);
+
   const rowCountAfterImport = await page.$$eval(".ledger-row", els => els.length);
   assert(
     "import replaces the ledger with the imported entries (+1 auto-created today entry)",

@@ -870,6 +870,17 @@ function computeJaapFromInput(rawValue, originalJaap) {
   return malaToJaap(malaInput);
 }
 
+// A null jaap (no entry) is always valid; anything else must be a finite,
+// non-negative number. Number(rawValue) in computeJaapFromInput() returns
+// NaN for garbage input (e.g. a stray non-numeric value slipping past the
+// browser's own <input type="number"> validation) with nothing downstream
+// to catch it — an unguarded NaN silently poisons every sum that touches
+// it (lifetime/yearly totals, milestone %, pace predictions) once written
+// to IndexedDB. Call sites must check this before persisting entry.jaap.
+function isValidJaapValue(value) {
+  return value === null || (Number.isFinite(value) && value >= 0);
+}
+
 function updateMalaToggleButton() {
   const input = document.getElementById("mala-toggle");
   if (!input) return;
@@ -959,6 +970,18 @@ await saveAutomaticBackup(ledgerData);
   }
 })();
 
+// todayISO is only refreshed at the top of renderToday() — a tab left open
+// (or a backgrounded PWA left running) across midnight with no save/toggle/
+// language-switch action in between would keep showing yesterday's date on
+// the Today Card until some other action happened to trigger a re-render.
+// Catch that by refreshing whenever the app is brought back to the
+// foreground, which is exactly when a phone user re-opening the app across
+// a day boundary would notice the staleness.
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState === "visible" && getTodayISO() !== todayISO) {
+    renderToday();
+  }
+});
 
 async function saveAutomaticBackup(data) {
   const db = await openDB();
@@ -1119,6 +1142,141 @@ function renderReflectionSummary() {
 }
 
 
+// Builds and appends every row for one year into yearContainer, wiring up
+// each row's save/chevron handlers. Factored out of renderLedgerList() so
+// it can be called either eagerly (the current, expanded-by-default year)
+// or lazily (any other year, only once the user actually expands it or
+// jumps to it) — see the "lazy year build" note on renderLedgerList()
+// itself for why this split exists.
+function buildYearRows(yearContainer, entries, { sparklineMap, milestoneByDate }) {
+  entries.forEach(entry => {
+    const row = document.createElement("div");
+    row.className = "ledger-row";
+
+    if (isSunday(entry.date)) {
+      row.classList.add("sunday");
+    }
+
+    // Suppress today's sparkline until today's own jaap has been entered and
+    // saved — otherwise it renders a (correctly spec'd) trend from the prior
+    // 6 days alone, which reads as misleading before today's practice is logged.
+    const isUnsavedToday = entry.date === todayISO && (entry.jaap === null || entry.jaap === undefined);
+    const sparklinePoints = getRollingWindowFromMap(sparklineMap, entry.date);
+    const sparklineHTML = isUnsavedToday ? "" : renderSparklineSVG(sparklinePoints);
+    const crossedCrore = milestoneByDate.get(entry.date) || null;
+
+    row.innerHTML = `
+      <div class="ledger-main">
+        <span class="ledger-chevron">▸</span>
+
+        <span class="ledger-date">
+          ${formatDate(entry.date)}
+          ${crossedCrore ? " 🏵️" : ""}
+          ${hasExplicitPoornima(entry.notes) ? " 🌕" : ""}
+        </span>
+
+        <span class="ledger-jaap">${entry.jaap == null ? "—" : (malaViewEnabled ? formatAsMala(entry.jaap) : entry.jaap)}</span>
+
+        <span class="ledger-sparkline">${sparklineHTML}</span>
+      </div>
+
+      <div class="ledger-notes">
+        ${
+          crossedCrore
+            ? `<div class="milestone">
+                 ${t("ledgerListMilestoneBadge", { crore: crossedCrore })}
+               </div>`
+            : ""
+        }
+
+        ${
+          isEditableEntry(entry.date)
+            ? `
+              ${renderJaapInputField(entry)}
+
+              <br><br>
+
+              <label>
+                ${t("commonNotesLabel")}<br>
+                <textarea class="edit-notes" rows="3">${escapeHTML(entry.notes || "")}</textarea>
+              </label>
+
+              <br>
+
+              <button class="save-entry">${t("ledgerListUpdateBtn")}</button>
+            `
+            : `
+              ${entry.notes ? escapeHTML(entry.notes) : `<em>${t("ledgerListNoNotes")}</em>`}
+              <div class="locked-note">${t("ledgerListEntryLocked")}</div>
+            `
+        }
+      </div>
+    `;
+
+    const saveBtn = row.querySelector(".save-entry");
+    if (saveBtn) {
+      saveBtn.addEventListener("click", async (e) => {
+        e.stopPropagation();
+
+        const jaapInput = row.querySelector(".edit-jaap").value;
+        const notesInput = row.querySelector(".edit-notes").value;
+
+        const newJaap = computeJaapFromInput(jaapInput, entry.jaap);
+        if (!isValidJaapValue(newJaap)) {
+          showToast(t("commonInvalidNumber"));
+          return;
+        }
+
+        entry.jaap = newJaap;
+        entry.notes = notesInput;
+
+        // Editing a backdated (within-7-day) entry can cross a Crore boundary
+        // just as saving today's entry can — previously only the Today Card
+        // path checked this, so the same milestone crossing via a Ledger row
+        // silently skipped the petal celebration.
+        const crossedNewMilestone = getCroreMilestone(entry.date);
+
+        await saveLedger(ledgerData);
+        await saveAutomaticBackup(ledgerData);
+        renderToday();
+        showToast(t("commonSavedToast"));
+
+        if (crossedNewMilestone) {
+          celebrateMilestone();
+        }
+      });
+    }
+
+    const chevron = row.querySelector(".ledger-chevron");
+    chevron.addEventListener("click", (e) => {
+      e.stopPropagation();
+
+      const expanded = row.classList.contains("expanded");
+
+      // Collapse all rows — CSS handles the chevron rotation via .expanded
+      document.querySelectorAll(".ledger-row").forEach(r => {
+        r.classList.remove("expanded");
+      });
+
+      if (!expanded) {
+        row.classList.add("expanded");
+      }
+    });
+
+    yearContainer.appendChild(row);
+  });
+}
+
+// Rebuilds on every renderToday() call (save, mala toggle, language switch,
+// etc.), but only ever eagerly builds row DOM + listeners for the current
+// (expanded-by-default) year — other years' containers are created empty
+// and marked data-built="false", with their rows built on first expand
+// (year-header click or jump-to-year) and cached from then on for this
+// render pass. Previously every year was fully built on every single call
+// regardless of visibility, which meant a one-row save on a ledger with
+// years of daily history rebuilt thousands of already-hidden DOM nodes and
+// re-attached thousands of listeners just to update the one row that
+// changed.
 function renderLedgerList() {
   const container = document.getElementById("ledger-list");
   // Uses the module-level todayISO (refreshed at the top of renderToday()) —
@@ -1140,6 +1298,7 @@ function renderLedgerList() {
   // pass (renderReflectionSummary() uses it the same way); build a lookup
   // once and reuse it per row instead.
   const milestoneByDate = new Map(getMilestoneHistory(ledgerData).map(m => [m.date, m.crore]));
+  const rowDeps = { sparklineMap, milestoneByDate };
 
   container.innerHTML = "";
 
@@ -1170,6 +1329,10 @@ function renderLedgerList() {
     const targetHeader = container.querySelector(`[data-year="${target}"]`);
     if (targetHeader) {
       const targetContainer = targetHeader.nextElementSibling;
+      if (targetContainer.dataset.built === "false") {
+        buildYearRows(targetContainer, groupedByYear[target], rowDeps);
+        targetContainer.dataset.built = "true";
+      }
       targetContainer.style.display = "block";
       targetHeader.querySelector(".year-chevron").textContent = "▾";
       targetHeader.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -1179,147 +1342,52 @@ function renderLedgerList() {
     e.target.value = "";
   });
 
-  Object.keys(groupedByYear)
-  .sort((a, b) => b - a)
-  .forEach(year => {
-    // Year header
+  years.forEach(year => {
     const isCurrentYear = year === CURRENT_YEAR;
 
-// Year header
-const yearHeader = document.createElement("div");
-yearHeader.className = "ledger-year-header";
-yearHeader.dataset.year = year;
+    const yearHeader = document.createElement("div");
+    yearHeader.className = "ledger-year-header";
+    yearHeader.dataset.year = year;
 
-const yearTotal = groupedByYear[year]
-  .reduce((sum, e) => sum + (e.jaap || 0), 0)
-  .toLocaleString();
+    const yearTotal = groupedByYear[year]
+      .reduce((sum, e) => sum + (e.jaap || 0), 0)
+      .toLocaleString();
 
-yearHeader.innerHTML = `
-  <span class="year-left">
-    <span class="year-chevron">${isCurrentYear ? "▾" : "▸"}</span>
-    <span class="year-label">${year}</span>
-  </span>
-  <span class="year-total">${yearTotal}</span>
-`;
+    yearHeader.innerHTML = `
+      <span class="year-left">
+        <span class="year-chevron">${isCurrentYear ? "▾" : "▸"}</span>
+        <span class="year-label">${year}</span>
+      </span>
+      <span class="year-total">${yearTotal}</span>
+    `;
 
-container.appendChild(yearHeader);
+    container.appendChild(yearHeader);
 
-const yearContainer = document.createElement("div");
-yearContainer.className = "ledger-year-container";
+    const yearContainer = document.createElement("div");
+    yearContainer.className = "ledger-year-container";
+    yearContainer.dataset.built = "false";
 
-if (!isCurrentYear) {
-  yearContainer.style.display = "none";
-}
+    if (isCurrentYear) {
+      buildYearRows(yearContainer, groupedByYear[year], rowDeps);
+      yearContainer.dataset.built = "true";
+    } else {
+      yearContainer.style.display = "none";
+    }
 
-container.appendChild(yearContainer);
+    container.appendChild(yearContainer);
 
-yearHeader.addEventListener("click", () => {
-  const isHidden = yearContainer.style.display === "none";
-  yearContainer.style.display = isHidden ? "block" : "none";
+    yearHeader.addEventListener("click", () => {
+      const isHidden = yearContainer.style.display === "none";
 
-  const chevron = yearHeader.querySelector(".year-chevron");
-  chevron.textContent = isHidden ? "▾" : "▸";
-});
-
-    groupedByYear[year].forEach(entry => {
-      const row = document.createElement("div");
-      row.className = "ledger-row";
-
-      if (isSunday(entry.date)) {
-        row.classList.add("sunday");
+      if (isHidden && yearContainer.dataset.built === "false") {
+        buildYearRows(yearContainer, groupedByYear[year], rowDeps);
+        yearContainer.dataset.built = "true";
       }
 
-      // Suppress today's sparkline until today's own jaap has been entered and
-      // saved — otherwise it renders a (correctly spec'd) trend from the prior
-      // 6 days alone, which reads as misleading before today's practice is logged.
-      const isUnsavedToday = entry.date === todayISO && (entry.jaap === null || entry.jaap === undefined);
-      const sparklinePoints = getRollingWindowFromMap(sparklineMap, entry.date);
-      const sparklineHTML = isUnsavedToday ? "" : renderSparklineSVG(sparklinePoints);
-      const crossedCrore = milestoneByDate.get(entry.date) || null;
+      yearContainer.style.display = isHidden ? "block" : "none";
 
-      row.innerHTML = `
-        <div class="ledger-main">
-          <span class="ledger-chevron">▸</span>
-
-          <span class="ledger-date">
-            ${formatDate(entry.date)}
-            ${crossedCrore ? " 🏵️" : ""}
-            ${hasExplicitPoornima(entry.notes) ? " 🌕" : ""}
-          </span>
-
-          <span class="ledger-jaap">${entry.jaap == null ? "—" : (malaViewEnabled ? formatAsMala(entry.jaap) : entry.jaap)}</span>
-
-          <span class="ledger-sparkline">${sparklineHTML}</span>
-        </div>
-
-        <div class="ledger-notes">
-          ${
-            crossedCrore
-              ? `<div class="milestone">
-                   ${t("ledgerListMilestoneBadge", { crore: crossedCrore })}
-                 </div>`
-              : ""
-          }
-
-          ${
-            isEditableEntry(entry.date)
-              ? `
-                ${renderJaapInputField(entry)}
-
-                <br><br>
-
-                <label>
-                  ${t("commonNotesLabel")}<br>
-                  <textarea class="edit-notes" rows="3">${escapeHTML(entry.notes || "")}</textarea>
-                </label>
-
-                <br>
-
-                <button class="save-entry">${t("ledgerListUpdateBtn")}</button>
-              `
-              : `
-                ${entry.notes ? escapeHTML(entry.notes) : `<em>${t("ledgerListNoNotes")}</em>`}
-                <div class="locked-note">${t("ledgerListEntryLocked")}</div>
-              `
-          }
-        </div>
-      `;
-
-      const saveBtn = row.querySelector(".save-entry");
-      if (saveBtn) {
-        saveBtn.addEventListener("click", async (e) => {
-          e.stopPropagation();
-
-          const jaapInput = row.querySelector(".edit-jaap").value;
-          const notesInput = row.querySelector(".edit-notes").value;
-
-          entry.jaap = computeJaapFromInput(jaapInput, entry.jaap);
-          entry.notes = notesInput;
-
-          await saveLedger(ledgerData);
-          await saveAutomaticBackup(ledgerData);
-          renderToday();
-          showToast(t("commonSavedToast"));
-        });
-      }
-
-      const chevron = row.querySelector(".ledger-chevron");
-      chevron.addEventListener("click", (e) => {
-        e.stopPropagation();
-
-        const expanded = row.classList.contains("expanded");
-
-        // Collapse all rows — CSS handles the chevron rotation via .expanded
-        document.querySelectorAll(".ledger-row").forEach(r => {
-          r.classList.remove("expanded");
-        });
-
-        if (!expanded) {
-          row.classList.add("expanded");
-        }
-      });
-
-      yearContainer.appendChild(row);
+      const chevron = yearHeader.querySelector(".year-chevron");
+      chevron.textContent = isHidden ? "▾" : "▸";
     });
   });
 }
@@ -1375,7 +1443,13 @@ if (!isWithinLastNDays(entry.date, 7)) {
   return;
 }
 
-  entry.jaap = computeJaapFromInput(jaapInput, entry.jaap);
+  const newJaap = computeJaapFromInput(jaapInput, entry.jaap);
+  if (!isValidJaapValue(newJaap)) {
+    showToast(t("commonInvalidNumber"));
+    return;
+  }
+
+  entry.jaap = newJaap;
   entry.notes = notesInput;
 
   const crossedNewMilestone = getCroreMilestone(entry.date);
