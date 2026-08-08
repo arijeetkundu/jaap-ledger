@@ -157,6 +157,36 @@ function assert(label, condition) {
   const noPetalsOnPlainSave = await page.evaluate(() => document.querySelectorAll("#petal-overlay .petal-fly").length);
   assert("a non-crossing save triggers no petals", noPetalsOnPlainSave === 0);
 
+  // Editing a backdated (within-7-day) entry via the Ledger List — not the
+  // Today Card — can cross a Crore boundary too; previously only the Today
+  // Card save path checked for this, so the same crossing via a Ledger row
+  // silently skipped the celebration.
+  await page.reload({ waitUntil: "networkidle0" });
+  await new Promise(r => setTimeout(r, SPLASH_WAIT_MS));
+
+  const yesterdayFormatted = await page.evaluate(() => formatDate(addDaysISO(todayISO, -1)));
+  const ledgerRows = await page.$$(".ledger-row");
+  let yesterdayRow = null;
+  for (const row of ledgerRows) {
+    const dateText = await row.$eval(".ledger-date", el => el.textContent.trim());
+    if (dateText.startsWith(yesterdayFormatted)) {
+      yesterdayRow = row;
+      break;
+    }
+  }
+  assert("found yesterday's row in the (current-year, already-built) Ledger List", yesterdayRow !== null);
+
+  await yesterdayRow.$eval(".ledger-chevron", el => el.click());
+  await new Promise(r => setTimeout(r, 200));
+  const rowJaapField = await yesterdayRow.$(".edit-jaap");
+  await rowJaapField.click({ clickCount: 3 });
+  await rowJaapField.type("10000000"); // guaranteed to cross a Crore boundary
+  await yesterdayRow.$eval(".save-entry", el => el.click());
+  await new Promise(r => setTimeout(r, 400));
+
+  const petalsAfterRowEdit = await page.evaluate(() => document.querySelectorAll("#petal-overlay .petal-fly").length);
+  assert("crossing a Crore via a Ledger-row edit also triggers the petal celebration", petalsAfterRowEdit === 96);
+
   // ── Splash entrance animation ───────────────────────────────────────
   console.log("\n=== Splash entrance animation ===");
   await page.reload({ waitUntil: "domcontentloaded" });
