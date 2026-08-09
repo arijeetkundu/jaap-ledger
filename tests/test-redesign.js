@@ -27,6 +27,15 @@ function assert(label, condition) {
   const browser = await puppeteer.launch({ headless: true, args: ["--no-sandbox"] });
   const page = await browser.newPage();
   await page.evaluateOnNewDocument(() => localStorage.setItem("appLanguage", "en"));
+  // Also pre-seed today's date as the last Sunday-backup prompt date, so
+  // the Sunday Backup Reminder modal (a real position:fixed, inset:0
+  // backdrop) never opens and silently swallows a click meant for
+  // something underneath it whenever this suite actually runs on a Sunday.
+  await page.evaluateOnNewDocument(() => {
+    const today = new Date();
+    const iso = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+    localStorage.setItem("lastSundayBackupPromptDate", iso);
+  });
 
   const pageErrors = [];
   page.on("pageerror", err => pageErrors.push(err.message));

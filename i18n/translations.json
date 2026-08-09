@@ -19,6 +19,11 @@
     "hi": "माला दृश्य: बंद",
     "bn": "মালা ভিউ: বন্ধ"
   },
+  "commonMalaUnit": {
+    "en": "mala",
+    "hi": "माला",
+    "bn": "মালা"
+  },
   "settingsGearAria": {
     "en": "Settings",
     "hi": "सेटिंग्स",

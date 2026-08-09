@@ -29,6 +29,18 @@ function assert(label, condition) {
 async function newFreshPage(browser) {
   const context = await browser.createBrowserContext();
   const page = await context.newPage();
+  // Orthogonal to the deliberate no-appLanguage-seed above — without this,
+  // the Sunday Backup Reminder modal (a real position:fixed, inset:0
+  // backdrop, opened unconditionally in initApp() regardless of language
+  // choice) would sit just below the language picker's own overlay and
+  // become the topmost interactive layer the moment a language is picked,
+  // silently swallowing whatever this suite clicks next whenever it
+  // actually runs on a Sunday.
+  await page.evaluateOnNewDocument(() => {
+    const today = new Date();
+    const iso = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+    localStorage.setItem("lastSundayBackupPromptDate", iso);
+  });
   await page.setViewport({ width: 390, height: 844 });
   const errors = [];
   page.on("pageerror", (err) => errors.push(err.message));

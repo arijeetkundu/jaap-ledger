@@ -58,6 +58,15 @@ async function freshLoad(page, { clearStorage = false } = {}) {
   await cdpSession.send("Page.setDownloadBehavior", { behavior: "allow", downloadPath: downloadDir });
 
   await page.evaluateOnNewDocument(() => localStorage.setItem("appLanguage", "en"));
+  // Also pre-seed today's date as the last Sunday-backup prompt date, so
+  // the Sunday Backup Reminder modal (a real position:fixed, inset:0
+  // backdrop) never opens and silently swallows a click meant for
+  // something underneath it whenever this suite actually runs on a Sunday.
+  await page.evaluateOnNewDocument(() => {
+    const today = new Date();
+    const iso = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+    localStorage.setItem("lastSundayBackupPromptDate", iso);
+  });
   // This app is a phone PWA; Puppeteer's 800x600 default is a desktop-ish
   // shape that doesn't reflect real usage and breaks viewport-relative
   // layout assertions (e.g. the splash screen's portrait-framed deity

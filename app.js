@@ -416,9 +416,13 @@ function malaToJaap(malas) {
   return malas * MALA_SIZE;
 }
 
-// Pure formatting — never mutates stored data.
+// Pure formatting — never mutates stored data. The "mala" unit word is
+// translated (commonMalaUnit) — it was previously a hardcoded English
+// literal, so every mala total (Reflection Summary, Ledger List, per-row
+// counts) stayed in English even in Hindi/Bangla mode while the
+// surrounding labels around it were correctly localized.
 function formatAsMala(jaap) {
-  return `${formatIndianNumber(jaapToMala(jaap))} mala`;
+  return `${formatIndianNumber(jaapToMala(jaap))} ${t("commonMalaUnit")}`;
 }
 
 // Shared by every jaap-count total shown in the UI (Reflection Summary's
