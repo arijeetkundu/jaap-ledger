@@ -99,6 +99,26 @@
     "hi": "भाषा",
     "bn": "ভাষা"
   },
+  "settingsTextSizeHeading": {
+    "en": "Text Size",
+    "hi": "अक्षर आकार",
+    "bn": "অক্ষরের আকার"
+  },
+  "textSizeSmall": {
+    "en": "Small",
+    "hi": "छोटा",
+    "bn": "ছোট"
+  },
+  "textSizeMedium": {
+    "en": "Medium",
+    "hi": "मध्यम",
+    "bn": "মাঝারি"
+  },
+  "textSizeLarge": {
+    "en": "Large",
+    "hi": "बड़ा",
+    "bn": "বড়"
+  },
   "settingsSplashHeading": {
     "en": "Splash Images",
     "hi": "स्प्लैश तस्वीरें",

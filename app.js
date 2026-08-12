@@ -1,6 +1,29 @@
 // ---------- Background Theme ----------
 let backgroundChoice = localStorage.getItem("backgroundChoice") || "mandala";
 
+// ---------- Text Size ----------
+// Display preference, same tier as backgroundChoice. Applied to <html>
+// (not <body>) because every size in styles.css is in rem, so the root
+// font-size is the single lever that scales the whole app coherently.
+// Applied immediately below rather than in initApp() so it lands before
+// first paint — a late switch would visibly reflow the app under the
+// splash screen.
+const TEXT_SIZES = ["small", "medium", "large"];
+let textSizeChoice = localStorage.getItem("textSize");
+if (!TEXT_SIZES.includes(textSizeChoice)) textSizeChoice = "medium";
+
+function applyTextSize(size) {
+  if (!TEXT_SIZES.includes(size)) size = "medium";
+  textSizeChoice = size;
+  const root = document.documentElement;
+  TEXT_SIZES.forEach(s => root.classList.remove("text-" + s));
+  // "medium" is the stylesheet's own 100% default — no class needed, which
+  // also means an untouched install carries no marker at all.
+  if (size !== "medium") root.classList.add("text-" + size);
+}
+
+applyTextSize(textSizeChoice);
+
 // ---------- i18n: language state ----------
 // null until the user has explicitly chosen (via the first-run picker or the
 // Settings switcher) — that's what gates the first-run picker from showing.
@@ -1733,6 +1756,37 @@ document.querySelectorAll(".background-swatch").forEach((btn) => {
 });
 
 updateBackgroundSwatchButtons();
+
+// ---------- Text size buttons ----------
+
+function updateTextSizeButtons() {
+  document.querySelectorAll(".text-size-btn").forEach((btn) => {
+    const isActive = btn.dataset.size === textSizeChoice;
+    btn.classList.toggle("active", isActive);
+    btn.setAttribute("aria-pressed", isActive ? "true" : "false");
+  });
+}
+
+document.querySelectorAll(".text-size-btn").forEach((btn) => {
+  btn.addEventListener("click", () => {
+    const choice = btn.dataset.size;
+    if (choice === textSizeChoice) return;
+    applyTextSize(choice);
+    // Guarded like appLanguage — localStorage can throw when the shared
+    // origin quota is full (several custom splash images will do it), and
+    // an unguarded write would abort the rest of this handler, leaving the
+    // buttons out of sync with the size actually applied.
+    try {
+      localStorage.setItem("textSize", textSizeChoice);
+    } catch (e) {
+      console.error("Failed to persist textSize:", e);
+      showToast(t("langErrQuota"));
+    }
+    updateTextSizeButtons();
+  });
+});
+
+updateTextSizeButtons();
 
 // ---------- Language Picker (first-run) + Settings switcher ----------
 // Both surfaces call the same applyAppLanguage() — the full-screen picker

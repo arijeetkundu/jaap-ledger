@@ -196,6 +196,118 @@ async function freshLoad(page, { clearStorage = false } = {}) {
   );
   await page.click("#maintenance-toggle"); // close drawer
 
+  // ── Text size ────────────────────────────────────────────────────────
+  // Every size in styles.css is in rem, so this scales the whole app off
+  // the root font-size. Existing installs must be untouched by default.
+  console.log("\n=== Text size ===");
+  const textSizeDefault = await page.evaluate(() => ({
+    cls: document.documentElement.className,
+    root: parseFloat(getComputedStyle(document.documentElement).fontSize),
+    stored: localStorage.getItem("textSize"),
+  }));
+  assert("defaults to medium, with no marker class on <html>", !textSizeDefault.cls.includes("text-"));
+  assert("default root size is the browser's own 16px", Math.abs(textSizeDefault.root - 16) < 0.5);
+  assert("nothing is persisted until the user actually chooses", textSizeDefault.stored === null);
+
+  await page.click("#maintenance-toggle");
+  await page.waitForSelector("#maintenance-drawer.open");
+  await new Promise(r => setTimeout(r, 400));
+
+  await page.click('.text-size-btn[data-size="large"]');
+  await new Promise(r => setTimeout(r, 300));
+  const afterLarge = await page.evaluate(() => ({
+    cls: document.documentElement.className,
+    root: parseFloat(getComputedStyle(document.documentElement).fontSize),
+    stored: localStorage.getItem("textSize"),
+    pressed: document.querySelector('.text-size-btn[data-size="large"]').getAttribute("aria-pressed"),
+    ledgerRowFont: parseFloat(getComputedStyle(document.querySelector(".ledger-row")).fontSize),
+  }));
+  assert("choosing Large marks <html>", afterLarge.cls.includes("text-large"));
+  assert("Large genuinely increases the root font size", afterLarge.root > 16);
+  assert("Large is persisted", afterLarge.stored === "large");
+  assert("the active button reports aria-pressed", afterLarge.pressed === "true");
+  // The point of the whole feature: content actually gets bigger, not just
+  // the setting. Ledger rows are 0.95rem, i.e. below the 16px default.
+  assert("ledger row text scales up with the setting", afterLarge.ledgerRowFont > 15.2);
+
+  // Regression guard: at Large the date grows wide enough that a count
+  // anchored to the row's true centre overlaps it. .ledger-jaap is handed
+  // back to the grid's spacer column at this size specifically to prevent
+  // that; without the override these boxes intersect.
+  //
+  // The row must carry a genuinely wide value for this to mean anything —
+  // today's entry is still null at this point in the run and renders as a
+  // narrow "—", which cannot overlap anything. 118800 is the 6-digit value
+  // from the original overlap report, restored immediately afterwards so
+  // later sections see the ledger they expect.
+  const largeGeometry = await page.evaluate(async () => {
+    const iso = getTodayISO();
+    const entry = ledgerData.find(e => e.date === iso);
+    const previousJaap = entry.jaap;
+    entry.jaap = 118800;
+    renderToday();
+
+    const row = document.querySelector(".ledger-row");
+    const date = row.querySelector(".ledger-date").getBoundingClientRect();
+    const jaap = row.querySelector(".ledger-jaap").getBoundingClientRect();
+    const spark = row.querySelector(".ledger-sparkline").getBoundingClientRect();
+    const result = {
+      countRendered: row.querySelector(".ledger-jaap").textContent.trim(),
+      dateOverlapsJaap: date.right > jaap.left,
+      jaapOverlapsSpark: jaap.right > spark.left,
+      pageOverflows: document.documentElement.scrollWidth > document.documentElement.clientWidth + 1,
+    };
+
+    entry.jaap = previousJaap;
+    renderToday();
+    return result;
+  });
+  assert("the overlap check is measuring a genuinely wide count", largeGeometry.countRendered.includes("118800"));
+  assert("at Large, the date does not overlap the jaap count", !largeGeometry.dateOverlapsJaap);
+  assert("at Large, the jaap count does not overlap the sparkline", !largeGeometry.jaapOverlapsSpark);
+  assert("at Large, the page still does not scroll horizontally", !largeGeometry.pageOverflows);
+
+  await page.click('.text-size-btn[data-size="small"]');
+  await new Promise(r => setTimeout(r, 300));
+  const afterSmall = await page.evaluate(() => parseFloat(getComputedStyle(document.documentElement).fontSize));
+  assert("Small reduces the root font size below the default", afterSmall < 16);
+
+  await page.reload({ waitUntil: "networkidle0" });
+  await new Promise(r => setTimeout(r, SPLASH_WAIT_MS));
+  const afterReload = await page.evaluate(() => ({
+    cls: document.documentElement.className,
+    root: parseFloat(getComputedStyle(document.documentElement).fontSize),
+  }));
+  assert("the choice survives a reload", afterReload.cls.includes("text-small"));
+  assert("and is applied before first paint, not after", afterReload.root < 16);
+
+  // Content the user wrote must be copyable, while the chrome around it
+  // stays non-selectable so taps still feel app-like rather than web-like.
+  const selectability = await page.evaluate(() => {
+    const sel = el => el ? getComputedStyle(el).webkitUserSelect || getComputedStyle(el).userSelect : null;
+    return {
+      body: sel(document.body),
+      heading: sel(document.querySelector("h1")),
+      notes: sel(document.querySelector(".ledger-notes")),
+      reflectionLine: sel(document.querySelector(".reflection-line")),
+    };
+  });
+  assert("app chrome stays non-selectable", selectability.body === "none" && selectability.heading === "none");
+  assert("ledger notes are selectable so they can be copied", selectability.notes === "text");
+  assert("reflection totals are selectable", selectability.reflectionLine === "text");
+
+  // Reset to the default so later geometry assertions in this file measure
+  // the app at its normal size.
+  await page.evaluate(() => {
+    applyTextSize("medium");
+    localStorage.removeItem("textSize");
+  });
+  await new Promise(r => setTimeout(r, 200));
+  assert(
+    "resetting to Medium removes the marker class again",
+    !(await page.evaluate(() => document.documentElement.className)).includes("text-")
+  );
+
   // ── Splash deity image: framed, not full-bleed ──────────────────────
   console.log("\n=== Splash deity image framing ===");
   await page.reload({ waitUntil: "networkidle0" });

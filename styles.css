@@ -48,8 +48,29 @@ input, button, textarea, select {
   --ease-premium: cubic-bezier(0.22, 1, 0.36, 1);
 }
 
+/* Text size control. Every type size in this file is already expressed in
+   rem, so scaling the ROOT font-size scales the whole app coherently —
+   including the type set below the 16px browser default (ledger rows at
+   0.95rem, notes and predictions at 0.9rem, the progress label and legend
+   at 0.8rem), which is what made the app hard to read for older sadhaks
+   with no in-app remedy. Browser zoom is the only alternative and it is
+   awkward-to-unavailable inside an installed standalone PWA, where there
+   is no browser chrome to reach for.
+
+   "Medium" is deliberately exactly 100%, so existing users see no change
+   unless they ask for one. Applied as a class on <html> by app.js before
+   first paint, alongside the background theme. */
 html {
   scroll-behavior: smooth;
+  font-size: 100%;
+}
+
+html.text-small {
+  font-size: 90%;
+}
+
+html.text-large {
+  font-size: 118%;
 }
 @media (prefers-reduced-motion: reduce) {
   html {
@@ -71,7 +92,30 @@ body {
   overscroll-behavior-y: contain;
   -webkit-touch-callout: none;
   -webkit-user-select: none;
+  user-select: none;
   -webkit-tap-highlight-color: transparent;
+}
+
+/* ...but the user's OWN words must be copyable. The blanket rule above is
+   what makes taps feel app-like rather than web-page-like (no stray text
+   selection when scrolling or long-pressing a control), and it stays for
+   all the chrome — headings, buttons, toggles, labels. It was, however,
+   also blocking selection of the one category of content a sadhak might
+   genuinely want to copy out: their own notes and their Sankalpa. Opt those
+   back in explicitly, plus the totals, so a number can be copied into a
+   message without retyping it. */
+.ledger-notes,
+.locked-note,
+.sankalpa-text-display,
+.sankalpa-context-display,
+.sankalpa-date-display,
+.reflection-line,
+.progress-label,
+.milestone-line,
+input,
+textarea {
+  -webkit-user-select: text;
+  user-select: text;
 }
 
 /* Selectable background themes — rendered on a dedicated fixed element
@@ -276,6 +320,23 @@ p {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+/* At the Large text setting the row simply runs out of horizontal room:
+   the date grows wide enough that a true-centre-anchored count overlaps it
+   (verified by measuring the two boxes at 118% root size on a 390px
+   viewport — a 6-digit count and a full date collide). True centring is a
+   deliberate choice worth keeping at the default sizes, so rather than
+   weaken it everywhere, hand the count back to the grid's own spacer
+   column here: it centres within the space actually left over instead of
+   against the whole row, which cannot overlap by construction. The
+   geometry assertions in tests/test-redesign.js run at the default size
+   and continue to exercise the true-centre behaviour. */
+html.text-large .ledger-jaap {
+  position: static;
+  transform: none;
+  grid-column: 3;
+  max-width: none;
 }
 
 /* Sparkline cell */
@@ -1455,6 +1516,50 @@ body.loading {
   border-color: var(--gold);
   background-color: var(--surface-2);
   font-weight: 600;
+}
+
+/* Text size picker — same pill language as the language switcher above.
+   Each button previews its own setting (the "Large" button really is
+   larger), so the choice is legible before it's made. Sizes are in em so
+   they scale with whatever the current root size already is, keeping the
+   relative preview honest at every setting. */
+.text-size-wrap {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+  align-items: stretch;
+}
+
+.text-size-btn {
+  flex: 1;
+  padding: 8px 6px;
+  border-radius: 8px;
+  border: 1px solid var(--gold-hairline);
+  background-color: var(--surface);
+  color: var(--maroon);
+  cursor: pointer;
+  line-height: 1.2;
+  transition: background-color 0.2s var(--ease-premium), border-color 0.2s var(--ease-premium);
+}
+
+.text-size-btn-s { font-size: 0.75rem; }
+.text-size-btn-m { font-size: 0.9rem; }
+.text-size-btn-l { font-size: 1.05rem; }
+
+.text-size-btn:hover {
+  background-color: var(--surface-2);
+}
+
+.text-size-btn.active {
+  border-color: var(--gold);
+  background-color: var(--surface-2);
+  font-weight: 600;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .text-size-btn {
+    transition: none;
+  }
 }
 
 
