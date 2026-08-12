@@ -32,7 +32,7 @@ node tests/test-i18n.js         # language picker, Settings switcher, translatio
 node tests/test-service-worker.js # offline launch, precache, deploy pickup, shortcut target
 ```
 
-There is no build step, linter, or CI pipeline — `npm test` must be run locally before pushing. 406 assertions across the 8 suites as of this writing.
+There is no build step, linter, or CI pipeline — `npm test` must be run locally before pushing. 408 assertions across the 8 suites as of this writing.
 
 ## Architecture
 
