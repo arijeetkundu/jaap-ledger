@@ -1045,10 +1045,31 @@ appReady = true;
       showLanguagePicker();
     }
 
+    focusTodayInputIfRequested();
+
   } catch (err) {
     console.error("Initialization failed:", err);
   }
 })();
+
+// Target of the manifest's "Log Today's Jaap" home-screen shortcut
+// (?action=log). Scrolls the Today Card into view and focuses its count
+// field, so the one thing a sadhak does every day is reachable in a single
+// long-press from the home screen instead of a launch-and-scroll.
+//
+// The query string is deliberately left in place rather than cleaned up: on
+// a standalone PWA launch it isn't visible anywhere, and rewriting the URL
+// here would change start_url matching for no user-visible benefit.
+function focusTodayInputIfRequested() {
+  const params = new URLSearchParams(window.location.search);
+  if (params.get("action") !== "log") return;
+
+  const input = document.getElementById("today-jaap");
+  if (!input) return;
+
+  input.scrollIntoView({ block: "center", behavior: "auto" });
+  input.focus();
+}
 
 // todayISO is only refreshed at the top of renderToday() — a tab left open
 // (or a backgrounded PWA left running) across midnight with no save/toggle/
@@ -2525,5 +2546,26 @@ document.getElementById("sunday-backup-modal")?.addEventListener("click", (e) =>
   if (e.target.id === "sunday-backup-modal") dismissSundayBackupReminder();
 });
 document.getElementById("drive-backup-btn")?.addEventListener("click", backupToGoogleDrive);
+
+
+// ---------- Service Worker registration ----------
+// Registered with a RELATIVE url on purpose: this app is served from
+// https://arijeetkundu.github.io/jaap-ledger/ in production but from / when
+// served locally, and an absolute "/sw.js" would 404 (and take the wrong
+// scope) on GitHub Pages. "./sw.js" resolves against the document, giving
+// the correct scope in both places.
+//
+// Deferred to the load event so registration — and the install-time
+// precache fetches it kicks off — never competes with the app's own first
+// paint and bootstrap for bandwidth.
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("./sw.js").catch((err) => {
+      // Non-fatal by design: without a service worker the app still works
+      // exactly as it did before, just without offline launch capability.
+      console.warn("Service worker registration failed:", err);
+    });
+  });
+}
 
 

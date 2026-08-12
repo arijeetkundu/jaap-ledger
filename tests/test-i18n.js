@@ -24,6 +24,29 @@ function assert(label, condition) {
   }
 }
 
+// The two failure-path tests below simulate i18n/translations.json being
+// unreachable. The service worker precaches exactly that file so it's
+// available offline, so with the worker in play those requests are answered
+// from its cache and the failure can't be simulated at all.
+//
+// Note that Puppeteer's page-level request interception CANNOT block this:
+// neither the sw.js script fetch nor the worker's own precache fetches pass
+// through it, so aborting them from a page.on("request") handler silently
+// does nothing. The working lever is CDP's Network.setBypassServiceWorker,
+// which makes the *page's* requests skip the worker — and it requires
+// Network.enable on the same session first, or it's accepted and ignored.
+// The worker still installs; the page just stops being served by it.
+//
+// The fallback path is NOT dead code now that the worker exists: it still
+// runs on the very first load before any worker is installed, and whenever a
+// cache entry is missing. The worker itself is covered by
+// tests/test-service-worker.js.
+async function bypassServiceWorker(page) {
+  const client = await page.createCDPSession();
+  await client.send("Network.enable");
+  await client.send("Network.setBypassServiceWorker", { bypass: true });
+}
+
 // Fresh isolated context per scenario, no appLanguage pre-seeded — mirrors a
 // genuinely new install, unlike every other test file's "en"-seeded pages.
 async function newFreshPage(browser) {
@@ -203,6 +226,7 @@ async function newFreshPage(browser) {
   {
     const context = await browser.createBrowserContext();
     const page = await context.newPage();
+    await bypassServiceWorker(page); // see the note above bypassServiceWorker()
     await page.setViewport({ width: 390, height: 844 });
     const errors = [];
     page.on("pageerror", (err) => errors.push(err.message));
@@ -260,6 +284,7 @@ async function newFreshPage(browser) {
   {
     const context = await browser.createBrowserContext();
     const page = await context.newPage();
+    await bypassServiceWorker(page); // see the note above bypassServiceWorker()
     await page.setViewport({ width: 390, height: 844 });
     const errors = [];
     page.on("pageerror", (err) => errors.push(err.message));

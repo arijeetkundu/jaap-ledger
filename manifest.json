@@ -1,8 +1,11 @@
 {
+  "id": "./",
   "name": "Sumiran Lite",
   "short_name": "Sumiran Lite",
   "description": "Offline Jaap Sadhana Ledger",
+  "lang": "en",
   "start_url": "./index.html",
+  "scope": "./",
   "display": "standalone",
   "background_color": "#fbf1de",
   "theme_color": "#6c1c27",
@@ -11,14 +14,35 @@
     {
       "src": "icons/icon-192.png",
       "sizes": "192x192",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any"
     },
     {
       "src": "icons/icon-512.png",
       "sizes": "512x512",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icons/icon-512-maskable.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Log Today's Jaap",
+      "short_name": "Log Jaap",
+      "description": "Jump straight to today's jaap count",
+      "url": "./index.html?action=log",
+      "icons": [
+        {
+          "src": "icons/icon-192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
     }
   ]
 }
-
-

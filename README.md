@@ -15,7 +15,7 @@ Live app: https://arijeetkundu.github.io/jaap-ledger/
 - **Poornima (full moon) detection** from notes keywords.
 - **Automatic backups** plus manual JSON import/export, covering your ledger **and your Sankalpa** (splash images and display preferences are device-local and not included). Exports made by earlier versions still import.
 - **Google Drive backup** — a once-per-Sunday reminder modal (plus an on-demand button in Settings) backs up the ledger to your own Google Drive as `sumiran-lite-backup.json`, overwritten in place on each backup (no duplicates). Each user signs into their own Google account; nothing is shared with anyone else. See [Google Drive backup setup](#google-drive-backup-setup) below.
-- **Installable PWA** — add to home screen with a framed, gold-bordered splash screen and icons.
+- **Installable PWA that genuinely works offline** — a service worker caches the app shell, so it launches with no network at all; add it to your home screen for a framed, gold-bordered splash screen, an adaptive (maskable) icon, and a long-press shortcut straight to today's entry.
 - **Background themes** — switch the app's tiled/full-bleed background between Alpana, Mandala (default), and Jharokha from Settings.
 - **Customizable splash screen** — Hanuman is a fixed default image; up to 4 additional slots let you add your own pictures, which then rotate alongside Hanuman (never repeating the same image twice in a row). Uploads are validated, downscaled, and compressed client-side, so storage and startup performance stay unaffected by the original photo's size.
 - **Hindi and Bangla support** — a first-run language picker (also reachable anytime from Settings) switches the whole app's text between English, Hindi (हिन्दी), and Bangla (বাংলা). Ledger dates stay in English everywhere for consistency; only the Today Card's long-form date (weekday + month name) translates. See [Localization (i18n)](#localization-i18n) below.
@@ -30,9 +30,9 @@ All practice data lives in the browser's IndexedDB — nothing is sent to a serv
 | Styling | Plain CSS (`styles.css`) |
 | Logic | Vanilla JavaScript (`app.js`), no frameworks or bundler |
 | Storage | IndexedDB (practice data, backups, Sankalpa) + localStorage (display preferences only) |
-| PWA shell | `manifest.json` + `icons/` |
+| PWA shell | `manifest.json` + `icons/` + `sw.js` (offline shell cache) |
 | Localization | `i18n/translations.json` (English/Hindi/Bangla dictionary) + a `t()` lookup layer in `app.js` |
-| Testing | Puppeteer-driven structural, unit, E2E, redesign, custom-splash-image, Sunday-backup, and i18n tests (`tests/`), run via `npm test` |
+| Testing | Puppeteer-driven structural, unit, E2E, redesign, custom-splash-image, Sunday-backup, i18n, and service-worker tests (`tests/`), run via `npm test` |
 | Hosting | GitHub Pages (static) |
 
 ## Project structure
@@ -43,7 +43,8 @@ jaap-ledger/
 ├── app.js                              All application logic
 ├── styles.css                          All styling (Temple Gold & Maroon design tokens)
 ├── data.json                           Local-testing fixture only — never loaded into a real user's ledger
-├── manifest.json                       PWA manifest
+├── manifest.json                       PWA manifest (icons incl. maskable, home-screen shortcut)
+├── sw.js                               Service worker — offline shell cache
 ├── fonts/                              Self-hosted Playfair Display + Inter (variable .woff2, no CDN)
 ├── i18n/
 │   └── translations.json               English/Hindi/Bangla dictionary, fetched once at bootstrap
@@ -59,7 +60,8 @@ jaap-ledger/
 │   ├── test-redesign.js                Premium redesign: design tokens, milestone celebration, motion
 │   ├── test-splash-custom.js           Custom splash images: upload pipeline, guards, rotation, deletes
 │   ├── test-sunday-backup.js           Sunday backup modal + Google Drive backup flow (mocked network)
-│   └── test-i18n.js                    Language picker, Settings switcher, translations-load-failure fallback
+│   ├── test-i18n.js                    Language picker, Settings switcher, translations-load-failure fallback
+│   └── test-service-worker.js          Offline launch, precache contents, deploy pickup, shortcut target
 ├── package.json                        devDependencies: puppeteer, sharp; "test" script runs all 7 suites
 └── package-lock.json
 ```
@@ -83,7 +85,7 @@ python -m http.server 3333   # in one terminal
 npm test                     # in another
 ```
 
-`npm test` runs the full suite (336 assertions, as of this revision) against a running instance of the app: `tests/test.js` (structural smoke tests), `tests/test-unit.js` (pure-logic unit tests, calling app.js's global functions directly — including the `t()` lookup/fallback/interpolation logic and a dictionary-integrity check), `tests/test-e2e.js` (full user-flow E2E tests — Sankalpa, Import/Export, Restore from Backup, Background themes, and more), `tests/test-redesign.js` (premium redesign: design tokens, milestone celebration, splash entrance animation, motion polish), `tests/test-splash-custom.js` (custom splash images: upload pipeline guards, adaptive frame, rotation, per-slot/remove-all deletes, corrupt-data resilience), `tests/test-sunday-backup.js` (Sunday backup modal timing/dismiss paths, and the Google sign-in + Drive upload flow with the network mocked — real Google sign-in can't run headless, so the actual OAuth/Drive calls are verified manually instead, see below), and `tests/test-i18n.js` (the first-run language picker, the Settings switcher, live re-rendering on language change, and a simulated `translations.json` fetch failure to confirm the app degrades to readable English rather than raw dictionary keys). Each file can also be run individually, e.g. `node tests/test-unit.js`.
+`npm test` runs the full suite (359 assertions, as of this revision) against a running instance of the app: `tests/test.js` (structural smoke tests), `tests/test-unit.js` (pure-logic unit tests, calling app.js's global functions directly — including the `t()` lookup/fallback/interpolation logic and a dictionary-integrity check), `tests/test-e2e.js` (full user-flow E2E tests — Sankalpa, Import/Export, Restore from Backup, Background themes, and more), `tests/test-redesign.js` (premium redesign: design tokens, milestone celebration, splash entrance animation, motion polish), `tests/test-splash-custom.js` (custom splash images: upload pipeline guards, adaptive frame, rotation, per-slot/remove-all deletes, corrupt-data resilience), `tests/test-sunday-backup.js` (Sunday backup modal timing/dismiss paths, and the Google sign-in + Drive upload flow with the network mocked — real Google sign-in can't run headless, so the actual OAuth/Drive calls are verified manually instead, see below), `tests/test-i18n.js` (the first-run language picker, the Settings switcher, live re-rendering on language change, and a simulated `translations.json` fetch failure to confirm the app degrades to readable English rather than raw dictionary keys), and `tests/test-service-worker.js` (registration and scope, what gets precached, a genuinely offline launch, and a simulated deploy to prove users aren't pinned to a stale cached build). Each file can also be run individually, e.g. `node tests/test-unit.js`.
 
 ## Google Drive backup setup
 
