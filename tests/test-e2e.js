@@ -751,6 +751,102 @@ async function freshLoad(page, { clearStorage = false } = {}) {
   });
   assert("a backup record exists in the ledger-backups IndexedDB store", backupStoreHasEntries === true);
 
+  // ── Notes search & "On this day" ─────────────────────────────────────
+  console.log("\n=== Notes search & On this day ===");
+  {
+    // Seed a small multi-year history: two searchable notes, plus an entry
+    // on this same calendar day last year for the memory line.
+    await page.evaluate(async () => {
+      const iso = getTodayISO();
+      const md = iso.slice(5);
+      const y = Number(iso.slice(0, 4));
+      ledgerData = [
+        { date: `${y - 1}-${md}`, jaap: 65000, notes: "kirtan at the temple" },
+        { date: `${y}-01-15`, jaap: 1080, notes: "morning satsang with Guruji" },
+        { date: `${y}-02-20`, jaap: 2160, notes: "quiet day" },
+        { date: iso, jaap: 324, notes: "" },
+      ];
+      await saveLedger(ledgerData);
+      renderToday();
+    });
+    await new Promise(r => setTimeout(r, 400));
+
+    const memory = await page.$eval(".on-this-day", el => el.textContent.trim());
+    assert("the Today Card shows what was logged on this day a year ago", memory.includes("year ago"));
+    assert("the memory reports the actual count from that day", memory.includes("65,000"));
+
+    await page.type("#ledger-search", "satsang");
+    await new Promise(r => setTimeout(r, 500)); // outlast the 200ms debounce
+
+    const searching = await page.evaluate(() => ({
+      count: document.querySelector(".ledger-search-count")?.textContent.trim(),
+      notes: Array.from(document.querySelectorAll(".ledger-search-result-note")).map(n => n.textContent.trim()),
+      yearHeaders: document.querySelectorAll(".ledger-year-header").length,
+      jumpBar: !!document.querySelector(".jump-bar"),
+      focused: document.activeElement?.id,
+    }));
+    assert("searching shows only the matching entry", searching.notes.length === 1);
+    assert("the match is the entry whose note contains the term", searching.notes[0].includes("satsang"));
+    assert("a result count is shown", searching.count === "1 matching entry");
+    assert("the year accordions are replaced while searching", searching.yearHeaders === 0);
+    assert("the jump-to-year bar is hidden while searching", !searching.jumpBar);
+    // The input is destroyed and rebuilt on every keystroke's re-render, so
+    // without deliberate focus restoration the user would be typing into a
+    // dead field after the first character.
+    assert("focus stays in the search box while typing", searching.focused === "ledger-search");
+
+    // A save rebuilds the whole ledger list; the query must survive it, or
+    // saving an entry mid-search would silently dump the user back to the
+    // full ledger.
+    await page.evaluate(async () => { await saveLedger(ledgerData); renderToday(); });
+    await new Promise(r => setTimeout(r, 300));
+    const afterRerender = await page.evaluate(() => ({
+      value: document.getElementById("ledger-search").value,
+      results: document.querySelectorAll(".ledger-search-result").length,
+    }));
+    assert("the query survives an unrelated re-render", afterRerender.value === "satsang");
+    assert("and the filtered view survives with it", afterRerender.results === 1);
+
+    // Searching finds entries in years whose rows were never built — the
+    // lazy year build means matching by DOM would miss them entirely.
+    await page.evaluate(() => {
+      const i = document.getElementById("ledger-search");
+      i.value = "kirtan";
+      i.dispatchEvent(new Event("input", { bubbles: true }));
+    });
+    await new Promise(r => setTimeout(r, 500));
+    assert(
+      "matches are found in past years that were never expanded",
+      (await page.$$eval(".ledger-search-result-note", els => els.map(e => e.textContent))).some(x => x.includes("kirtan"))
+    );
+
+    await page.evaluate(() => {
+      const i = document.getElementById("ledger-search");
+      i.value = "zzzznomatch";
+      i.dispatchEvent(new Event("input", { bubbles: true }));
+    });
+    await new Promise(r => setTimeout(r, 500));
+    assert(
+      "a search with no matches says so plainly",
+      (await page.$eval(".ledger-search-empty", el => el.textContent)).length > 0
+    );
+
+    await page.evaluate(() => {
+      const i = document.getElementById("ledger-search");
+      i.value = "";
+      i.dispatchEvent(new Event("input", { bubbles: true }));
+    });
+    await new Promise(r => setTimeout(r, 500));
+    const cleared = await page.evaluate(() => ({
+      yearHeaders: document.querySelectorAll(".ledger-year-header").length,
+      jumpBar: !!document.querySelector(".jump-bar"),
+      results: document.querySelectorAll(".ledger-search-result").length,
+    }));
+    assert("clearing the search restores the year accordions", cleared.yearHeaders > 0);
+    assert("clearing the search restores the jump-to-year bar", cleared.jumpBar);
+    assert("clearing the search removes the result list", cleared.results === 0);
+  }
+
   // ── Data safety: Sankalpa round-trip, restore-undoes-import, status ──
   console.log("\n=== Data safety ===");
 

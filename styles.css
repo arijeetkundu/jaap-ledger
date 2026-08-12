@@ -106,6 +106,8 @@ body {
    message without retyping it. */
 .ledger-notes,
 .locked-note,
+.ledger-search-result-note,
+.on-this-day,
 .sankalpa-text-display,
 .sankalpa-context-display,
 .sankalpa-date-display,
@@ -640,6 +642,73 @@ button {
 }
 
 /* Jump-to-year bar */
+/* Notes search — sits above the jump-to-year bar, since "find what I wrote"
+   is a different question from "go to a year" and shouldn't be nested
+   inside it. */
+.ledger-search-bar {
+  margin-bottom: 12px;
+}
+
+.ledger-search-input {
+  width: 100%;
+  padding: 9px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--gold-hairline);
+  background-color: #fffdf7;
+  color: var(--ink);
+  font-size: 0.9rem;
+}
+
+.ledger-search-input:focus {
+  outline: none;
+  border-color: var(--gold);
+  box-shadow: 0 0 0 2px rgba(201, 162, 39, 0.25);
+}
+
+.ledger-search-count,
+.ledger-search-empty {
+  margin: 0 0 10px;
+  font-size: 0.82rem;
+  color: var(--ink-muted);
+}
+
+/* Read-only result rows — deliberately not the interactive ledger row, so
+   the 7-day edit window and its save handlers live in exactly one place. */
+.ledger-search-result {
+  padding: 10px 4px;
+  border-bottom: 1px solid rgba(122, 31, 43, 0.12);
+  background-color: #fffdf7;
+}
+
+.ledger-search-result-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.ledger-jaap-static {
+  font-weight: 600;
+  letter-spacing: 0.3px;
+  white-space: nowrap;
+}
+
+.ledger-search-result-note {
+  margin-top: 4px;
+  font-size: 0.9rem;
+  line-height: 1.4;
+  color: var(--ink-muted);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+/* On this day — a quiet memory, not a headline. */
+.on-this-day {
+  margin: 6px 0 10px;
+  font-size: 0.85rem;
+  color: var(--ink-muted);
+}
+
 .jump-bar {
   display: flex;
   align-items: center;

@@ -374,6 +374,16 @@
     "hi": "आज",
     "bn": "আজ"
   },
+  "todayOnThisDayOneYear": {
+    "en": "🪔 A year ago today you logged {count}.",
+    "hi": "🪔 आज से एक वर्ष पूर्व आपने {count} दर्ज किया था।",
+    "bn": "🪔 আজ থেকে এক বছর আগে আপনি {count} লিখেছিলেন।"
+  },
+  "todayOnThisDayYears": {
+    "en": "🪔 {years} years ago today you logged {count}.",
+    "hi": "🪔 आज से {years} वर्ष पूर्व आपने {count} दर्ज किया था।",
+    "bn": "🪔 আজ থেকে {years} বছর আগে আপনি {count} লিখেছিলেন।"
+  },
   "todayJaapLabel": {
     "en": "Jaap Count",
     "hi": "जाप संख्या",
@@ -423,6 +433,26 @@
     "en": "Jump to year",
     "hi": "वर्ष चुनें",
     "bn": "বছর নির্বাচন করুন"
+  },
+  "ledgerSearchPlaceholder": {
+    "en": "Search notes…",
+    "hi": "टिप्पणियाँ खोजें…",
+    "bn": "মন্তব্য খুঁজুন…"
+  },
+  "ledgerSearchNoResults": {
+    "en": "No entries match that search.",
+    "hi": "इस खोज से कोई एंट्री मेल नहीं खाती।",
+    "bn": "এই অনুসন্ধানে কোনো এন্ট্রি মেলেনি।"
+  },
+  "ledgerSearchOneResult": {
+    "en": "1 matching entry",
+    "hi": "1 मेल खाती एंट्री",
+    "bn": "১টি মিলে যাওয়া এন্ট্রি"
+  },
+  "ledgerSearchResultCount": {
+    "en": "{count} matching entries",
+    "hi": "{count} मेल खाती एंट्री",
+    "bn": "{count}টি মিলে যাওয়া এন্ট্রি"
   },
   "ledgerListSelectPlaceholder": {
     "en": "— select —",

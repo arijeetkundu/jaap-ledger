@@ -305,6 +305,72 @@ function assert(label, condition) {
     await page.evaluate(() => shouldShowSundayBackupReminder("2026-08-16", "2026-08-09")) === true
   );
 
+  // ── searchLedgerNotes ────────────────────────────────────────────────
+  console.log("\n=== searchLedgerNotes ===");
+  const searchFixture = [
+    { date: "2024-01-01", jaap: 108, notes: "Morning Satsang with Guruji" },
+    { date: "2025-06-06", jaap: 216, notes: "quiet satsang" },
+    { date: "2026-02-02", jaap: 324, notes: "" },
+    { date: "2026-03-03", jaap: 432 }, // no notes key at all
+  ];
+  const hits = await page.evaluate((f) => searchLedgerNotes(f, "satsang"), searchFixture);
+  assert("matches notes case-insensitively", hits.length === 2);
+  assert("results are newest-first", hits[0].date === "2025-06-06" && hits[1].date === "2024-01-01");
+  assert(
+    "entries with empty or missing notes never match",
+    hits.every(h => h.date !== "2026-02-02" && h.date !== "2026-03-03")
+  );
+  assert(
+    "an empty query matches nothing rather than everything",
+    (await page.evaluate((f) => searchLedgerNotes(f, ""), searchFixture)).length === 0
+  );
+  assert(
+    "a whitespace-only query is treated as empty",
+    (await page.evaluate((f) => searchLedgerNotes(f, "   "), searchFixture)).length === 0
+  );
+  assert(
+    "surrounding whitespace in a real query is ignored",
+    (await page.evaluate((f) => searchLedgerNotes(f, "  guruji "), searchFixture)).length === 1
+  );
+
+  // ── getOnThisDayEntry ────────────────────────────────────────────────
+  console.log("\n=== getOnThisDayEntry ===");
+  const onThisDay = await page.evaluate(() => {
+    ledgerData = [
+      { date: "2023-08-12", jaap: 500, notes: "" },
+      { date: "2024-08-12", jaap: 650, notes: "" },
+      { date: "2025-08-12", jaap: 0, notes: "" },     // a zero day, not a memory
+      { date: "2025-08-13", jaap: 900, notes: "" },   // different day
+      { date: "2026-08-12", jaap: 216, notes: "" },   // today itself
+    ];
+    return {
+      twoYearGap: getOnThisDayEntry("2026-08-12"),
+      noMatch: getOnThisDayEntry("2026-12-25"),
+      leapDay: getOnThisDayEntry("2026-02-29"),
+    };
+  });
+  // 2025 is the same calendar day but was logged as 0, so the nearest
+  // *real* memory is 2024 — two years back.
+  assert("skips zero-jaap days and finds the nearest real memory", onThisDay.twoYearGap.jaap === 650);
+  assert("reports how many years back that memory is", onThisDay.twoYearGap.yearsAgo === 2);
+  assert("never returns today's own entry", onThisDay.twoYearGap.date === "2024-08-12");
+  assert("returns null when no earlier year has this calendar day", onThisDay.noMatch === null);
+  assert("a 29 Feb lookup simply finds nothing rather than throwing", onThisDay.leapDay === null);
+
+  const onThisDayOneYear = await page.evaluate(() => {
+    ledgerData = [
+      { date: "2025-08-12", jaap: 650, notes: "" },
+      { date: "2024-08-12", jaap: 500, notes: "" },
+    ];
+    return getOnThisDayEntry("2026-08-12");
+  });
+  assert("the nearest year wins over older ones", onThisDayOneYear.yearsAgo === 1 && onThisDayOneYear.jaap === 650);
+
+  assert(
+    "an empty ledger yields no memory",
+    (await page.evaluate(() => { ledgerData = []; return getOnThisDayEntry("2026-08-12"); })) === null
+  );
+
   // ── buildLedgerExportPayload ────────────────────────────────────────
   console.log("\n=== buildLedgerExportPayload ===");
   const exportPayload = await page.evaluate(() => {

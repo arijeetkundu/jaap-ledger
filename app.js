@@ -733,6 +733,41 @@ function getCumulativeTotal() {
   return ledgerData.reduce((sum, e) => sum + (e.jaap || 0), 0);
 }
 
+// "On this day": the most recent earlier year in which the user actually
+// logged practice on this same calendar day. Returns { date, jaap, yearsAgo }
+// or null when there's nothing to say — the Today Card omits the line
+// entirely rather than showing an empty prompt, so a newer sadhak never
+// sees a hole where a memory should be.
+//
+// Matched on MM-DD, so 29 February finds nothing in non-leap years. That's
+// correct rather than unfortunate: there was no "this day" in those years.
+// Zero and null days are skipped too — "0 jaap a year ago today" is not a
+// memory worth surfacing.
+function getOnThisDayEntry(referenceISO) {
+  if (!referenceISO || ledgerData.length === 0) return null;
+
+  const year = Number(referenceISO.slice(0, 4));
+  const monthDay = referenceISO.slice(5); // "MM-DD"
+
+  const candidates = ledgerData.filter(e =>
+    typeof e.date === "string" &&
+    e.date.slice(5) === monthDay &&
+    Number(e.date.slice(0, 4)) < year &&
+    isValidJaapValue(e.jaap) &&
+    e.jaap > 0
+  );
+
+  if (candidates.length === 0) return null;
+
+  // Nearest year wins over older ones.
+  const match = candidates.reduce((best, e) => (e.date > best.date ? e : best), candidates[0]);
+  return {
+    date: match.date,
+    jaap: match.jaap,
+    yearsAgo: year - Number(match.date.slice(0, 4)),
+  };
+}
+
 function ensureTodayEntryExists() {
   let entry = ledgerData.find(e => e.date === todayISO);
 
@@ -1504,6 +1539,88 @@ function buildYearRows(yearContainer, entries, { sparklineMap, milestoneByDate }
 // years of daily history rebuilt thousands of already-hidden DOM nodes and
 // re-attached thousands of listeners just to update the one row that
 // changed.
+// ---------- Ledger notes search ----------
+// Module-level so it survives renderLedgerList() rebuilds, which happen on
+// every save/toggle/language switch — the same reason the Settings drawer's
+// other stateful bits are kept out here. Without it, saving an entry while
+// searching would silently drop the user back to the full ledger.
+let ledgerSearchQuery = "";
+let ledgerSearchDebounce = null;
+
+// Pure: entries whose notes contain `query` (case-insensitive), newest
+// first. Factored out so the matching rule is unit-testable without any
+// DOM — entries with no notes can never match, which is why an empty query
+// is treated as "no search" by the caller rather than "match everything".
+function searchLedgerNotes(entries, query) {
+  const needle = (query || "").trim().toLowerCase();
+  if (!needle) return [];
+  return entries
+    .filter(e => typeof e.notes === "string" && e.notes.toLowerCase().includes(needle))
+    .sort((a, b) => b.date.localeCompare(a.date));
+}
+
+function wireLedgerSearchInput(input) {
+  if (!input) return;
+
+  input.addEventListener("input", (e) => {
+    ledgerSearchQuery = e.target.value;
+    clearTimeout(ledgerSearchDebounce);
+    ledgerSearchDebounce = setTimeout(() => {
+      // Re-render only the ledger, not the whole app: nothing above it
+      // depends on the query, and a full renderToday() would rebuild the
+      // Today Card the user might be mid-edit in.
+      renderLedgerList(getMilestoneHistory(ledgerData));
+      // The input above was just destroyed and rebuilt, so put the caret
+      // back where the user left it or they'd be typing into a dead field.
+      const fresh = document.getElementById("ledger-search");
+      if (fresh) {
+        fresh.focus();
+        fresh.setSelectionRange(fresh.value.length, fresh.value.length);
+      }
+    }, 200);
+  });
+}
+
+// Flat, newest-first list of matches, rendered straight from ledgerData.
+// Deliberately read-only: this view answers "what did I write about X",
+// and keeping the editable row machinery (and its save handlers, 7-day
+// window, milestone re-checks) out of it avoids duplicating that logic in
+// a second place. Clearing the search returns to the normal ledger, where
+// anything still editable can be edited as usual.
+function renderLedgerSearchResults(container, entries) {
+  const matches = searchLedgerNotes(entries, ledgerSearchQuery);
+
+  const results = document.createElement("div");
+  results.className = "ledger-search-results";
+
+  if (matches.length === 0) {
+    results.innerHTML = `<p class="ledger-search-empty">${t("ledgerSearchNoResults")}</p>`;
+    container.appendChild(results);
+    return;
+  }
+
+  results.innerHTML = `
+    <p class="ledger-search-count">${
+      matches.length === 1
+        ? t("ledgerSearchOneResult")
+        : t("ledgerSearchResultCount", { count: matches.length })
+    }</p>
+    ${matches.map(entry => `
+      <div class="ledger-search-result">
+        <div class="ledger-search-result-head">
+          <span class="ledger-date">
+            ${formatDate(entry.date)}${hasExplicitPoornima(entry.notes) ? " 🌕" : ""}
+          </span>
+          <span class="ledger-jaap-static">${entry.jaap == null ? "—" : formatTotal(entry.jaap)}</span>
+        </div>
+        <div class="ledger-search-result-note">${escapeHTML(entry.notes)}</div>
+      </div>
+    `).join("")}
+  `;
+
+  container.appendChild(results);
+}
+
 function renderLedgerList(milestoneHistory) {
   const container = document.getElementById("ledger-list");
   // Uses the module-level todayISO (refreshed at the top of renderToday()) —
@@ -1528,6 +1645,36 @@ function renderLedgerList(milestoneHistory) {
   const rowDeps = { sparklineMap, milestoneByDate };
 
   container.innerHTML = "";
+
+  // Notes search box. Always present; when it holds a query the year
+  // accordions below are replaced by a flat result list (see the early
+  // return further down). Built from ledgerData rather than by filtering
+  // rendered rows, which matters because non-current years have no row DOM
+  // at all until expanded (see the lazy-build note on this function).
+  const searchBar = document.createElement("div");
+  searchBar.className = "ledger-search-bar";
+  searchBar.innerHTML = `
+    <input
+      type="search"
+      id="ledger-search"
+      class="ledger-search-input"
+      placeholder="${t("ledgerSearchPlaceholder")}"
+      aria-label="${t("ledgerSearchPlaceholder")}"
+    >
+  `;
+  container.appendChild(searchBar);
+
+  // Set via the property, never interpolated into the markup above:
+  // escapeHTML() deliberately doesn't escape quotes (see its own comment),
+  // so a query containing one would break out of a value="" attribute.
+  const searchInput = searchBar.querySelector("#ledger-search");
+  searchInput.value = ledgerSearchQuery;
+  wireLedgerSearchInput(searchInput);
+
+  if (ledgerSearchQuery.trim()) {
+    renderLedgerSearchResults(container, filtered);
+    return;
+  }
 
   // Jump-to-year selector
   const jumpBar = document.createElement("div");
@@ -1627,10 +1774,21 @@ function renderLedgerList(milestoneHistory) {
 function renderTodayCard(entry) {
   const container = document.getElementById("today-card");
 
+  // Only rendered when there's a real memory to show (see getOnThisDayEntry).
+  const onThisDay = getOnThisDayEntry(entry.date);
+
   container.innerHTML = `
     <h2>${t("todayHeading")}${hasExplicitPoornima(entry.notes) ? " 🌕" : ""}</h2>
 
     <p><strong>${formatDateLong(entry.date)}</strong></p>
+
+    ${onThisDay ? `
+      <p class="on-this-day">${
+        onThisDay.yearsAgo === 1
+          ? t("todayOnThisDayOneYear", { count: formatTotal(onThisDay.jaap) })
+          : t("todayOnThisDayYears", { years: onThisDay.yearsAgo, count: formatTotal(onThisDay.jaap) })
+      }</p>
+    ` : ""}
 
     ${renderJaapInputField(entry, { id: "today-jaap" })}
 
