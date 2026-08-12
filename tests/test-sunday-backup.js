@@ -87,7 +87,9 @@ async function mockGoogleDriveApis(page) {
       }
 
       const method = (opts && opts.method) || "GET";
-      window.__fetchCalls.push({ url: String(url), method });
+      // Body is captured too so tests can assert what actually gets uploaded
+      // to Drive, not merely that a request was made.
+      window.__fetchCalls.push({ url: String(url), method, body: opts && typeof opts.body === "string" ? opts.body : null });
 
       if (window.__mockFetchShouldFail) {
         return { ok: false, status: 500, json: async () => ({}) };
@@ -183,6 +185,22 @@ async function newMockedPage(browser, { dateISO, mockGoogle = true }) {
       !document.getElementById("sunday-backup-modal").classList.contains("open")
     );
     assert(`${label}: modal does not reappear later the same Sunday`, staysClosedSameSunday);
+
+    // The whole reason lastDriveBackupAt exists as a separate key: dismissing
+    // the prompt marks it *handled* for the day, but nothing was actually
+    // backed up. lastSundayBackupPromptDate alone can't tell those apart, so
+    // it must never be mistaken for evidence of a backup.
+    const dismissRecordedNoBackup = await page.evaluate(() =>
+      localStorage.getItem("lastDriveBackupAt") === null &&
+      localStorage.getItem("lastSundayBackupPromptDate") !== null
+    );
+    assert(`${label}: dismissing marks the prompt handled but records no backup`, dismissRecordedNoBackup);
+
+    const statusStillSaysNever = await page.evaluate(() =>
+      document.getElementById("drive-backup-status")?.textContent || ""
+    );
+    assert(`${label}: the Settings status line still reports no backup`, statusStillSaysNever.includes("Not yet backed up"));
+
     allErrors.push(...errors);
     await context.close();
   }
@@ -222,13 +240,27 @@ async function newMockedPage(browser, { dateISO, mockGoogle = true }) {
       toastText: document.getElementById("toast")?.textContent || "",
       modalOpen: document.getElementById("sunday-backup-modal").classList.contains("open"),
       handled: localStorage.getItem("lastSundayBackupPromptDate") === "2026-08-09",
+      lastBackupAt: localStorage.getItem("lastDriveBackupAt"),
+      statusLine: document.getElementById("drive-backup-status")?.textContent || "",
       fetchCalls: window.__fetchCalls.map(c => c.method + " " + c.url),
     }));
     assert("a successful backup shows a confirmation toast", result.toastVisible && result.toastText.toLowerCase().includes("drive"));
     assert("a successful backup closes the modal", !result.modalOpen);
     assert("a successful backup marks today as handled", result.handled);
+    assert("a successful backup records a real timestamp", !!result.lastBackupAt && !isNaN(Date.parse(result.lastBackupAt)));
+    assert("the Settings status line updates immediately after a successful backup", result.statusLine.includes("today"));
     assert("upload flow searched for an existing file before uploading", result.fetchCalls.some(c => c.startsWith("GET") && c.includes("/drive/v3/files?q=")));
     assert("upload flow created the file (none existed) via multipart POST", result.fetchCalls.some(c => c.startsWith("POST") && c.includes("uploadType=multipart")));
+
+    // What actually goes to Drive matters more than that a request happened:
+    // the uploaded payload must be the versioned object carrying the
+    // Sankalpa, not the old bare entries array.
+    const uploadedBody = await page.evaluate(() => {
+      const call = window.__fetchCalls.find(c => c.method === "POST" && c.url.includes("uploadType=multipart"));
+      return call ? call.body : null;
+    });
+    assert("the uploaded Drive payload is the versioned object format", !!uploadedBody && uploadedBody.includes('"version"'));
+    assert("the uploaded Drive payload includes a sankalpa field", !!uploadedBody && uploadedBody.includes('"sankalpa"'));
 
     allErrors.push(...errors);
     await context.close();

@@ -86,6 +86,10 @@
       ☁️ Back Up to Google Drive
     </button>
 
+    <!-- Both filled by app.js's renderDataSafetyStatus() — dynamic text, so
+         no data-i18n attribute (they go through t() at render time). -->
+    <p class="maintenance-status" id="drive-backup-status"></p>
+
 	<button id="import-json-btn" class="maintenance-btn" data-i18n="settingsImportBtn">
 		⬆️ Import Ledger (JSON)
 	</button>
@@ -100,6 +104,8 @@
     <button id="restore-backup-btn" class="maintenance-btn" data-i18n="settingsRestoreBtn">
       Restore from Backup
     </button>
+
+    <p class="maintenance-status" id="storage-status"></p>
 
     <h3 data-i18n="langSettingsHeading">Language</h3>
     <div id="lang-settings-wrap" class="lang-settings-wrap">

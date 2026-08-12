@@ -313,17 +313,95 @@ function assert(label, condition) {
       { date: "2026-01-02", jaap: null, notes: "" },
       { date: "2026-01-03" }, // missing jaap/notes entirely
     ];
-    return buildLedgerExportPayload();
+    return buildLedgerExportPayload({ id: "primary", text: "My vow", context: "Guru's blessing", date: "2023-04-01" });
   });
-  assert("export payload has one entry per ledger entry", exportPayload.length === 3);
+  assert("export payload is versioned", exportPayload.version === 2);
+  assert("export payload has one entry per ledger entry", exportPayload.entries.length === 3);
   assert(
     "export payload preserves date/jaap/notes for a normal entry",
-    exportPayload[0].date === "2026-01-01" && exportPayload[0].jaap === 500 && exportPayload[0].notes === "hello"
+    exportPayload.entries[0].date === "2026-01-01" && exportPayload.entries[0].jaap === 500 && exportPayload.entries[0].notes === "hello"
   );
-  assert("export payload preserves an explicit null jaap", exportPayload[1].jaap === null);
+  assert("export payload preserves an explicit null jaap", exportPayload.entries[1].jaap === null);
   assert(
     "export payload defaults missing jaap/notes to null/empty string rather than undefined",
-    exportPayload[2].jaap === null && exportPayload[2].notes === ""
+    exportPayload.entries[2].jaap === null && exportPayload.entries[2].notes === ""
+  );
+  assert(
+    "export payload carries the Sankalpa (previously it had no export path at all)",
+    exportPayload.sankalpa.text === "My vow" &&
+      exportPayload.sankalpa.context === "Guru's blessing" &&
+      exportPayload.sankalpa.date === "2023-04-01"
+  );
+  assert(
+    "export payload drops the Sankalpa's internal storage key",
+    !("id" in exportPayload.sankalpa)
+  );
+
+  const exportNoSankalpa = await page.evaluate(() => buildLedgerExportPayload(null));
+  assert("a missing Sankalpa exports as null, not undefined", exportNoSankalpa.sankalpa === null);
+  const exportBlankSankalpa = await page.evaluate(() => buildLedgerExportPayload({ text: "   ", context: "", date: "" }));
+  assert("a blank-text Sankalpa is treated as absent", exportBlankSankalpa.sankalpa === null);
+
+  // ── parseImportedLedgerFile (legacy + current formats) ───────────────
+  console.log("\n=== parseImportedLedgerFile ===");
+  // Every export produced before v2 was a bare JSON array. If that stopped
+  // importing, every file a user already has on disk would be dead.
+  const legacyParsed = await page.evaluate(() =>
+    parseImportedLedgerFile([{ date: "2026-01-01", jaap: 108, notes: "" }])
+  );
+  assert("a legacy bare-array export still parses", legacyParsed !== null && legacyParsed.entries.length === 1);
+  assert("a legacy export yields no Sankalpa (it never carried one)", legacyParsed.sankalpa === null);
+
+  const currentParsed = await page.evaluate(() =>
+    parseImportedLedgerFile({
+      version: 2,
+      entries: [{ date: "2026-01-01", jaap: 108, notes: "" }],
+      sankalpa: { text: "vow", context: "", date: "2023-04-01" },
+    })
+  );
+  assert("a v2 object export parses its entries", currentParsed.entries.length === 1);
+  assert("a v2 object export parses its Sankalpa", currentParsed.sankalpa.text === "vow");
+
+  assert(
+    "a non-ledger object is rejected",
+    (await page.evaluate(() => parseImportedLedgerFile({ foo: "bar" }))) === null
+  );
+  assert(
+    "a bare string is rejected",
+    (await page.evaluate(() => parseImportedLedgerFile("nope"))) === null
+  );
+  assert(
+    "null is rejected",
+    (await page.evaluate(() => parseImportedLedgerFile(null))) === null
+  );
+  assert(
+    "a v2 payload with a malformed Sankalpa still imports its entries, dropping the bad vow",
+    (await page.evaluate(() =>
+      parseImportedLedgerFile({ version: 2, entries: [], sankalpa: { text: 123 } })
+    )).sankalpa === null
+  );
+
+  // ── describeLastDriveBackup / daysSinceDateISO ───────────────────────
+  console.log("\n=== Drive backup status text ===");
+  assert(
+    "no recorded backup reads as 'never'",
+    (await page.evaluate(() => describeLastDriveBackup(null, "2026-08-11"))) === "Not yet backed up to Google Drive."
+  );
+  assert(
+    "same-day backup reads as 'today'",
+    (await page.evaluate(() => describeLastDriveBackup("2026-08-11T09:00:00.000Z", "2026-08-11"))) === "Last backed up today."
+  );
+  assert(
+    "one day old reads as 'yesterday', not '1 days ago'",
+    (await page.evaluate(() => describeLastDriveBackup("2026-08-10T09:00:00.000Z", "2026-08-11"))) === "Last backed up yesterday."
+  );
+  assert(
+    "older backups report the day count",
+    (await page.evaluate(() => describeLastDriveBackup("2026-07-30T09:00:00.000Z", "2026-08-11"))) === "Last backed up 12 days ago."
+  );
+  assert(
+    "daysSinceDateISO counts whole days across a month boundary",
+    (await page.evaluate(() => daysSinceDateISO("2026-07-30", "2026-08-11"))) === 12
   );
 
   // ── buildDriveUploadRequest ──────────────────────────────────────────

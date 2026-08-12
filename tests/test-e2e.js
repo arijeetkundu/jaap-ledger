@@ -412,18 +412,30 @@ async function freshLoad(page, { clearStorage = false } = {}) {
   await new Promise(r => setTimeout(r, 300));
 
   const exportedText = await page.evaluate(() => window.__exportedBlobText);
-  let exportedArray = null;
-  try { exportedArray = JSON.parse(exportedText || "null"); } catch { /* leave null */ }
-  assert("export produces a JSON array", Array.isArray(exportedArray));
+  let exported = null;
+  try { exported = JSON.parse(exportedText || "null"); } catch { /* leave null */ }
+  assert("export produces a versioned object payload", !!exported && exported.version === 2);
+  assert("export payload carries an entries array", !!exported && Array.isArray(exported.entries));
   assert(
     "exported entry count matches the rendered ledger row count",
-    !!exportedArray && exportedArray.length === rowCountBeforeExport
+    !!exported && exported.entries.length === rowCountBeforeExport
   );
   assert(
     "exported entries have the expected shape",
-    !!exportedArray && exportedArray.every(e => typeof e.date === "string" && "jaap" in e && "notes" in e)
+    !!exported && exported.entries.every(e => typeof e.date === "string" && "jaap" in e && "notes" in e)
+  );
+  // The Sankalpa section above established (then rewrote) a vow, so one
+  // exists by now. Before this batch it was excluded from every persistence
+  // path — export, import, backup and Drive — and could only ever live on
+  // the single device it was written on.
+  assert(
+    "export payload carries the Sankalpa established earlier in this run",
+    !!exported && !!exported.sankalpa && typeof exported.sankalpa.text === "string" && exported.sankalpa.text.length > 0
   );
 
+  // Deliberately a bare array — the pre-v2 export format. Every file a user
+  // exported before this change looks like this, so importing one must keep
+  // working; this fixture is that regression guard.
   const importFixture = [
     { date: "2020-01-01", jaap: 108, notes: "imported one" },
     { date: "2020-01-02", jaap: null, notes: "" },
@@ -435,6 +447,20 @@ async function freshLoad(page, { clearStorage = false } = {}) {
   const importInput = await page.$("#import-json-input");
   await importInput.uploadFile(tmpFile);
   await new Promise(r => setTimeout(r, 800)); // file read + confirm()/alert() dialog round-trip + re-render
+
+  assert(
+    "a legacy bare-array export still imports successfully",
+    (await page.evaluate(() => ledgerData.length)) === importFixture.length + 1 // +1 auto-created today entry
+  );
+  // A legacy file carries no Sankalpa. Importing one must leave the vow
+  // already on this device alone rather than silently wiping it.
+  assert(
+    "importing a legacy file does not wipe the existing Sankalpa",
+    (await page.evaluate(async () => {
+      const s = await getSankalpa();
+      return !!(s && s.text);
+    })) === true
+  );
 
   // ── Lazy year build: a non-current year's rows aren't built until expanded ──
   console.log("\n=== Ledger List lazy year build (performance) ===");
@@ -612,6 +638,102 @@ async function freshLoad(page, { clearStorage = false } = {}) {
     });
   });
   assert("a backup record exists in the ledger-backups IndexedDB store", backupStoreHasEntries === true);
+
+  // ── Data safety: Sankalpa round-trip, restore-undoes-import, status ──
+  console.log("\n=== Data safety ===");
+
+  // Put the app into a known state: a distinctive vow plus a one-entry ledger.
+  await page.evaluate(async () => {
+    await saveSankalpa({ text: "Round-trip vow", context: "round-trip ctx", date: "2023-04-01" });
+    ledgerData = [{ date: "2026-01-05", jaap: 216, notes: "before import" }];
+    await saveLedger(ledgerData);
+    await saveAutomaticBackup(ledgerData);
+    renderToday();
+  });
+  await new Promise(r => setTimeout(r, 400));
+
+  // Build a v2 export file from the same function the Export button uses.
+  const v2Payload = await page.evaluate(async () => buildLedgerExportPayload(await getSankalpa()));
+  const v2File = path.join(os.tmpdir(), `jaap-v2-export-${Date.now()}.json`);
+  fs.writeFileSync(v2File, JSON.stringify(v2Payload));
+
+  // Now clobber both the vow and the ledger, so a successful import has to
+  // genuinely restore them rather than coincidentally matching.
+  await page.evaluate(async () => {
+    await saveSankalpa({ text: "REPLACED vow", context: "", date: "2024-01-01" });
+    ledgerData = [{ date: "2026-02-02", jaap: 999, notes: "clobbered" }];
+    await saveLedger(ledgerData);
+    renderToday();
+  });
+  await new Promise(r => setTimeout(r, 400));
+
+  const drawerOpenForDataSafety = await page.evaluate(() =>
+    document.getElementById("maintenance-drawer").classList.contains("open")
+  );
+  if (!drawerOpenForDataSafety) {
+    await page.click("#maintenance-toggle");
+    await page.waitForSelector("#maintenance-drawer.open");
+    await new Promise(r => setTimeout(r, 400));
+  }
+
+  const importInputV2 = await page.$("#import-json-input");
+  await importInputV2.uploadFile(v2File);
+  await new Promise(r => setTimeout(r, 900));
+  fs.unlinkSync(v2File);
+
+  assert(
+    "a v2 export round-trips its Sankalpa back into the app",
+    (await page.evaluate(async () => (await getSankalpa()).text)) === "Round-trip vow"
+  );
+  assert(
+    "a v2 export round-trips the Sankalpa's context and original date too",
+    (await page.evaluate(async () => {
+      const s = await getSankalpa();
+      return s.context === "round-trip ctx" && s.date === "2023-04-01";
+    })) === true
+  );
+  assert(
+    "a v2 export round-trips its ledger entries",
+    (await page.evaluate(() => ledgerData.some(e => e.date === "2026-01-05" && e.jaap === 216))) === true
+  );
+
+  // 1.2: the import above snapshotted the pre-import ledger ("clobbered"),
+  // so Restore must be able to walk the import back. Previously the backup
+  // was overwritten *with* the imported data, making a mistaken import
+  // permanent and unrecoverable.
+  await page.click("#restore-backup-btn");
+  await new Promise(r => setTimeout(r, 700));
+  assert(
+    "Restore from Backup undoes a mistaken import (pre-import ledger comes back)",
+    (await page.evaluate(() => ledgerData.some(e => e.date === "2026-02-02" && e.jaap === 999))) === true
+  );
+  assert(
+    "the undone import's entries are gone after restore",
+    (await page.evaluate(() => ledgerData.some(e => e.date === "2026-01-05"))) === false
+  );
+  assert(
+    "restoring also brings back the Sankalpa captured in that backup",
+    (await page.evaluate(async () => (await getSankalpa()).text)) === "REPLACED vow"
+  );
+
+  // Status lines in Settings
+  const statusLines = await page.evaluate(() => {
+    localStorage.setItem("lastDriveBackupAt", "2020-01-01T00:00:00.000Z");
+    renderDataSafetyStatus();
+    return {
+      drive: document.getElementById("drive-backup-status").textContent,
+      storagePresent: !!document.getElementById("storage-status"),
+    };
+  });
+  assert("the Drive status line reports a stale backup in days", /\d+ days ago/.test(statusLines.drive));
+  assert("a storage-status element exists in Settings", statusLines.storagePresent);
+
+  const neverStatus = await page.evaluate(() => {
+    localStorage.removeItem("lastDriveBackupAt");
+    renderDataSafetyStatus();
+    return document.getElementById("drive-backup-status").textContent;
+  });
+  assert("with no recorded backup the Drive status says so plainly", neverStatus.includes("Not yet backed up"));
 
   await page.click("#maintenance-toggle"); // close drawer
 

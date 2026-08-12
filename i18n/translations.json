@@ -234,6 +234,36 @@
     "hi": "Google Drive पर बैकअप हो गया ✓",
     "bn": "Google Drive-এ ব্যাকআপ হয়েছে ✓"
   },
+  "backupStatusNever": {
+    "en": "Not yet backed up to Google Drive.",
+    "hi": "अभी तक Google Drive पर बैकअप नहीं लिया गया है।",
+    "bn": "এখনও Google Drive-এ ব্যাকআপ নেওয়া হয়নি।"
+  },
+  "backupStatusToday": {
+    "en": "Last backed up today.",
+    "hi": "पिछला बैकअप आज लिया गया।",
+    "bn": "শেষ ব্যাকআপ আজ নেওয়া হয়েছে।"
+  },
+  "backupStatusYesterday": {
+    "en": "Last backed up yesterday.",
+    "hi": "पिछला बैकअप कल लिया गया।",
+    "bn": "শেষ ব্যাকআপ গতকাল নেওয়া হয়েছে।"
+  },
+  "backupStatusDaysAgo": {
+    "en": "Last backed up {days} days ago.",
+    "hi": "पिछला बैकअप {days} दिन पहले लिया गया।",
+    "bn": "শেষ ব্যাকআপ {days} দিন আগে নেওয়া হয়েছে।"
+  },
+  "storageStatusProtected": {
+    "en": "Your practice data is protected from automatic cleanup on this device.",
+    "hi": "इस डिवाइस पर आपका साधना डेटा स्वतः सफ़ाई से सुरक्षित है।",
+    "bn": "এই ডিভাইসে আপনার সাধনার তথ্য স্বয়ংক্রিয় পরিষ্কার থেকে সুরক্ষিত।"
+  },
+  "storageStatusAtRisk": {
+    "en": "This browser may clear your practice data if storage runs low. Add Sumiran Lite to your Home Screen, and back up to Google Drive.",
+    "hi": "संग्रहण कम होने पर यह ब्राउज़र आपका साधना डेटा हटा सकता है। Sumiran Lite को अपनी होम स्क्रीन पर जोड़ें, और Google Drive पर बैकअप लें।",
+    "bn": "সংরক্ষণস্থান কমে গেলে এই ব্রাউজার আপনার সাধনার তথ্য মুছে দিতে পারে। Sumiran Lite আপনার হোম স্ক্রিনে যোগ করুন, এবং Google Drive-এ ব্যাকআপ নিন।"
+  },
   "backupToastFailFallback": {
     "en": "Backup failed. Please try again.",
     "hi": "बैकअप विफल रहा। कृपया पुनः प्रयास करें।",

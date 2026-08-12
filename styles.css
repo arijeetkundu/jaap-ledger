@@ -1098,6 +1098,28 @@ body.loading {
   color: var(--ink-muted);
 }
 
+/* Data-safety status lines under the Drive backup / Restore buttons —
+   informational by default, and deliberately quiet: these report state, they
+   don't demand action. :empty collapses the line entirely when there's
+   nothing meaningful to say (e.g. storage persistence is unknown on this
+   browser), so no stray gap is left behind. */
+.maintenance-status {
+  margin: 6px 2px 0;
+  font-size: 0.78rem;
+  line-height: 1.35;
+  color: var(--ink-muted);
+}
+
+.maintenance-status:empty {
+  display: none;
+}
+
+/* Only the genuinely actionable case (data is evictable) gets emphasis. */
+.maintenance-status-warn {
+  color: var(--maroon-red);
+  font-weight: 500;
+}
+
 /* Custom splash image slots */
 .splash-slot-wrap {
   display: grid;

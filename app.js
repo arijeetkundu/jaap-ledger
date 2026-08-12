@@ -90,6 +90,7 @@ function scheduleTranslationsRetry() {
       updateMalaToggleButton();
       renderSplashSlotUI();
       renderToday();
+      renderDataSafetyStatus();
       if (document.getElementById("sankalpa-page")?.classList.contains("open")) {
         renderSankalpaPage();
       }
@@ -180,6 +181,7 @@ function applyAppLanguage(lang) {
   updateMalaToggleButton();
   renderSplashSlotUI();
   renderToday();
+  renderDataSafetyStatus();
   if (document.getElementById("sankalpa-page")?.classList.contains("open")) {
     renderSankalpaPage();
   }
@@ -981,9 +983,10 @@ function updateBackgroundSwatchButtons() {
 (async function initApp() {
   try {
 	  
-	if (navigator.storage && navigator.storage.persist) {
-  navigator.storage.persist(); // best-effort; outcome doesn't change app behavior either way
-}
+	// Best-effort persistence request, but the answer is now kept and
+	// surfaced in Settings — if the browser denied it, the OS can evict the
+	// entire ledger under storage pressure, which the user deserves to know.
+	await refreshStoragePersistenceState();
 
     await loadTranslations();
 
@@ -995,6 +998,7 @@ function updateBackgroundSwatchButtons() {
     updateMalaToggleButton();
     renderSplashSlotUI();
     updateLanguagePickerSelection();
+    renderDataSafetyStatus();
 
     // The splash screen's own <img alt> was set synchronously by the
     // chooseSplashImage() IIFE at the very top of this file, long before
@@ -1075,6 +1079,11 @@ setInterval(() => {
 }, 60000);
 
 async function saveAutomaticBackup(data) {
+  // Captured before the backup transaction opens (a separate store, so a
+  // separate transaction) — the Sankalpa previously had no backup coverage
+  // at all, meaning a restore silently resurrected the ledger but not the
+  // user's vow.
+  const sankalpa = sanitizeSankalpaForExport(await getSankalpa());
   const db = await openDB();
 
   return new Promise((resolve, reject) => {
@@ -1083,7 +1092,8 @@ async function saveAutomaticBackup(data) {
 
     const payload = {
       backedUpAt: new Date().toISOString(),
-      entries: data
+      entries: data,
+      sankalpa
     };
 
     store.put(payload, "latest");
@@ -1138,11 +1148,85 @@ async function restoreFromBackup() {
 
   await saveLedger(ledgerData);
 
+  // Older backups (taken before the Sankalpa was covered) have no sankalpa
+  // field — restoring one must leave the user's current vow alone rather
+  // than wiping it.
+  if (backup.sankalpa) {
+    await saveSankalpa(backup.sankalpa);
+  }
+
   alert(t("ledgerRestoreSuccess"));
 
   renderToday();
 }
 
+
+// ---------- Data safety status (Settings drawer) ----------
+// Two silent risks made visible, informationally — not as nagging prompts.
+
+// null = unknown or unsupported by this browser; true/false = the real
+// answer from navigator.storage.persisted(). Kept module-level so the
+// (async) query runs once at bootstrap and every later re-render — e.g. a
+// language switch — can render from it synchronously.
+let storageIsPersistent = null;
+
+async function refreshStoragePersistenceState() {
+  try {
+    if (navigator.storage && navigator.storage.persist) {
+      // Requesting is idempotent — an already-granted origin simply returns
+      // true again — so this stays a best-effort ask, as before. The change
+      // is that we now read the result back instead of discarding it.
+      await navigator.storage.persist();
+    }
+    if (navigator.storage && navigator.storage.persisted) {
+      storageIsPersistent = await navigator.storage.persisted();
+    }
+  } catch (e) {
+    console.warn("Could not determine storage persistence:", e);
+    storageIsPersistent = null;
+  }
+}
+
+// Whole days between two ISO dates. Both parse as UTC midnight, so the
+// arithmetic is clean — same approach as isWithinLastNDays().
+function daysSinceDateISO(dateISO, referenceISO) {
+  const then = new Date(dateISO);
+  const now = new Date(referenceISO);
+  return Math.round((now - then) / (1000 * 60 * 60 * 24));
+}
+
+function describeLastDriveBackup(lastBackupAtISO, referenceISO) {
+  if (!lastBackupAtISO) return t("backupStatusNever");
+  const days = daysSinceDateISO(lastBackupAtISO.slice(0, 10), referenceISO);
+  if (days <= 0) return t("backupStatusToday");
+  if (days === 1) return t("backupStatusYesterday");
+  return t("backupStatusDaysAgo", { days });
+}
+
+function renderDataSafetyStatus() {
+  const driveEl = document.getElementById("drive-backup-status");
+  if (driveEl) {
+    driveEl.textContent = describeLastDriveBackup(
+      localStorage.getItem("lastDriveBackupAt"),
+      todayISO
+    );
+  }
+
+  const storageEl = document.getElementById("storage-status");
+  if (storageEl) {
+    if (storageIsPersistent === true) {
+      storageEl.textContent = t("storageStatusProtected");
+      storageEl.classList.remove("maintenance-status-warn");
+    } else if (storageIsPersistent === false) {
+      storageEl.textContent = t("storageStatusAtRisk");
+      storageEl.classList.add("maintenance-status-warn");
+    } else {
+      // Unknown/unsupported — say nothing rather than guess at the user's risk.
+      storageEl.textContent = "";
+      storageEl.classList.remove("maintenance-status-warn");
+    }
+  }
+}
 
 // ---------- Rendering ----------
 function renderToday() {
@@ -2058,12 +2142,55 @@ document.getElementById("sankalpa-open-btn")
 
 // Shared by the Export button and the Google Drive backup path — both need
 // the same clone-and-sanitize shaping of the raw ledger.
-function buildLedgerExportPayload() {
-  return ledgerData.map(e => ({
-    date: e.date,
-    jaap: e.jaap ?? null,
-    notes: e.notes || ""
-  }));
+//
+// Takes `sankalpa` as an argument rather than reading it itself, so this
+// stays pure and directly unit-testable without mocking IndexedDB (same
+// reasoning as shouldShowSundayBackupReminder()/buildDriveUploadRequest()).
+// The Sankalpa is included because it previously had NO export, backup or
+// Drive path at all — it lived in one IndexedDB store on one device and was
+// lost silently on eviction or a device change.
+const LEDGER_EXPORT_VERSION = 2;
+
+function buildLedgerExportPayload(sankalpa) {
+  return {
+    version: LEDGER_EXPORT_VERSION,
+    entries: ledgerData.map(e => ({
+      date: e.date,
+      jaap: e.jaap ?? null,
+      notes: e.notes || ""
+    })),
+    sankalpa: sanitizeSankalpaForExport(sankalpa)
+  };
+}
+
+// Keeps only the three fields a Sankalpa record actually carries (the stored
+// record also has a fixed `id: "primary"` key, which is storage plumbing, not
+// user data) — and returns null for anything unusable, so a missing or
+// malformed record can never poison an export or an import.
+function sanitizeSankalpaForExport(sankalpa) {
+  if (!sankalpa || typeof sankalpa !== "object") return null;
+  if (typeof sankalpa.text !== "string" || sankalpa.text.trim() === "") return null;
+  return {
+    text: sankalpa.text,
+    context: typeof sankalpa.context === "string" ? sankalpa.context : "",
+    date: typeof sankalpa.date === "string" ? sankalpa.date : ""
+  };
+}
+
+// Normalizes a parsed import file into { entries, sankalpa }, accepting BOTH
+// the current object payload and the legacy bare-array format that every
+// export before v2 produced. Without the legacy branch, every file a user
+// exported previously would become unimportable — so this compatibility is
+// not optional. Returns null for anything that isn't a recognizable ledger
+// file; per-entry validation is the caller's job.
+function parseImportedLedgerFile(parsed) {
+  if (Array.isArray(parsed)) {
+    return { entries: parsed, sankalpa: null }; // legacy (pre-v2) export
+  }
+  if (parsed && typeof parsed === "object" && Array.isArray(parsed.entries)) {
+    return { entries: parsed.entries, sankalpa: sanitizeSankalpaForExport(parsed.sankalpa) };
+  }
+  return null;
 }
 
 document.getElementById("export-json-btn")
@@ -2073,7 +2200,7 @@ document.getElementById("export-json-btn")
       return;
     }
 
-    const exportData = buildLedgerExportPayload();
+    const exportData = buildLedgerExportPayload(await getSankalpa());
 
     const blob = new Blob(
       [JSON.stringify(exportData, null, 2)],
@@ -2114,13 +2241,18 @@ importInput?.addEventListener("change", async (event) => {
 
   try {
     const text = await file.text();
-    const importedData = JSON.parse(text);
+    const parsedFile = JSON.parse(text);
 
     // ---- Validation ----
-    if (!Array.isArray(importedData)) {
+    // Accepts both the current object payload and the legacy bare-array
+    // format produced by every export before v2.
+    const parsed = parseImportedLedgerFile(parsedFile);
+    if (!parsed) {
       alert(t("ledgerInvalidFileFormat"));
       return;
     }
+    const importedData = parsed.entries;
+    const importedSankalpa = parsed.sankalpa;
 
     const seenDates = new Set();
     for (const entry of importedData) {
@@ -2156,11 +2288,24 @@ importInput?.addEventListener("change", async (event) => {
       return;
     }
 
+    // Snapshot the CURRENT ledger before overwriting it. This used to run
+    // after the replace, which meant the backup was overwritten with the
+    // imported data in the same breath — so "Restore from Backup" could not
+    // undo a mistaken import, and the replaced data was simply gone. Taking
+    // it first makes restore a real escape hatch.
+    await saveAutomaticBackup(ledgerData);
+
     // ---- Replace Ledger ----
     ledgerData = importedData;
 
     await saveLedger(ledgerData);
-    await saveAutomaticBackup(ledgerData);
+
+    // A Sankalpa is only ever restored from a file that actually carries one
+    // — a legacy (pre-v2) export has none, and must not wipe the Sankalpa
+    // the user already has on this device.
+    if (importedSankalpa) {
+      await saveSankalpa(importedSankalpa);
+    }
 
     alert(t("ledgerImportSuccess"));
 
@@ -2295,7 +2440,7 @@ async function findExistingDriveBackupFileId(accessToken) {
 }
 
 async function uploadLedgerBackupToDrive(accessToken) {
-  const payloadJSON = JSON.stringify(buildLedgerExportPayload(), null, 2);
+  const payloadJSON = JSON.stringify(buildLedgerExportPayload(await getSankalpa()), null, 2);
   const existingFileId = await findExistingDriveBackupFileId(accessToken);
   const request = buildDriveUploadRequest(existingFileId, payloadJSON);
 
@@ -2310,8 +2455,25 @@ async function uploadLedgerBackupToDrive(accessToken) {
   }
 }
 
+// Records that the Sunday *prompt* has been dealt with for today — written
+// by a successful upload AND by every dismiss path, so it deliberately
+// cannot tell you whether a backup actually happened. That's what
+// recordSuccessfulDriveBackup() below is for; don't conflate the two.
 function markSundayBackupHandled() {
   localStorage.setItem("lastSundayBackupPromptDate", todayISO);
+}
+
+// Written ONLY on a genuinely successful upload. Display-state tier (like
+// backgroundChoice), so it's deliberately excluded from Export/Import and
+// the backup payload. Guarded because localStorage can throw when the
+// shared origin quota is full (see setCustomSplashImage()) — a failed
+// status write must never turn a successful backup into an error.
+function recordSuccessfulDriveBackup() {
+  try {
+    localStorage.setItem("lastDriveBackupAt", new Date().toISOString());
+  } catch (e) {
+    console.warn("Could not record the Drive backup timestamp:", e);
+  }
 }
 
 function openSundayBackupModal() {
@@ -2346,6 +2508,8 @@ async function backupToGoogleDrive() {
     const accessToken = await requestGoogleDriveAccessToken();
     await uploadLedgerBackupToDrive(accessToken);
     markSundayBackupHandled();
+    recordSuccessfulDriveBackup();
+    renderDataSafetyStatus();
     closeSundayBackupModal();
     showToast(t("backupToastSuccess"));
   } catch (err) {
