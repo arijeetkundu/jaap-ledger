@@ -72,6 +72,13 @@ async function newFreshPage(browser) {
   });
   await page.goto(BASE, { waitUntil: "networkidle0", timeout: 15000 });
   await new Promise((r) => setTimeout(r, 2600)); // outlast splash
+  // Then wait for the picker itself rather than trusting that fixed sleep.
+  // Every page from this helper starts with no language chosen, so the
+  // picker opening is the reliable signal that initApp() has finished; a
+  // bare timer races it under load and the next click lands on an element
+  // that is not interactive yet ("Node is either not clickable"), which was
+  // observed intermittently once the suite grew to eight files.
+  await page.waitForSelector("#language-picker.open", { timeout: 10000 });
   return { context, page, errors };
 }
 
