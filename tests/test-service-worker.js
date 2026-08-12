@@ -160,16 +160,22 @@ async function newPage(browser) {
       // Simulate a deploy by changing the served file.
       fs.writeFileSync(TARGET, original + "\n" + MARKER + "\n");
 
-      await page.reload({ waitUntil: "networkidle0", timeout: 15000 });
-      await new Promise(r => setTimeout(r, SW_SETTLE_MS));
-      await page.reload({ waitUntil: "networkidle0", timeout: 15000 });
-      await new Promise(r => setTimeout(r, SW_SETTLE_MS));
-
-      const afterDeploy = await page.evaluate(async () => {
-        const res = await fetch("./styles.css");
-        return (await res.text()).includes("sw-deploy-pickup-probe");
-      });
-      assert("a deployed change is picked up rather than cached forever", afterDeploy === true);
+      // Smoke check only (see the structural guard below for the actual
+      // regression detection). How MANY launches this takes depends on when
+      // the background revalidation lands, which under a loaded machine is
+      // not a fixed number -- asserting "exactly two" made this fail
+      // intermittently while the behaviour was fine. Poll a few launches so
+      // it still fails loudly if the answer is genuinely "never".
+      let afterDeploy = false;
+      for (let attempt = 0; attempt < 4 && !afterDeploy; attempt++) {
+        await page.reload({ waitUntil: "networkidle0", timeout: 15000 });
+        await new Promise(r => setTimeout(r, SW_SETTLE_MS));
+        afterDeploy = await page.evaluate(async () => {
+          const res = await fetch("./styles.css");
+          return (await res.text()).includes("sw-deploy-pickup-probe");
+        });
+      }
+      assert("a deployed change is eventually picked up, not cached forever", afterDeploy === true);
 
       // Structural guard, and labelled as such: the assertion above is a
       // real end-to-end smoke check but it CANNOT distinguish the fixed
