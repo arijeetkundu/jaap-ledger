@@ -160,11 +160,8 @@ async function newPage(browser) {
       // Simulate a deploy by changing the served file.
       fs.writeFileSync(TARGET, original + "\n" + MARKER + "\n");
 
-      // One launch later the cache has been refreshed in the background...
       await page.reload({ waitUntil: "networkidle0", timeout: 15000 });
       await new Promise(r => setTimeout(r, SW_SETTLE_MS));
-
-      // ...so by the next launch the app genuinely sees the new file.
       await page.reload({ waitUntil: "networkidle0", timeout: 15000 });
       await new Promise(r => setTimeout(r, SW_SETTLE_MS));
 
@@ -173,6 +170,35 @@ async function newPage(browser) {
         return (await res.text()).includes("sw-deploy-pickup-probe");
       });
       assert("a deployed change is picked up rather than cached forever", afterDeploy === true);
+
+      // Structural guard, and labelled as such: the assertion above is a
+      // real end-to-end smoke check but it CANNOT distinguish the fixed
+      // worker from the buggy one in this environment, so it must not be
+      // mistaken for a regression test.
+      //
+      // The cache-forever bug only bites when the cached copy has an old
+      // Last-Modified, because Chrome's heuristic freshness is a fraction of
+      // the document's age. This test rewrites styles.css to simulate a
+      // deploy, which makes its Last-Modified "now", which makes Chrome
+      // revalidate anyway -- masking the defect. Verified directly: with the
+      // bypass deliberately removed from sw.js, every behavioural variant
+      // tried here (two reloads, five reloads, a fresh navigation, reading
+      // Cache Storage) still passed. Reproducing it faithfully would need a
+      // server that sends production-like caching headers, which is out of
+      // proportion for one line.
+      //
+      // So assert the line itself is present. It is deliberate, load-bearing
+      // and easy to "tidy away" while everything still appears to work --
+      // exactly the kind of thing worth pinning down explicitly.
+      const swSource = fs.readFileSync(path.join(__dirname, "..", "sw.js"), "utf8");
+      assert(
+        "the worker's revalidation explicitly bypasses the HTTP cache",
+        /fetch\(\s*new Request\([^)]*cache:\s*"no-cache"/.test(swSource)
+      );
+      assert(
+        "the install precache explicitly bypasses the HTTP cache too",
+        /new Request\([^)]*cache:\s*"reload"/.test(swSource)
+      );
     } finally {
       fs.writeFileSync(TARGET, original);
     }
