@@ -913,12 +913,33 @@ function openDB() {
   });
 }
 
+// Resolves only once the transaction has actually COMMITTED, and rejects if
+// it fails. This used to be `await store.put(...)` — but an IDBRequest is not
+// a thenable, so that await resolved on the next microtask, before the write
+// landed, and there was no error handler at all. Since this is the sole
+// writer of the primary ledger store, every "Saved ✓" the app has ever shown
+// was unverified, and a failed write (quota exhausted, corrupt DB) was
+// silently swallowed. saveSankalpa() and saveAutomaticBackup() below already
+// do it this way — saveLedger was simply the odd one out.
+//
+// A synchronous throw from put() (e.g. DataCloneError) rejects this promise
+// too, since it happens inside the executor.
 async function saveLedger(data) {
   const db = await openDB();
-  const tx = db.transaction(STORE_NAME, "readwrite");
-  const store = tx.objectStore(STORE_NAME);
 
-  await store.put(data, "entries");
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE_NAME, "readwrite");
+    const store = tx.objectStore(STORE_NAME);
+
+    store.put(data, "entries");
+
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+    // A transaction can also abort without onerror firing (most commonly
+    // QuotaExceededError) — without this the promise would hang forever and
+    // the caller's await would never settle.
+    tx.onabort = () => reject(tx.error || new Error("Ledger transaction aborted"));
+  });
 }
 
 
@@ -936,6 +957,23 @@ let appReady = false;
 // Display preference only — never mutates stored ledger data. Persisted in
 // localStorage (same tier as other display preferences), not IndexedDB.
 let malaViewEnabled = localStorage.getItem("malaViewEnabled") === "true";
+
+// What the user has typed into the Today Card but not yet saved, as raw
+// input strings: { jaap, notes } or null when there's nothing in progress.
+//
+// Module-level for exactly the reason ledgerSearchQuery is (see its comment):
+// renderTodayCard() rebuilds the card's innerHTML from scratch, so anything
+// living only in the DOM is destroyed by any unrelated re-render. And plenty
+// of things re-render — flipping Mala View, switching language, and the
+// translations background retry, which can fire ~100s after launch with no
+// user action at all. Typing a count and a note, then toggling Mala View,
+// used to silently wipe both.
+//
+// Deliberately holds raw strings rather than a parsed jaap value: this is
+// what the user typed, in whatever unit was active, and it is not ledger
+// data until a save actually commits. Cleared only on a genuinely successful
+// write (see updateTodayEntry) and on a date rollover (see renderToday).
+let todayDraft = null;
 
 // ---------- Sumiran-Lite: Sankalpa storage ----------
 
@@ -961,6 +999,10 @@ async function saveSankalpa({ text, context, date }) {
     store.put({ id: "primary", text, context, date }, "primary");
     tx.oncomplete = () => resolve();
     tx.onerror = () => reject(tx.error);
+    // See saveLedger() — an abort (typically QuotaExceededError) doesn't
+    // fire onerror, and without this the promise never settles, so a
+    // caller's try/catch would wait forever instead of reporting failure.
+    tx.onabort = () => reject(tx.error || new Error("Sankalpa transaction aborted"));
   });
 }
 
@@ -1185,6 +1227,13 @@ async function saveAutomaticBackup(data) {
       console.error("Backup transaction failed", tx.error);
       reject(tx.error);
     };
+
+    // See saveLedger() — an abort doesn't fire onerror, and an unsettled
+    // promise here would hang the save path that awaits it.
+    tx.onabort = () => {
+      console.error("Backup transaction aborted", tx.error);
+      reject(tx.error || new Error("Backup transaction aborted"));
+    };
   });
 }
 
@@ -1223,15 +1272,27 @@ async function restoreFromBackup() {
 
   if (!confirmRestore) return;
 
+  // Held so a failed write can put the live ledger back — otherwise a
+  // restore that fails to persist leaves the user looking at the backup's
+  // contents while the store still holds their real data, and the mismatch
+  // only reveals itself on the next launch.
+  const previousLedger = ledgerData;
   ledgerData = backup.entries;
 
-  await saveLedger(ledgerData);
+  try {
+    await saveLedger(ledgerData);
 
-  // Older backups (taken before the Sankalpa was covered) have no sankalpa
-  // field — restoring one must leave the user's current vow alone rather
-  // than wiping it.
-  if (backup.sankalpa) {
-    await saveSankalpa(backup.sankalpa);
+    // Older backups (taken before the Sankalpa was covered) have no sankalpa
+    // field — restoring one must leave the user's current vow alone rather
+    // than wiping it.
+    if (backup.sankalpa) {
+      await saveSankalpa(backup.sankalpa);
+    }
+  } catch (err) {
+    ledgerData = previousLedger;
+    console.error("Failed to restore from backup:", err);
+    alert(t("ledgerRestoreFailed"));
+    return;
   }
 
   alert(t("ledgerRestoreSuccess"));
@@ -1309,7 +1370,13 @@ function renderDataSafetyStatus() {
 
 // ---------- Rendering ----------
 function renderToday() {
+  const previousToday = todayISO;
   todayISO = getTodayISO();
+  // A draft belongs to the day it was typed on. If the date rolled over
+  // underneath a card left open mid-edit, carrying it forward would drop
+  // yesterday's half-written text into today's entry.
+  if (todayISO !== previousToday) todayDraft = null;
+
   const entry = ensureTodayEntryExists();
   // Computed once here and threaded through — renderReflectionSummary() and
   // renderLedgerList() previously each called getMilestoneHistory(ledgerData)
@@ -1489,6 +1556,10 @@ function buildYearRows(yearContainer, entries, { sparklineMap, milestoneByDate }
           return;
         }
 
+        // Same rollback capture as updateTodayEntry() — see its comment.
+        const previousJaap = entry.jaap;
+        const previousNotes = entry.notes;
+
         entry.jaap = newJaap;
         entry.notes = notesInput;
 
@@ -1498,8 +1569,17 @@ function buildYearRows(yearContainer, entries, { sparklineMap, milestoneByDate }
         // silently skipped the petal celebration.
         const crossedNewMilestone = getCroreMilestone(entry.date);
 
-        await saveLedger(ledgerData);
-        await saveAutomaticBackup(ledgerData);
+        try {
+          await saveLedger(ledgerData);
+          await saveAutomaticBackup(ledgerData);
+        } catch (err) {
+          entry.jaap = previousJaap;
+          entry.notes = previousNotes;
+          console.error("Failed to save ledger entry:", err);
+          showToast(t("commonSaveFailed"));
+          return;
+        }
+
         renderToday();
         showToast(t("commonSavedToast"));
 
@@ -1774,6 +1854,18 @@ function renderLedgerList(milestoneHistory) {
 function renderTodayCard(entry) {
   const container = document.getElementById("today-card");
 
+  // Which field the user was in, and where their caret sat, before this
+  // rebuild destroys it — restored at the end, the same way
+  // wireLedgerSearchInput() already does for the search box. Without it, a
+  // re-render mid-typing drops focus and the user carries on typing into
+  // nothing. selectionStart is null on <input type="number">, which is what
+  // the null check below accounts for.
+  const active = document.activeElement;
+  const focusedId =
+    active && (active.id === "today-jaap" || active.id === "today-notes") ? active.id : null;
+  const caret =
+    focusedId && typeof active.selectionStart === "number" ? active.selectionStart : null;
+
   // Only rendered when there's a real memory to show (see getOnThisDayEntry).
   const onThisDay = getOnThisDayEntry(entry.date);
 
@@ -1814,6 +1906,37 @@ function renderTodayCard(entry) {
 
   `;
 
+  const jaapEl = document.getElementById("today-jaap");
+  const notesEl = document.getElementById("today-notes");
+
+  // An in-progress draft wins over the stored entry — the markup above was
+  // built from what's saved, which is precisely what we must not show the
+  // user back while they're still mid-edit. Set as properties, never
+  // interpolated into the template: escapeHTML() doesn't escape quotes.
+  if (todayDraft) {
+    if (jaapEl) jaapEl.value = todayDraft.jaap;
+    if (notesEl) notesEl.value = todayDraft.notes;
+  }
+
+  const captureDraft = () => {
+    todayDraft = {
+      jaap: jaapEl ? jaapEl.value : "",
+      notes: notesEl ? notesEl.value : "",
+    };
+  };
+  jaapEl?.addEventListener("input", captureDraft);
+  notesEl?.addEventListener("input", captureDraft);
+
+  if (focusedId) {
+    const refocus = document.getElementById(focusedId);
+    if (refocus) {
+      refocus.focus();
+      if (caret !== null && typeof refocus.setSelectionRange === "function") {
+        refocus.setSelectionRange(caret, caret);
+      }
+    }
+  }
+
   document
     .getElementById("update-today")
     .addEventListener("click", updateTodayEntry);
@@ -1849,13 +1972,37 @@ async function updateTodayEntry() {
     return;
   }
 
+  // Captured before the mutation so a failed write can put memory back the
+  // way it was. Without this, entry.jaap/entry.notes are assigned before the
+  // await and simply stay assigned when the write fails — leaving ledgerData
+  // ahead of what's actually on disk, so every total on screen reflects a
+  // value that was never persisted and vanishes on the next launch.
+  const previousJaap = entry.jaap;
+  const previousNotes = entry.notes;
+
   entry.jaap = newJaap;
   entry.notes = notesInput;
 
   const crossedNewMilestone = getCroreMilestone(entry.date);
 
-  await saveLedger(ledgerData);
-  await saveAutomaticBackup(ledgerData);
+  try {
+    await saveLedger(ledgerData);
+    await saveAutomaticBackup(ledgerData);
+  } catch (err) {
+    // Roll back, then tell the user plainly. Deliberately no re-render: the
+    // card still shows what they typed (and todayDraft still holds it), so
+    // they can correct or retry without losing the entry they just wrote.
+    entry.jaap = previousJaap;
+    entry.notes = previousNotes;
+    console.error("Failed to save today's entry:", err);
+    showToast(t("commonSaveFailed"));
+    return;
+  }
+
+  // Only once the write has genuinely committed: drop the draft, confirm,
+  // and celebrate. Previously all three ran regardless of whether the save
+  // succeeded, because nothing could report that it hadn't.
+  todayDraft = null;
   renderToday();
   showToast(t("commonSavedToast"));
 
@@ -1892,6 +2039,22 @@ document.addEventListener("click", (e) => {
 
 document.getElementById("mala-toggle")?.addEventListener("change", (e) => {
   malaViewEnabled = e.target.checked;
+
+  // An unsaved draft holds what the user typed in the unit that was active
+  // when they typed it. Now that the unit has changed, the same digits would
+  // mean a completely different quantity — 500 jaap silently becoming 500
+  // mala (54,000 jaap) — so convert rather than reinterpret. Non-numeric or
+  // empty input is left exactly as typed; it isn't a quantity yet.
+  if (todayDraft && todayDraft.jaap !== "") {
+    const typed = Number(todayDraft.jaap);
+    if (Number.isFinite(typed)) {
+      todayDraft = {
+        ...todayDraft,
+        jaap: String(malaViewEnabled ? jaapToMala(typed) : malaToJaap(typed)),
+      };
+    }
+  }
+
   localStorage.setItem("malaViewEnabled", String(malaViewEnabled));
   updateMalaToggleButton();
   renderToday();
@@ -2472,6 +2635,12 @@ importInput?.addEventListener("change", async (event) => {
     return;
   }
 
+  // Held for the same reason as restoreFromBackup()'s: the catch below
+  // already reported failures, but it left ledgerData holding the imported
+  // entries even when they never reached disk. Harmless no-op when the
+  // failure happened before the swap (a parse error, say).
+  const previousLedger = ledgerData;
+
   try {
     const text = await file.text();
     const parsedFile = JSON.parse(text);
@@ -2522,10 +2691,18 @@ importInput?.addEventListener("change", async (event) => {
     }
 
     // Snapshot the CURRENT ledger before overwriting it. This used to run
-    // after the replace, which meant the backup was overwritten with the
-    // imported data in the same breath — so "Restore from Backup" could not
-    // undo a mistaken import, and the replaced data was simply gone. Taking
-    // it first makes restore a real escape hatch.
+    // after the replace, which overwrote the backup with the imported data in
+    // the same breath, so the replaced data was gone immediately. Taking it
+    // first is strictly better and is the best protection available at this
+    // moment.
+    //
+    // But be precise about what it buys, because an earlier version of this
+    // comment claimed a guarantee the code does not provide: there is exactly
+    // ONE backup slot (saveAutomaticBackup writes the same "latest" key on
+    // every single save), so this snapshot survives only until the next save.
+    // Restore can therefore undo a mistaken import only if nothing has been
+    // saved since. Once the user saves an entry, the pre-import ledger is
+    // unrecoverable from here. Export remains the only durable escape hatch.
     await saveAutomaticBackup(ledgerData);
 
     // ---- Replace Ledger ----
@@ -2545,6 +2722,7 @@ importInput?.addEventListener("change", async (event) => {
     renderToday();
 
   } catch (err) {
+    ledgerData = previousLedger;
     console.error("Import failed:", err);
     alert(t("ledgerImportFailed"));
   } finally {

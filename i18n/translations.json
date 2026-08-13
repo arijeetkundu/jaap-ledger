@@ -464,6 +464,16 @@
     "hi": "सहेजा गया ✓",
     "bn": "সংরক্ষিত ✓"
   },
+  "commonSaveFailed": {
+    "en": "Could not save. Please try again.",
+    "hi": "सहेजा नहीं जा सका। कृपया पुनः प्रयास करें।",
+    "bn": "সংরক্ষণ করা যায়নি। আবার চেষ্টা করুন।"
+  },
+  "ledgerRestoreFailed": {
+    "en": "Could not restore from backup. Your ledger is unchanged.",
+    "hi": "बैकअप से पुनर्स्थापित नहीं किया जा सका। आपका लेजर अपरिवर्तित है।",
+    "bn": "ব্যাকআপ থেকে ফিরিয়ে আনা যায়নি। আপনার লেজার অপরিবর্তিত রয়েছে।"
+  },
   "ledgerListMilestoneBadge": {
     "en": "◈ {crore} Crore Jaap Completed",
     "hi": "◈ {crore} करोड़ जाप पूर्ण",

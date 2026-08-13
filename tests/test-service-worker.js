@@ -166,8 +166,17 @@ async function newPage(browser) {
       // not a fixed number -- asserting "exactly two" made this fail
       // intermittently while the behaviour was fine. Poll a few launches so
       // it still fails loudly if the answer is genuinely "never".
+      //
+      // The budget is 8 rather than 4 because 4 was still too tight in the
+      // full `npm test` run specifically: by the time this suite starts,
+      // seven others have already run and the machine is loaded, so the
+      // background revalidation lands later than it does when this file is
+      // run on its own. It failed here while passing standalone. Polling
+      // more times costs nothing when the worker is behaving (the loop exits
+      // on the first success) and still fails loudly if the answer is
+      // genuinely "never", which is the regression this guards.
       let afterDeploy = false;
-      for (let attempt = 0; attempt < 4 && !afterDeploy; attempt++) {
+      for (let attempt = 0; attempt < 8 && !afterDeploy; attempt++) {
         await page.reload({ waitUntil: "networkidle0", timeout: 15000 });
         await new Promise(r => setTimeout(r, SW_SETTLE_MS));
         afterDeploy = await page.evaluate(async () => {
