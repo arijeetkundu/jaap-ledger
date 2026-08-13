@@ -459,6 +459,11 @@
     "hi": "सहेजा गया ✓",
     "bn": "সংরক্ষিত ✓"
   },
+  "ledgerBackupCorrupt": {
+    "en": "That backup is damaged and cannot be restored. Your ledger is unchanged.",
+    "hi": "वह बैकअप क्षतिग्रस्त है और पुनर्स्थापित नहीं किया जा सकता। आपका लेजर अपरिवर्तित है।",
+    "bn": "সেই ব্যাকআপটি ক্ষতিগ্রস্ত এবং ফিরিয়ে আনা যাবে না। আপনার লেজার অপরিবর্তিত রয়েছে।"
+  },
   "sankalpaLoadFailed": {
     "en": "Could not open your Sankalpa. Please try again.",
     "hi": "आपका संकल्प नहीं खुल सका। कृपया पुनः प्रयास करें।",

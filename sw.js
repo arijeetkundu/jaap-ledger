@@ -112,6 +112,21 @@ async function staleWhileRevalidate(event) {
   // whatever build they first loaded, with no way out but clearing site
   // data. This project's files are unhashed and long-lived, so heuristic
   // HTTP caching bites hard here; verified against a real deploy simulation.
+  // Deliberately rebuilt from the URL rather than from the original Request.
+  //
+  // The audit suggested carrying the original request's headers/credentials
+  // over by using `new Request(request, {...})`, and that was tried and
+  // reverted. It buys nothing here — every same-origin GET this worker sees
+  // is a plain static-asset fetch against a server that does no content
+  // negotiation — while forcing a real semantic change: a navigation request
+  // has mode "navigate", which cannot be reconstructed, so it would have to
+  // be overridden to something else. Changing navigation semantics to
+  // preserve headers the app never sets is a bad trade.
+  //
+  // It also broke the structural guard in tests/test-service-worker.js,
+  // which pins this exact expression precisely because the cache-bypass is
+  // load-bearing and its absence can't be detected behaviourally here. That
+  // guard was right to complain; don't loosen it to accommodate a rewrite.
   const networkFetch = fetch(new Request(request.url, { cache: "no-cache" }))
     .then((response) => {
       // Only store genuinely successful, non-opaque responses — caching an

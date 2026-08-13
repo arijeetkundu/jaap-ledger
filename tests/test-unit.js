@@ -240,6 +240,98 @@ function assert(label, condition) {
   assert("a future date is not within N days", await page.evaluate((d) => isWithinLastNDays(d, 7), tomorrow) === false);
   assert("today's own entry is editable", await page.evaluate((t) => isEditableEntry(t), today) === true);
 
+  // The window is "today plus the six days before it" — seven days total,
+  // matching what ensureRecentEntriesExist(7) materialises and what the docs
+  // promise. isEditableEntry() used to delegate to isWithinLastNDays(d, 7),
+  // whose inclusive `<= days` accepted offsets 0-7, i.e. EIGHT days.
+  // isWithinLastNDays itself is deliberately unchanged (asserted above).
+  const sixDaysAgo = await page.evaluate((t) => addDaysISO(t, -6), today);
+  assert("6 days ago is editable (last day inside the window)", await page.evaluate((d) => isEditableEntry(d), sixDaysAgo) === true);
+  assert("7 days ago is NOT editable (the off-by-one that used to slip through)", await page.evaluate((d) => isEditableEntry(d), sevenDaysAgo) === false);
+  assert("8 days ago is NOT editable", await page.evaluate((d) => isEditableEntry(d), eightDaysAgo) === false);
+  assert("a future date is not editable", await page.evaluate((d) => isEditableEntry(d), tomorrow) === false);
+
+  // ── areLedgerEntriesValid (shared by import/restore/recovery) ─────
+  // Restore and the backup-recovery branch of loadLedgerFromDB() used to
+  // apply only an Array.isArray check, so a corrupt backup could reach
+  // ledgerData and crash the next render — hasExplicitPoornima() calls
+  // notes.toLowerCase(), and renderToday() is the single render entry point,
+  // so that takes the whole app down.
+  console.log("\n=== areLedgerEntriesValid ===");
+  const valid = [{ date: "2026-01-05", jaap: 216, notes: "" }];
+  assert("a well-formed ledger validates", await page.evaluate((e) => areLedgerEntriesValid(e), valid) === true);
+  assert("an empty ledger is valid", await page.evaluate(() => areLedgerEntriesValid([])) === true);
+  assert("a non-array is rejected", await page.evaluate(() => areLedgerEntriesValid(null)) === false);
+  assert(
+    "a non-string notes is rejected (the render-crashing case)",
+    await page.evaluate(() => areLedgerEntriesValid([{ date: "2026-01-05", jaap: 1, notes: 123 }])) === false
+  );
+  assert(
+    "a malformed date is rejected",
+    await page.evaluate(() => areLedgerEntriesValid([{ date: "05-01-2026", jaap: 1, notes: "" }])) === false
+  );
+  assert(
+    "a negative jaap is rejected",
+    await page.evaluate(() => areLedgerEntriesValid([{ date: "2026-01-05", jaap: -500, notes: "" }])) === false
+  );
+  assert(
+    "a NaN jaap is rejected",
+    await page.evaluate(() => areLedgerEntriesValid([{ date: "2026-01-05", jaap: NaN, notes: "" }])) === false
+  );
+  assert(
+    "a null jaap (no practice recorded) is accepted",
+    await page.evaluate(() => areLedgerEntriesValid([{ date: "2026-01-05", jaap: null, notes: "" }])) === true
+  );
+  assert(
+    "duplicate dates are rejected",
+    await page.evaluate(() => areLedgerEntriesValid([
+      { date: "2026-01-05", jaap: 1, notes: "" },
+      { date: "2026-01-05", jaap: 2, notes: "" },
+    ])) === false
+  );
+
+  // ── formatDate on malformed input ─────────────────────────────────
+  // Reachable via a Sankalpa whose date sanitizeSankalpaForExport() defaults
+  // to "". It used to render "undefined undefined NaN", and formatDate(
+  // undefined) threw outright — inside the Sankalpa page render, that's the
+  // whole page.
+  console.log("\n=== formatDate / formatDateLong on bad input ===");
+  assert('formatDate("") returns empty, not "undefined undefined 0"', await page.evaluate(() => formatDate("")) === "");
+  assert('formatDate("junk") returns empty', await page.evaluate(() => formatDate("junk")) === "");
+  assert("formatDate(undefined) returns empty instead of throwing", await page.evaluate(() => formatDate(undefined)) === "");
+  assert("formatDate(null) returns empty instead of throwing", await page.evaluate(() => formatDate(null)) === "");
+  assert('formatDate rejects an out-of-range month', await page.evaluate(() => formatDate("2026-13-01")) === "");
+  assert("formatDate still formats a real date", await page.evaluate(() => formatDate("2026-04-12")) === "12 Apr 2026");
+  assert("formatDateLong(undefined) returns empty instead of throwing", await page.evaluate(() => formatDateLong(undefined)) === "");
+
+  // ── escapeAttr (quote-safe attribute values) ──────────────────────
+  // escapeHTML() deliberately doesn't escape `"`, so it must never build an
+  // attribute. Today no dictionary entry contains a quote, which is a fact
+  // about the content rather than the code.
+  console.log("\n=== escapeAttr ===");
+  assert(
+    "escapeAttr escapes double quotes so a value cannot break out of an attribute",
+    await page.evaluate(() => escapeAttr('say "hi"')) === "say &quot;hi&quot;"
+  );
+  assert(
+    "escapeAttr still escapes angle brackets and ampersands",
+    await page.evaluate(() => escapeAttr('<b>&</b>')) === "&lt;b&gt;&amp;&lt;/b&gt;"
+  );
+
+  // ── openDB connection reuse ───────────────────────────────────────
+  // Every call used to open a brand-new connection and never close any; one
+  // Today Card save opens three. Leaked connections block a future
+  // DB_VERSION upgrade.
+  console.log("\n=== openDB connection reuse ===");
+  assert(
+    "openDB hands back the same connection rather than opening a new one each call",
+    await page.evaluate(async () => {
+      const first = await openDB();
+      const second = await openDB();
+      return first === second;
+    }) === true
+  );
+
   // ── computeJaapFromInput (precision guard) ────────────────────────
   console.log("\n=== computeJaapFromInput ===");
   assert("empty string input -> null", await page.evaluate(() => computeJaapFromInput("", 500)) === null);

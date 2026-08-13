@@ -262,10 +262,6 @@ p {
 }
 
 /* Ledger jaap */
-.ledger-jaap {
-  font-weight: 500;
-}
-
 /* Ledger row container */
 .ledger-row {
   cursor: pointer;
@@ -897,12 +893,6 @@ body.loading {
   overflow: hidden;
   height: 100vh;
 }
-
-/* Hide the main content while splash is active to prevent scrolling */
-body.loading {
-  overflow: hidden;
-}
-/* ---------- Maintenance Drawer ---------- */
 
 /* ---------- Maintenance Drawer ---------- */
 
