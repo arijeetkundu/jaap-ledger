@@ -74,9 +74,24 @@ async function freshLoad(page, { clearStorage = false } = {}) {
   await page.setViewport({ width: 390, height: 844 });
 
   const pageErrors = [];
-  page.on("pageerror", err => pageErrors.push(err.message));
+  // The save-failure tests below deliberately force IndexedDB writes to
+  // abort, and the app correctly reports that with console.error. Those are
+  // the expected, *desired* output of those tests — collecting them would
+  // make the end-of-run "no JS errors" assertion fail for the wrong reason.
+  // Fragments are pushed only for the duration of the test that expects
+  // them, so an unexpected error anywhere else is still caught.
+  const expectedErrorFragments = [];
+  const isExpectedError = (text) => expectedErrorFragments.some(f => text.includes(f));
+
+  // err can be null — an unhandled promise rejection whose reason is a
+  // DOMException surfaces here with no Error object at all, which is exactly
+  // what an unguarded failed IndexedDB write produces.
+  page.on("pageerror", err => {
+    const message = err && err.message ? err.message : String(err);
+    if (!isExpectedError(message)) pageErrors.push(message);
+  });
   page.on("console", msg => {
-    if (msg.type() === "error") pageErrors.push(msg.text());
+    if (msg.type() === "error" && !isExpectedError(msg.text())) pageErrors.push(msg.text());
   });
 
   // Most flows here are the "proceed" path (establish, rewrite, import,
@@ -909,10 +924,18 @@ async function freshLoad(page, { clearStorage = false } = {}) {
   // so Restore must be able to walk the import back. Previously the backup
   // was overwritten *with* the imported data, making a mistaken import
   // permanent and unrecoverable.
+  //
+  // Be clear about the scope of what this proves: nothing has been saved
+  // between the import and the restore below. There is only ONE backup slot
+  // (keyed "latest", rewritten by every save), so a single save here would
+  // overwrite the pre-import snapshot and this recovery would no longer be
+  // possible. That limitation is deliberate and documented; this assertion
+  // covers the ordering fix, not a general "imports are always undoable"
+  // guarantee — the app no longer claims one.
   await page.click("#restore-backup-btn");
   await new Promise(r => setTimeout(r, 700));
   assert(
-    "Restore from Backup undoes a mistaken import (pre-import ledger comes back)",
+    "Restore from Backup undoes an import when nothing has been saved since",
     (await page.evaluate(() => ledgerData.some(e => e.date === "2026-02-02" && e.jaap === 999))) === true
   );
   assert(
@@ -944,6 +967,144 @@ async function freshLoad(page, { clearStorage = false } = {}) {
   assert("with no recorded backup the Drive status says so plainly", neverStatus.includes("Not yet backed up"));
 
   await page.click("#maintenance-toggle"); // close drawer
+
+  // ── Save failure is reported, not swallowed ──────────────────────────
+  // Regression cover for the audit's two data-loss findings: saveLedger()
+  // used to `await store.put(...)` — an IDBRequest is not a thenable, so it
+  // resolved before the transaction committed and no write error could ever
+  // surface — and no save path had a try/catch, so a failed write showed no
+  // toast at all while ledgerData kept the value that never reached disk.
+  //
+  // Both are forced here by making every IndexedDB put() abort its own
+  // transaction. Verified to fail without their fixes: with the old
+  // saveLedger, the first assertion below reports "resolved".
+  console.log("\n=== Save failure is reported, not swallowed ===");
+
+  const forceWriteFailure = () => page.evaluate(() => {
+    window.__origPut = IDBObjectStore.prototype.put;
+    IDBObjectStore.prototype.put = function (...args) {
+      const req = window.__origPut.apply(this, args);
+      try { this.transaction.abort(); } catch (e) { /* already aborting */ }
+      return req;
+    };
+  });
+  const restoreWrites = () => page.evaluate(() => {
+    if (window.__origPut) {
+      IDBObjectStore.prototype.put = window.__origPut;
+      delete window.__origPut;
+    }
+  });
+
+  await freshLoad(page);
+  expectedErrorFragments.push("Failed to save today's entry:", "Backup transaction");
+
+  await forceWriteFailure();
+  const saveOutcome = await page.evaluate(async () => {
+    try {
+      await saveLedger(ledgerData);
+      return "resolved";
+    } catch (e) {
+      return "rejected";
+    }
+  });
+  assert(
+    "saveLedger rejects when its transaction aborts (it used to resolve before commit)",
+    saveOutcome === "rejected"
+  );
+
+  const jaapBeforeFailedSave = await page.evaluate(() => {
+    const e = ledgerData.find(x => x.date === todayISO);
+    return e ? e.jaap : null;
+  });
+
+  await page.evaluate(() => {
+    const input = document.getElementById("today-jaap");
+    input.value = "77777";
+    input.dispatchEvent(new Event("input", { bubbles: true }));
+  });
+  await page.click("#update-today");
+  await new Promise(r => setTimeout(r, 500));
+
+  const failToast = await page.evaluate(() => {
+    const el = document.getElementById("toast");
+    return el ? el.textContent : "";
+  });
+  assert("a failed save tells the user it could not save", failToast.includes("Could not save"));
+  assert("a failed save does not claim success", !failToast.includes("Saved"));
+
+  const jaapAfterFailedSave = await page.evaluate(() => {
+    const e = ledgerData.find(x => x.date === todayISO);
+    return e ? e.jaap : null;
+  });
+  assert(
+    "a failed save rolls ledgerData back, so memory never runs ahead of disk",
+    jaapAfterFailedSave === jaapBeforeFailedSave
+  );
+
+  await restoreWrites();
+  expectedErrorFragments.length = 0;
+
+  // ── Unsaved Today Card input survives unrelated re-renders ───────────
+  // The card is rebuilt via innerHTML by any renderToday(), so anything held
+  // only in the DOM was destroyed by a Mala View toggle, a language switch,
+  // or the translations background retry firing ~100s after launch. Verified
+  // to fail without its fix: both fields come back empty.
+  console.log("\n=== Unsaved Today Card input survives re-renders ===");
+
+  await freshLoad(page);
+  await page.evaluate(() => {
+    const j = document.getElementById("today-jaap");
+    const n = document.getElementById("today-notes");
+    j.value = "540";
+    j.dispatchEvent(new Event("input", { bubbles: true }));
+    n.value = "half-written note";
+    n.dispatchEvent(new Event("input", { bubbles: true }));
+  });
+
+  await page.evaluate(() => {
+    const cb = document.getElementById("mala-toggle");
+    cb.checked = true;
+    cb.dispatchEvent(new Event("change"));
+  });
+  await new Promise(r => setTimeout(r, 200));
+
+  const afterToggle = await page.evaluate(() => ({
+    jaap: document.getElementById("today-jaap").value,
+    notes: document.getElementById("today-notes").value,
+  }));
+  assert("an in-progress note survives a Mala View toggle", afterToggle.notes === "half-written note");
+  // 540 jaap is 5 mala. The count must be CONVERTED, not reinterpreted —
+  // leaving "540" would silently turn 540 jaap into 540 mala (58,320 jaap).
+  assert("the in-progress count is converted into the new unit", afterToggle.jaap === "5");
+
+  await page.evaluate(() => {
+    const cb = document.getElementById("mala-toggle");
+    cb.checked = false;
+    cb.dispatchEvent(new Event("change"));
+  });
+  await new Promise(r => setTimeout(r, 200));
+  const afterToggleBack = await page.evaluate(() => document.getElementById("today-jaap").value);
+  assert("toggling back converts the count to the original jaap figure", afterToggleBack === "540");
+
+  await page.evaluate(() => applyAppLanguage("hi"));
+  await new Promise(r => setTimeout(r, 300));
+  const afterLangSwitch = await page.evaluate(() => ({
+    jaap: document.getElementById("today-jaap").value,
+    notes: document.getElementById("today-notes").value,
+  }));
+  assert("an in-progress count survives a language switch", afterLangSwitch.jaap === "540");
+  assert("an in-progress note survives a language switch", afterLangSwitch.notes === "half-written note");
+  await page.evaluate(() => applyAppLanguage("en"));
+  await new Promise(r => setTimeout(r, 200));
+
+  // A successful save must clear the draft, or the next render would keep
+  // replaying stale typed text over the saved entry forever.
+  await page.click("#update-today");
+  await new Promise(r => setTimeout(r, 500));
+  assert(
+    "a successful save clears the draft",
+    await page.evaluate(() => todayDraft === null)
+  );
 
   // ── Console errors ───────────────────────────────────────────────────
   console.log("\n=== Console errors ===");
