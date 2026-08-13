@@ -48,7 +48,16 @@ async function newPage(browser) {
 }
 
 (async () => {
-  const browser = await puppeteer.launch({ headless: true, args: ["--no-sandbox"] });
+  const browser = await puppeteer.launch({
+    headless: true,
+    args: ["--no-sandbox"],
+    // Puppeteer's 30s default is not enough on a loaded machine: by the
+    // time the later suites in `npm test` start, seven browsers have
+    // already been launched and torn down, and the launch itself timed
+    // out -- a capacity limit, not a failing assertion. Costs nothing
+    // when the machine is idle.
+    timeout: 90000,
+  });
   const allErrors = [];
 
   // ── Registration, scope, and precache contents ───────────────────────
@@ -105,11 +114,27 @@ async function newPage(browser) {
     await page.goto(BASE + "/", { waitUntil: "networkidle0", timeout: 15000 });
     await new Promise(r => setTimeout(r, SW_SETTLE_MS));
 
-    await page.setOfflineMode(true);
-    await page.reload({ waitUntil: "domcontentloaded", timeout: 15000 });
+    // Launch offline on a SECOND page in the same context rather than
+    // reloading this one. Same context means the worker registration and its
+    // caches are shared, so this is still a genuine cold offline launch —
+    // and it is closer to what a user actually does (open the app again)
+    // than a reload is. The reload it replaces intermittently threw
+    // "Attempted to use detached Frame": Chrome can swap the frame on a
+    // navigation and Puppeteer is left holding the old one. That took the
+    // whole suite down rather than failing an assertion, and it is a race in
+    // the harness, not a defect in the worker.
+    await page.close();
+    const offlinePage = await context.newPage();
+    await offlinePage.setViewport({ width: 390, height: 844 });
+    offlinePage.on("pageerror", (err) => errors.push(err.message));
+    offlinePage.on("console", (msg) => {
+      if (msg.type() === "error") errors.push(msg.text());
+    });
+    await offlinePage.setOfflineMode(true);
+    await offlinePage.goto(BASE + "/", { waitUntil: "domcontentloaded", timeout: 15000 });
     await new Promise(r => setTimeout(r, SPLASH_WAIT_MS + 700));
 
-    const offline = await page.evaluate(() => ({
+    const offline = await offlinePage.evaluate(() => ({
       heading: document.querySelector("h1")?.textContent || "",
       todayCardRendered: (document.getElementById("today-card")?.innerHTML || "").trim().length > 0,
       ledgerRendered: (document.getElementById("ledger-list")?.innerHTML || "").trim().length > 0,
@@ -128,7 +153,7 @@ async function newPage(browser) {
     assert("translations are available offline (not raw keys)", offline.translationsLoaded);
     assert("offline UI shows real English, not a raw dictionary key", offline.todayHeading === "Today");
 
-    await page.setOfflineMode(false);
+    await offlinePage.setOfflineMode(false);
     allErrors.push(...errors);
     await context.close();
   }
@@ -161,29 +186,46 @@ async function newPage(browser) {
       fs.writeFileSync(TARGET, original + "\n" + MARKER + "\n");
 
       // Smoke check only (see the structural guard below for the actual
-      // regression detection). How MANY launches this takes depends on when
-      // the background revalidation lands, which under a loaded machine is
-      // not a fixed number -- asserting "exactly two" made this fail
-      // intermittently while the behaviour was fine. Poll a few launches so
-      // it still fails loudly if the answer is genuinely "never".
+      // regression detection).
       //
-      // The budget is 8 rather than 4 because 4 was still too tight in the
-      // full `npm test` run specifically: by the time this suite starts,
-      // seven others have already run and the machine is loaded, so the
-      // background revalidation lands later than it does when this file is
-      // run on its own. It failed here while passing standalone. Polling
-      // more times costs nothing when the worker is behaving (the loop exits
-      // on the first success) and still fails loudly if the answer is
-      // genuinely "never", which is the regression this guards.
-      let afterDeploy = false;
-      for (let attempt = 0; attempt < 8 && !afterDeploy; attempt++) {
-        await page.reload({ waitUntil: "networkidle0", timeout: 15000 });
-        await new Promise(r => setTimeout(r, SW_SETTLE_MS));
-        afterDeploy = await page.evaluate(async () => {
-          const res = await fetch("./styles.css");
-          return (await res.text()).includes("sw-deploy-pickup-probe");
-        });
-      }
+      // This polls the CACHE, not page reloads. The earlier version reloaded
+      // the page a fixed number of times and hoped the background
+      // revalidation happened to land in one of the gaps -- which is a race,
+      // not a condition, so it failed intermittently (and in different
+      // suites' company) while the worker was behaving correctly. Raising
+      // the reload count from 4 to 8 did not fix it, and neither did
+      // returning cache.put() in sw.js: the write can simply land later than
+      // any fixed number of reloads, because stale-while-revalidate makes no
+      // promise about WHEN.
+      //
+      // What the worker actually guarantees is that the cached entry is
+      // eventually replaced. So: reload once to trigger a revalidation, then
+      // wait for that to become true, reading Cache Storage directly. It
+      // still fails loudly if the answer is genuinely "never", which is the
+      // regression being guarded, but it no longer fails merely because the
+      // machine was busy.
+      const DEPLOY_PICKUP_TIMEOUT_MS = 20000;
+      await page.reload({ waitUntil: "networkidle0", timeout: 15000 });
+      const afterDeploy = await page.evaluate(async (timeoutMs) => {
+        const deadline = Date.now() + timeoutMs;
+        while (Date.now() < deadline) {
+          // Read what the worker has actually stored, rather than what a
+          // fetch() happens to be answered with this instant.
+          const keys = await caches.keys();
+          for (const key of keys) {
+            const cache = await caches.open(key);
+            const hit = await cache.match("./styles.css");
+            if (hit && (await hit.clone().text()).includes("sw-deploy-pickup-probe")) {
+              return true;
+            }
+          }
+          // Keep asking through the worker too — that's what drives the
+          // stale-while-revalidate refresh in the first place.
+          await fetch("./styles.css");
+          await new Promise(r => setTimeout(r, 500));
+        }
+        return false;
+      }, DEPLOY_PICKUP_TIMEOUT_MS);
       assert("a deployed change is eventually picked up, not cached forever", afterDeploy === true);
 
       // Structural guard, and labelled as such: the assertion above is a

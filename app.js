@@ -1,5 +1,49 @@
+// ---------- Guarded localStorage access ----------
+// app.js is a classic script, not a module: a throw at top-level scope
+// aborts the ENTIRE remaining file. Nothing below the throw is ever
+// defined — no initApp(), no render, no event listeners, no service worker
+// registration — so the user is left staring at a splash screen that never
+// clears, with no way to recover short of clearing site data. That is the
+// single worst failure this file can have, and several unguarded
+// localStorage calls at top-level scope could cause it:
+//
+//   - setItem throws QuotaExceededError when the origin's storage is full,
+//     which four ~250KB custom splash images get genuinely close to. The
+//     lastSplashImage write in chooseSplashImage() below runs before first
+//     paint, making it the most exposed line in the file.
+//   - Merely *reading* localStorage throws SecurityError when the platform
+//     blocks all site data (Safari's "Block All Cookies", some embedded
+//     webviews). That kills the app on line one, before anything at all.
+//
+// These accessors degrade to the in-memory default instead. The pattern was
+// already understood in this file — resolveSplashCustomSlots() and
+// setCustomSplashImage() both guard — it just wasn't applied consistently.
+// Function declarations hoist, so these are safe to call from the
+// module-level initializers immediately below.
+function readStoredPreference(key) {
+  try {
+    return localStorage.getItem(key);
+  } catch (e) {
+    console.warn("Could not read localStorage key:", key, e);
+    return null;
+  }
+}
+
+// Returns whether the value was actually persisted, so callers that care
+// (the ones showing a quota toast) can tell, and callers that don't can
+// ignore it — but neither can be aborted by a throw.
+function writeStoredPreference(key, value) {
+  try {
+    localStorage.setItem(key, value);
+    return true;
+  } catch (e) {
+    console.warn("Could not persist localStorage key:", key, e);
+    return false;
+  }
+}
+
 // ---------- Background Theme ----------
-let backgroundChoice = localStorage.getItem("backgroundChoice") || "mandala";
+let backgroundChoice = readStoredPreference("backgroundChoice") || "mandala";
 
 // ---------- Text Size ----------
 // Display preference, same tier as backgroundChoice. Applied to <html>
@@ -9,7 +53,7 @@ let backgroundChoice = localStorage.getItem("backgroundChoice") || "mandala";
 // first paint — a late switch would visibly reflow the app under the
 // splash screen.
 const TEXT_SIZES = ["small", "medium", "large"];
-let textSizeChoice = localStorage.getItem("textSize");
+let textSizeChoice = readStoredPreference("textSize");
 if (!TEXT_SIZES.includes(textSizeChoice)) textSizeChoice = "medium";
 
 function applyTextSize(size) {
@@ -29,7 +73,7 @@ applyTextSize(textSizeChoice);
 // Settings switcher) — that's what gates the first-run picker from showing.
 // Lookups always fall back to "en" via t() below, so the app renders in
 // English before a choice is made.
-let currentAppLanguage = localStorage.getItem("appLanguage") || null;
+let currentAppLanguage = readStoredPreference("appLanguage") || null;
 
 // The reviewed, locked dictionary lives in i18n/translations.json (every
 // user-facing string, each key with { en, hi, bn }; placeholders use
@@ -115,7 +159,7 @@ function scheduleTranslationsRetry() {
       renderToday();
       renderDataSafetyStatus();
       if (document.getElementById("sankalpa-page")?.classList.contains("open")) {
-        renderSankalpaPage();
+        renderSankalpaPageSafely();
       }
     } catch (e) {
       scheduleTranslationsRetry();
@@ -188,16 +232,11 @@ function applyStaticTranslations() {
 // the Settings switcher.
 function applyAppLanguage(lang) {
   currentAppLanguage = lang;
-  // Unguarded (unlike setCustomSplashImage()'s explicit QuotaExceededError
-  // handling) this could throw and abort the rest of this function if
-  // localStorage is near its shared-origin quota (e.g. several custom
-  // splash images already stored) — the language would apply for this
-  // session but silently fail to persist, so the first-run picker would
-  // incorrectly reappear next load even though the user already chose.
-  try {
-    localStorage.setItem("appLanguage", lang);
-  } catch (e) {
-    console.error("Failed to persist appLanguage:", e);
+  // A throw here would abort the rest of this function, so the language
+  // would apply for this session but silently fail to persist — and the
+  // first-run picker would incorrectly reappear next load even though the
+  // user already chose. writeStoredPreference() can't throw; it reports.
+  if (!writeStoredPreference("appLanguage", lang)) {
     showToast(t("langErrQuota"));
   }
   applyStaticTranslations();
@@ -206,7 +245,7 @@ function applyAppLanguage(lang) {
   renderToday();
   renderDataSafetyStatus();
   if (document.getElementById("sankalpa-page")?.classList.contains("open")) {
-    renderSankalpaPage();
+    renderSankalpaPageSafely();
   }
   updateLanguagePickerSelection();
 }
@@ -256,7 +295,7 @@ function resolveSplashRotationPool() {
 (function chooseSplashImage() {
   const pool = resolveSplashRotationPool();
 
-  const lastId = localStorage.getItem("lastSplashImage");
+  const lastId = readStoredPreference("lastSplashImage");
   const candidates = pool.filter((r) => r.id !== lastId);
   const chosenFrom = candidates.length > 0 ? candidates : pool;
   const chosen = chosenFrom[Math.floor(Math.random() * chosenFrom.length)];
@@ -279,7 +318,7 @@ function resolveSplashRotationPool() {
     }
   }
 
-  localStorage.setItem("lastSplashImage", chosen.id);
+  writeStoredPreference("lastSplashImage", chosen.id);
 })();
 
 // ---------- Splash Screen Logic ----------
@@ -956,7 +995,7 @@ let ledgerData = [];
 let appReady = false;
 // Display preference only — never mutates stored ledger data. Persisted in
 // localStorage (same tier as other display preferences), not IndexedDB.
-let malaViewEnabled = localStorage.getItem("malaViewEnabled") === "true";
+let malaViewEnabled = readStoredPreference("malaViewEnabled") === "true";
 
 // What the user has typed into the Today Card but not yet saved, as raw
 // input strings: { jaap, notes } or null when there's nothing in progress.
@@ -1107,7 +1146,7 @@ function updateBackgroundSwatchButtons() {
     // which image was actually chosen ("hanuman" or "customN").
     const splashImgEl = document.getElementById("splash-img");
     if (splashImgEl) {
-      const lastSplashId = localStorage.getItem("lastSplashImage");
+      const lastSplashId = readStoredPreference("lastSplashImage");
       const splashAltKey = lastSplashId && lastSplashId !== "hanuman" ? "splashCustomAlt" : "splashHanumanAlt";
       // Only overwrite if a real translation exists — the element's current
       // alt is already correct English (baked into SPLASH_DEFAULT_IMAGE /
@@ -1135,7 +1174,7 @@ appReady = true;
     // Checked once at app-open, not inside renderToday() itself (which also
     // runs after every save) — the reminder is an app-open event, not a
     // re-render event.
-    if (shouldShowSundayBackupReminder(todayISO, localStorage.getItem("lastSundayBackupPromptDate"))) {
+    if (shouldShowSundayBackupReminder(todayISO, readStoredPreference("lastSundayBackupPromptDate"))) {
       openSundayBackupModal();
     }
 
@@ -1347,7 +1386,7 @@ function renderDataSafetyStatus() {
   const driveEl = document.getElementById("drive-backup-status");
   if (driveEl) {
     driveEl.textContent = describeLastDriveBackup(
-      localStorage.getItem("lastDriveBackupAt"),
+      readStoredPreference("lastDriveBackupAt"),
       todayISO
     );
   }
@@ -1898,10 +1937,16 @@ function renderTodayCard(entry) {
 
     <br>
 
-    ${entry.date === todayISO || isWithinLastNDays(entry.date, 7)
-  ? `<button id="update-today">${t("todaySaveBtn")}</button>`
-  : `<p><em>${t("todayLockedMsg")}</em></p>`
-}
+    <!-- Always a save button, never a "locked" message. This entry comes
+         from ensureTodayEntryExists(), so entry.date === todayISO always
+         holds and the locked branch that used to live here could never
+         render. It was worse than merely dead: had it ever rendered,
+         #update-today would not exist and the unguarded addEventListener
+         below would have thrown mid-render, taking the Reflection Summary
+         and the whole Ledger List down with it. The 7-day window still
+         governs the *ledger rows*, via isEditableEntry() in
+         buildYearRows(). -->
+    <button id="update-today">${t("todaySaveBtn")}</button>
 
 
   `;
@@ -1937,9 +1982,12 @@ function renderTodayCard(entry) {
     }
   }
 
-  document
-    .getElementById("update-today")
-    .addEventListener("click", updateTodayEntry);
+  // Null-guarded even though the button is now unconditional — matching the
+  // `if (saveBtn)` guard buildYearRows() already uses. A render function
+  // should degrade, not take the entire page down, if its own markup ever
+  // changes underneath it.
+  const saveTodayBtn = document.getElementById("update-today");
+  if (saveTodayBtn) saveTodayBtn.addEventListener("click", updateTodayEntry);
 }
 
 // ---------- Update logic ----------
@@ -2055,7 +2103,7 @@ document.getElementById("mala-toggle")?.addEventListener("change", (e) => {
     }
   }
 
-  localStorage.setItem("malaViewEnabled", String(malaViewEnabled));
+  writeStoredPreference("malaViewEnabled", String(malaViewEnabled));
   updateMalaToggleButton();
   renderToday();
 });
@@ -2071,7 +2119,7 @@ document.querySelectorAll(".background-swatch").forEach((btn) => {
     document.body.classList.remove("bg-" + backgroundChoice);
     backgroundChoice = choice;
     document.body.classList.add("bg-" + backgroundChoice);
-    localStorage.setItem("backgroundChoice", backgroundChoice);
+    writeStoredPreference("backgroundChoice", backgroundChoice);
     updateBackgroundSwatchButtons();
   });
 });
@@ -2093,14 +2141,10 @@ document.querySelectorAll(".text-size-btn").forEach((btn) => {
     const choice = btn.dataset.size;
     if (choice === textSizeChoice) return;
     applyTextSize(choice);
-    // Guarded like appLanguage — localStorage can throw when the shared
-    // origin quota is full (several custom splash images will do it), and
-    // an unguarded write would abort the rest of this handler, leaving the
-    // buttons out of sync with the size actually applied.
-    try {
-      localStorage.setItem("textSize", textSizeChoice);
-    } catch (e) {
-      console.error("Failed to persist textSize:", e);
+    // Guarded like appLanguage — a throw would abort the rest of this
+    // handler, leaving the buttons out of sync with the size actually
+    // applied.
+    if (!writeStoredPreference("textSize", textSizeChoice)) {
       showToast(t("langErrQuota"));
     }
     updateTextSizeButtons();
@@ -2388,7 +2432,7 @@ function openSankalpaPage() {
   if (!page) return;
   page.classList.add("open");
   page.setAttribute("aria-hidden", "false");
-  renderSankalpaPage();
+  renderSankalpaPageSafely();
 }
 
 function closeSankalpaPage() {
@@ -2396,6 +2440,20 @@ function closeSankalpaPage() {
   if (!page) return;
   page.classList.remove("open");
   page.setAttribute("aria-hidden", "true");
+}
+
+// renderSankalpaPage() is async and writes ALL of the page's markup — close
+// button included — only after its first await on getSankalpa(). Called bare,
+// a rejection there (IndexedDB blocked or unavailable) left the user sealed
+// inside an empty full-screen overlay with nothing to tap, and the only
+// trace an unhandled rejection in the console. Every call site goes through
+// this instead: report, and close the page rather than stranding anyone in it.
+function renderSankalpaPageSafely() {
+  return renderSankalpaPage().catch((err) => {
+    console.error("Could not render the Sankalpa page:", err);
+    showToast(t("sankalpaLoadFailed"));
+    closeSankalpaPage();
+  });
 }
 
 async function renderSankalpaPage() {
@@ -2445,9 +2503,19 @@ async function renderSankalpaPage() {
       if (!text) return;
 
       const context = page.querySelector("#sankalpa-context").value.trim();
-      await saveSankalpa({ text, context, date: getTodayISO() });
+      // Same reasoning as the ledger save paths: an unguarded await in a
+      // click handler turns a failed write into an unhandled rejection with
+      // no user feedback at all — the vow would appear to vanish. Confirm
+      // only after the write has genuinely committed.
+      try {
+        await saveSankalpa({ text, context, date: getTodayISO() });
+      } catch (err) {
+        console.error("Failed to establish the Sankalpa:", err);
+        showToast(t("commonSaveFailed"));
+        return;
+      }
       showToast(t("sankalpaEstablishedToast"));
-      renderSankalpaPage();
+      renderSankalpaPageSafely();
     });
 
     page.querySelector("#sankalpa-close").addEventListener("click", closeSankalpaPage);
@@ -2525,9 +2593,17 @@ async function renderSankalpaPage() {
 
     const context = page.querySelector("#sankalpa-context-edit").value.trim();
     // date is always preserved from the original record — never reset to today.
-    await saveSankalpa({ text, context, date: sankalpa.date });
+    // Guarded like the establish path above: a failed rewrite must say so,
+    // not silently leave the old vow in place while looking like it worked.
+    try {
+      await saveSankalpa({ text, context, date: sankalpa.date });
+    } catch (err) {
+      console.error("Failed to rewrite the Sankalpa:", err);
+      showToast(t("commonSaveFailed"));
+      return;
+    }
     showToast(t("sankalpaRewrittenToast"));
-    renderSankalpaPage();
+    renderSankalpaPageSafely();
   });
 }
 
@@ -2870,8 +2946,16 @@ async function uploadLedgerBackupToDrive(accessToken) {
 // by a successful upload AND by every dismiss path, so it deliberately
 // cannot tell you whether a backup actually happened. That's what
 // recordSuccessfulDriveBackup() below is for; don't conflate the two.
+//
+// Guarded, like recordSuccessfulDriveBackup() below already was. It matters
+// more here, not less, because of where this is called from: every dismiss
+// route (✕, "Remind me next Sunday", backdrop click) ran this BEFORE
+// closing the modal, so a quota throw meant the modal could not be closed
+// at all — a full-screen backdrop with no way past it, on a device whose
+// storage is already full. It also runs after a successful upload, where a
+// throw would have reported a backup failure that had in fact succeeded.
 function markSundayBackupHandled() {
-  localStorage.setItem("lastSundayBackupPromptDate", todayISO);
+  writeStoredPreference("lastSundayBackupPromptDate", todayISO);
 }
 
 // Written ONLY on a genuinely successful upload. Display-state tier (like
@@ -2905,8 +2989,12 @@ function closeSundayBackupModal() {
 // today handled (so the modal won't reappear until next Sunday) without
 // uploading anything.
 function dismissSundayBackupReminder() {
-  markSundayBackupHandled();
+  // Close FIRST. markSundayBackupHandled() is guarded and can no longer
+  // throw, but dismissing a modal must not depend on a storage write
+  // succeeding at all — the user asked to be left alone, and that has to
+  // work whatever the state of their storage. Belt and braces, deliberately.
   closeSundayBackupModal();
+  markSundayBackupHandled();
 }
 
 // The primary action, wired to both the modal's "Back Up to Google Drive"

@@ -41,7 +41,16 @@ async function freshLoad(page, { clearStorage = false } = {}) {
 }
 
 (async () => {
-  const browser = await puppeteer.launch({ headless: true, args: ["--no-sandbox"] });
+  const browser = await puppeteer.launch({
+    headless: true,
+    args: ["--no-sandbox"],
+    // Puppeteer's 30s default is not enough on a loaded machine: by the
+    // time the later suites in `npm test` start, seven browsers have
+    // already been launched and torn down, and the launch itself timed
+    // out -- a capacity limit, not a failing assertion. Costs nothing
+    // when the machine is idle.
+    timeout: 90000,
+  });
   const page = await browser.newPage();
 
   // The Import/Export test below clicks the real Export button, which
@@ -1105,6 +1114,102 @@ async function freshLoad(page, { clearStorage = false } = {}) {
     "a successful save clears the draft",
     await page.evaluate(() => todayDraft === null)
   );
+
+  // ── A hostile storage environment must not kill the app ──────────────
+  // app.js is a classic script, so a throw at top-level scope aborts the
+  // ENTIRE remaining file — no initApp(), no listeners, no service worker,
+  // and a splash screen that never clears. Several unguarded localStorage
+  // calls sat at top-level scope, the most exposed being the
+  // lastSplashImage write in chooseSplashImage(), which runs before first
+  // paint. Verified to fail without its fix: the Today Card never renders
+  // and app.js's later functions are undefined.
+  console.log("\n=== A hostile storage environment must not kill the app ===");
+  {
+    const hostileContext = await browser.createBrowserContext();
+    const hostilePage = await hostileContext.newPage();
+    await hostilePage.setViewport({ width: 390, height: 844 });
+    await hostilePage.evaluateOnNewDocument(() => {
+      Storage.prototype.setItem = function () {
+        throw new DOMException("Quota exceeded", "QuotaExceededError");
+      };
+    });
+    await hostilePage.goto(BASE, { waitUntil: "networkidle0", timeout: 15000 });
+    await new Promise(r => setTimeout(r, SPLASH_WAIT_MS));
+
+    const booted = await hostilePage.evaluate(() => ({
+      todayCard: !!document.querySelector("#today-card h2"),
+      ledger: !!document.querySelector("#ledger-list .ledger-year-header"),
+      // Must be a late `const`, NOT a late function: function declarations
+      // are hoisted, so they exist even when execution aborted on line 282
+      // and never reached them. (This assertion originally checked a
+      // function and passed even with the fix reverted — vacuous.) A const
+      // sits in the temporal dead zone until its initializer actually runs,
+      // so touching it throws unless execution genuinely got that far.
+      lateConstInitialized: (() => {
+        try {
+          return typeof GOOGLE_DRIVE_CLIENT_ID === "string";
+        } catch (e) {
+          return false;
+        }
+      })(),
+      splashGone: !document.getElementById("splash-screen"),
+    }));
+    assert("the Today Card still renders when every localStorage write throws", booted.todayCard);
+    assert("the Ledger List still renders when every localStorage write throws", booted.ledger);
+    assert("app.js executed all the way to the end of the file", booted.lateConstInitialized);
+    assert("the splash screen still clears", booted.splashGone);
+
+    await hostileContext.close();
+  }
+
+  // ── A blocked Sankalpa read must not strand the user ─────────────────
+  // renderSankalpaPage() writes the page's markup — close button included —
+  // only after its first await. A rejection there left the user sealed
+  // inside an empty full-screen overlay with nothing to tap. Verified to
+  // fail without its fix: the page stays open with no close button.
+  console.log("\n=== A blocked Sankalpa read must not strand the user ===");
+  {
+    const strandContext = await browser.createBrowserContext();
+    const strandPage = await strandContext.newPage();
+    await strandPage.setViewport({ width: 390, height: 844 });
+    await strandPage.evaluateOnNewDocument(() => localStorage.setItem("appLanguage", "en"));
+    const strandErrors = [];
+    strandPage.on("console", msg => {
+      if (msg.type() === "error") strandErrors.push(msg.text());
+    });
+    await strandPage.goto(BASE, { waitUntil: "networkidle0", timeout: 15000 });
+    await new Promise(r => setTimeout(r, SPLASH_WAIT_MS));
+
+    // Top-level function declarations land on window, so this replaces the
+    // real read with a failing one — the same shape as IndexedDB being
+    // unavailable or blocked.
+    await strandPage.evaluate(() => {
+      window.getSankalpa = () => Promise.reject(new Error("IndexedDB unavailable"));
+    });
+
+    await strandPage.click("#maintenance-toggle");
+    await strandPage.waitForSelector("#maintenance-drawer.open");
+    await new Promise(r => setTimeout(r, 400));
+    await strandPage.click("#sankalpa-open-btn");
+    await new Promise(r => setTimeout(r, 600));
+
+    const strandState = await strandPage.evaluate(() => {
+      const page = document.getElementById("sankalpa-page");
+      return {
+        stillOpen: page.classList.contains("open"),
+        hasCloseButton: !!page.querySelector("#sankalpa-close"),
+        toast: document.getElementById("toast") ? document.getElementById("toast").textContent : "",
+      };
+    });
+    assert("a failed Sankalpa read closes the page instead of stranding the user", !strandState.stillOpen);
+    assert("the user is told the Sankalpa could not be opened", strandState.toast.includes("Could not open"));
+    assert(
+      "the failure is reported rather than left as an unhandled rejection",
+      strandErrors.some(e => e.includes("Could not render the Sankalpa page"))
+    );
+
+    await strandContext.close();
+  }
 
   // ── Console errors ───────────────────────────────────────────────────
   console.log("\n=== Console errors ===");
