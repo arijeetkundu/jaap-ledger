@@ -1115,6 +1115,100 @@ async function freshLoad(page, { clearStorage = false } = {}) {
     await page.evaluate(() => todayDraft === null)
   );
 
+  // ── A corrupt backup is refused, not loaded ──────────────────────────
+  // Restore applied only an Array.isArray check while Import validated
+  // thoroughly, so the exact render crash Import's guard exists to prevent
+  // was reachable through Restore. Verified to fail without its fix: the
+  // restore proceeds and the next render throws on notes.toLowerCase().
+  console.log("\n=== A corrupt backup is refused, not loaded ===");
+  await freshLoad(page);
+  {
+    const before = await page.evaluate(() => ledgerData.length);
+
+    // Write a structurally invalid backup directly into the backup store:
+    // notes as a number is the case that crashes hasExplicitPoornima().
+    await page.evaluate(async () => {
+      const db = await openDB();
+      await new Promise((resolve, reject) => {
+        const tx = db.transaction("ledger-backups", "readwrite");
+        tx.objectStore("ledger-backups").put({
+          backedUpAt: new Date().toISOString(),
+          entries: [{ date: "2026-01-05", jaap: 108, notes: 12345 }],
+          sankalpa: null,
+        }, "latest");
+        tx.oncomplete = resolve;
+        tx.onerror = () => reject(tx.error);
+      });
+    });
+
+    expectedErrorFragments.push("Refusing to restore a structurally invalid backup");
+    // The button lives in the Settings drawer, which slides in via transform
+    // — let the transition finish or Puppeteer hit-tests it mid-slide.
+    await page.click("#maintenance-toggle");
+    await page.waitForSelector("#maintenance-drawer.open");
+    await new Promise(r => setTimeout(r, 400));
+    await page.click("#restore-backup-btn");
+    await new Promise(r => setTimeout(r, 700));
+
+    assert(
+      "a corrupt backup leaves the live ledger untouched",
+      await page.evaluate(() => ledgerData.length) === before
+    );
+    // Assert on ledger ROWS specifically. Two weaker versions of this check
+    // passed even with the fix reverted, and both were rejected: the Today
+    // Card is written before the crash point, and so is the year header —
+    // the corrupt entry's non-string notes only blows up inside
+    // buildYearRows(), via hasExplicitPoornima(). Rows are the first thing
+    // that genuinely doesn't exist when this render dies.
+    assert(
+      "the Ledger List still renders its rows after refusing the corrupt backup",
+      await page.evaluate(() => document.querySelectorAll("#ledger-list .ledger-row").length > 0)
+    );
+    expectedErrorFragments.length = 0;
+
+    // Put a valid backup back so later sections aren't affected, and close
+    // the drawer so it can't swallow a later click.
+    await page.evaluate(async () => { await saveAutomaticBackup(ledgerData); });
+    await page.click("#maintenance-toggle");
+    await new Promise(r => setTimeout(r, 400));
+  }
+
+  // ── The milestone celebration fires once, not on every re-save ───────
+  // getCroreMilestone() reports that a crossing EXISTS, not that this save
+  // created it, so re-saving an unchanged milestone entry re-fired all 96
+  // petals. Verified to fail without its fix: petals appear both times.
+  console.log("\n=== The milestone celebration fires once, not on every re-save ===");
+  await freshLoad(page);
+  {
+    const countPetals = () => page.evaluate(() =>
+      document.querySelectorAll("#petal-overlay .petal-fly").length
+    );
+
+    // A single entry that crosses the first Crore outright.
+    await page.evaluate(async () => {
+      document.getElementById("petal-overlay").innerHTML = "";
+      const today = getTodayISO();
+      ledgerData = [{ date: today, jaap: null, notes: "" }];
+      await saveLedger(ledgerData);
+      renderToday();
+    });
+
+    await page.evaluate(() => {
+      const input = document.getElementById("today-jaap");
+      input.value = "10000000";
+      input.dispatchEvent(new Event("input", { bubbles: true }));
+    });
+    await page.click("#update-today");
+    await new Promise(r => setTimeout(r, 700));
+    assert("crossing a Crore for the first time celebrates", (await countPetals()) > 0);
+
+    // Re-save the very same value — no new crossing is created.
+    await page.evaluate(() => { document.getElementById("petal-overlay").innerHTML = ""; });
+    await page.click("#update-today");
+    await new Promise(r => setTimeout(r, 700));
+    assert("re-saving the same milestone entry does not celebrate again", (await countPetals()) === 0);
+  }
+
   // ── A hostile storage environment must not kill the app ──────────────
   // app.js is a classic script, so a throw at top-level scope aborts the
   // ENTIRE remaining file — no initApp(), no listeners, no service worker,

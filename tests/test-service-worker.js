@@ -170,6 +170,25 @@ async function newPage(browser) {
     const TARGET = path.join(__dirname, "..", "styles.css");
     const MARKER = "/* sw-deploy-pickup-probe */";
     const original = fs.readFileSync(TARGET, "utf8");
+
+    // Replace the file ATOMICALLY (write a temp file, then rename over the
+    // target). fs.writeFileSync truncates before it writes, which leaves a
+    // window where the served file is 0 bytes — and this test is racing a
+    // service worker that fetches it. Losing that race poisons the run
+    // permanently, not transiently: the worker caches a 0-byte 200 OK, and
+    // every later revalidation gets a 304 Not Modified, so the empty copy
+    // sticks and the marker can never appear no matter how long we poll.
+    //
+    // That is what was behind this test's long history of "fails in the full
+    // suite, passes standalone" — more load, wider truncation window. It was
+    // misdiagnosed twice before instrumentation showed the cached entry was
+    // simply empty (servedLength: 0, cachedLength: 0).
+    const writeAtomically = (contents) => {
+      const tmp = TARGET + ".deploy-probe.tmp";
+      fs.writeFileSync(tmp, contents);
+      fs.renameSync(tmp, TARGET); // replaces in one step, no empty window
+    };
+
     const { context, page, errors } = await newPage(browser);
 
     try {
@@ -183,7 +202,7 @@ async function newPage(browser) {
       assert("the probe marker is absent before the simulated deploy", beforeDeploy === false);
 
       // Simulate a deploy by changing the served file.
-      fs.writeFileSync(TARGET, original + "\n" + MARKER + "\n");
+      writeAtomically(original + "\n" + MARKER + "\n");
 
       // Smoke check only (see the structural guard below for the actual
       // regression detection).
@@ -204,11 +223,20 @@ async function newPage(browser) {
       // still fails loudly if the answer is genuinely "never", which is the
       // regression being guarded, but it no longer fails merely because the
       // machine was busy.
-      const DEPLOY_PICKUP_TIMEOUT_MS = 20000;
+      // 20s was still not enough in the full `npm test` run specifically —
+      // it passed standalone every time and failed in company three times,
+      // across two different implementations of this check. Rather than keep
+      // raising a number blindly, this now also reports WHY it gave up, so a
+      // future failure is diagnosable instead of merely annoying: whether the
+      // page was controlled by a worker at all, what the worker answered, and
+      // what was actually in the cache.
+      const DEPLOY_PICKUP_TIMEOUT_MS = 45000;
       await page.reload({ waitUntil: "networkidle0", timeout: 15000 });
-      const afterDeploy = await page.evaluate(async (timeoutMs) => {
+      const pickup = await page.evaluate(async (timeoutMs) => {
         const deadline = Date.now() + timeoutMs;
+        let polls = 0;
         while (Date.now() < deadline) {
+          polls++;
           // Read what the worker has actually stored, rather than what a
           // fetch() happens to be answered with this instant.
           const keys = await caches.keys();
@@ -216,7 +244,7 @@ async function newPage(browser) {
             const cache = await caches.open(key);
             const hit = await cache.match("./styles.css");
             if (hit && (await hit.clone().text()).includes("sw-deploy-pickup-probe")) {
-              return true;
+              return { ok: true, polls };
             }
           }
           // Keep asking through the worker too — that's what drives the
@@ -224,9 +252,27 @@ async function newPage(browser) {
           await fetch("./styles.css");
           await new Promise(r => setTimeout(r, 500));
         }
-        return false;
+
+        // Timed out: gather evidence before giving up.
+        const served = await (await fetch("./styles.css")).text();
+        const cacheNames = await caches.keys();
+        let cachedLen = null;
+        for (const key of cacheNames) {
+          const hit = await (await caches.open(key)).match("./styles.css");
+          if (hit) cachedLen = (await hit.clone().text()).length;
+        }
+        return {
+          ok: false,
+          polls,
+          controlled: !!navigator.serviceWorker.controller,
+          cacheNames,
+          servedHasMarker: served.includes("sw-deploy-pickup-probe"),
+          servedLength: served.length,
+          cachedLength: cachedLen,
+        };
       }, DEPLOY_PICKUP_TIMEOUT_MS);
-      assert("a deployed change is eventually picked up, not cached forever", afterDeploy === true);
+      assert("a deployed change is eventually picked up, not cached forever", pickup.ok === true);
+      if (!pickup.ok) console.log("  deploy-pickup diagnostics:", JSON.stringify(pickup));
 
       // Structural guard, and labelled as such: the assertion above is a
       // real end-to-end smoke check but it CANNOT distinguish the fixed
@@ -257,7 +303,9 @@ async function newPage(browser) {
         /new Request\([^)]*cache:\s*"reload"/.test(swSource)
       );
     } finally {
-      fs.writeFileSync(TARGET, original);
+      // Atomic here too — the restore races the same worker, and leaving a
+      // truncated styles.css behind would corrupt the working tree.
+      writeAtomically(original);
     }
 
     allErrors.push(...errors);

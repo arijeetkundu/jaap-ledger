@@ -436,8 +436,20 @@ function celebrateMilestone() {
 
 // Format YYYY-MM-DD → "D MMM YYYY" (e.g. "12 Apr 2026")
 const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+// Returns "" rather than garbage for anything unparseable. It used to
+// produce "undefined undefined NaN" for a malformed string and to THROW
+// outright on undefined — reachable in practice via a Sankalpa whose date
+// sanitizeSankalpaForExport() defaults to "", which then renders inside the
+// Sankalpa page's date line. An empty string simply omits the date; a throw
+// there would take the whole page render down.
+function isParsableISODate(value) {
+  return typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value);
+}
+
 function formatDate(isoDate) {
+  if (!isParsableISODate(isoDate)) return "";
   const [year, month, day] = isoDate.split("-").map(Number);
+  if (month < 1 || month > 12) return "";
   return `${day} ${MONTHS[month - 1]} ${year}`;
 }
 
@@ -447,7 +459,11 @@ function formatDate(isoDate) {
 const WEEKDAYS = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
 const MONTHS_FULL = ["January","February","March","April","May","June","July","August","September","October","November","December"];
 function formatDateLong(isoDate) {
+  // Same guard as formatDate() — this one renders the Today Card's date
+  // line, so a throw here would take the entire card down.
+  if (!isParsableISODate(isoDate)) return "";
   const [year, month, day] = isoDate.split("-").map(Number);
+  if (month < 1 || month > 12) return "";
   const dayIndex = new Date(year, month - 1, day).getDay();
   const weekdays = (TRANSLATIONS && TRANSLATIONS.datesWeekdaysFull && TRANSLATIONS.datesWeekdaysFull[getEffectiveLang()]) || WEEKDAYS;
   const months = (TRANSLATIONS && TRANSLATIONS.datesMonthsFull && TRANSLATIONS.datesMonthsFull[getEffectiveLang()]) || MONTHS_FULL;
@@ -513,6 +529,26 @@ function escapeHTML(str) {
   const div = document.createElement("div");
   div.textContent = str ?? "";
   return div.innerHTML;
+}
+
+// Escape for use inside a DOUBLE-QUOTED HTML attribute value. escapeHTML()
+// deliberately doesn't escape `"` (it's unnecessary for text nodes, its only
+// use case), so it must never be used to build an attribute — see its own
+// comment and the sankalpa-context-edit note in renderSankalpaPage().
+//
+// Currently every attribute built this way interpolates a translated string,
+// and no entry in the reviewed dictionary contains a `"` — verified across
+// all keys. That is a property of today's content, not of the code, and a
+// future translation adding a quotation mark would silently break out of the
+// attribute. tAttr() removes the dependency on that holding.
+function escapeAttr(str) {
+  return escapeHTML(str).split('"').join("&quot;");
+}
+
+// t(), escaped for attribute context. Use wherever a translated string lands
+// inside quotes in a template string.
+function tAttr(key, params) {
+  return escapeAttr(t(key, params));
 }
 
 // Get today's date in YYYY-MM-DD (local)
@@ -841,8 +877,22 @@ function ensureRecentEntriesExist(days = 7) {
   }
 }		
 
+// The window the app documents and the User Guide promises: today plus the
+// six days before it. It used to be `isWithinLastNDays(dateISO, 7)`, whose
+// `<= days` is inclusive, so it actually accepted offsets 0-7 — eight days,
+// one more than advertised, and one more than ensureRecentEntriesExist(7)
+// ever materialises.
+//
+// isWithinLastNDays() itself is deliberately left alone: its inclusive
+// reading of "within the last N days" is defensible, and it is asserted
+// directly by tests/test-unit.js. Fixing the caller keeps that test honest
+// and puts the window in exactly one place.
+const EDITABLE_WINDOW_DAYS = 7;
+
+// The old `dateISO === todayISO ||` prefix is gone as redundant, not as a
+// behaviour change: today's offset is 0, which already passes.
 function isEditableEntry(dateISO) {
-  return dateISO === todayISO || isWithinLastNDays(dateISO, 7);
+  return isWithinLastNDays(dateISO, EDITABLE_WINDOW_DAYS - 1);
 }
 
 async function loadLedgerFromDB() {
@@ -858,8 +908,15 @@ async function loadLedgerFromDB() {
     req.onerror = () => resolve(null);
   });
 
-  if (ledger && Array.isArray(ledger)) {
+  // Validated, not merely array-checked: a structurally broken live store
+  // would otherwise crash the first render and leave the app dead, when
+  // falling through to the backup below is exactly the recovery this
+  // function exists to perform.
+  if (ledger && areLedgerEntriesValid(ledger)) {
     return ledger;
+  }
+  if (ledger && Array.isArray(ledger)) {
+    console.warn("Live ledger failed validation — falling back to the latest backup");
   }
 
   // 2️⃣ Fallback: latest automatic backup
@@ -874,9 +931,12 @@ async function loadLedgerFromDB() {
     req.onerror = () => resolve(null);
   });
 
-  if (backup && Array.isArray(backup.entries)) {
+  if (backup && areLedgerEntriesValid(backup.entries)) {
     await saveLedger(backup.entries);
     return backup.entries;
+  }
+  if (backup && Array.isArray(backup.entries)) {
+    console.warn("Backup failed validation — refusing to load it");
   }
 
   // 3️⃣ Final fallback: empty ledger
@@ -919,13 +979,26 @@ let todayISO = getTodayISO();
 const DB_NAME = "jaap-ledger-db";
 const STORE_NAME = "ledger";
 const BACKUP_STORE = "ledger-backups";
-const META_STORE = "meta";            // 👈 ADD
+// Inert by design: this store was a one-time data.json seeding guard and is
+// no longer read or written anywhere. It is kept, not dropped, because the
+// upgrade handler is additive-only — destroying a store would be
+// irreversible for anyone whose browser still holds one.
+const META_STORE = "meta";
 const SANKALPA_STORE = "sankalpa";
-const DB_VERSION = 4;                 // 👈 BUMP version
+const DB_VERSION = 4;
 
+// One connection, reused. openDB() used to open a brand-new connection on
+// every call and never close any of them — a single Today Card save opens
+// three (ledger, sankalpa, backup). Leaked connections are not merely
+// untidy: an open connection BLOCKS a future version upgrade, so the next
+// time DB_VERSION is bumped the upgrade would hang behind the leaks with no
+// onblocked handler anywhere to notice.
+let dbConnectionPromise = null;
 
 function openDB() {
-  return new Promise((resolve, reject) => {
+  if (dbConnectionPromise) return dbConnectionPromise;
+
+  dbConnectionPromise = new Promise((resolve, reject) => {
     const request = indexedDB.open(DB_NAME, DB_VERSION);
 
     request.onupgradeneeded = (e) => {
@@ -938,18 +1011,48 @@ function openDB() {
       if (!db.objectStoreNames.contains(BACKUP_STORE)) {
         db.createObjectStore(BACKUP_STORE);
       }
-	  if (!db.objectStoreNames.contains(META_STORE)) {
-		db.createObjectStore(META_STORE);
-	}
-	  if (!db.objectStoreNames.contains(SANKALPA_STORE)) {
-		db.createObjectStore(SANKALPA_STORE);
-	}
-
+      if (!db.objectStoreNames.contains(META_STORE)) {
+        db.createObjectStore(META_STORE);
+      }
+      if (!db.objectStoreNames.contains(SANKALPA_STORE)) {
+        db.createObjectStore(SANKALPA_STORE);
+      }
     };
 
-    request.onsuccess = () => resolve(request.result);
-    request.onerror = () => reject(request.error);
+    request.onsuccess = () => {
+      const db = request.result;
+
+      // Another tab running a newer build wants to upgrade: close this
+      // connection so its upgrade isn't blocked, and drop the memo so the
+      // next call reconnects rather than handing out a dead handle.
+      db.onversionchange = () => {
+        db.close();
+        dbConnectionPromise = null;
+      };
+
+      // An unexpected close (eviction, corruption, the user clearing site
+      // data) must also invalidate the memo, or every later call would keep
+      // resolving to a connection that can no longer open a transaction.
+      db.onclose = () => {
+        dbConnectionPromise = null;
+      };
+
+      resolve(db);
+    };
+
+    request.onerror = () => {
+      // Clear on failure too, so a transient error isn't cached for the
+      // rest of the session — the app would otherwise never recover.
+      dbConnectionPromise = null;
+      reject(request.error);
+    };
+
+    request.onblocked = () => {
+      console.warn("IndexedDB upgrade is blocked by another open connection.");
+    };
   });
+
+  return dbConnectionPromise;
 }
 
 // Resolves only once the transaction has actually COMMITTED, and rejects if
@@ -1058,7 +1161,7 @@ function renderJaapInputField(entry, opts = {}) {
     return `
       <label>
         ${t("todayMalaLabel")}<br>
-        <input type="number" step="1"${idAttr} class="${className}" value="${malaValue}" placeholder="${t("todayMalaPlaceholder")}">
+        <input type="number" step="1"${idAttr} class="${className}" value="${malaValue}" placeholder="${tAttr("todayMalaPlaceholder")}">
       </label>
     `;
   }
@@ -1066,7 +1169,7 @@ function renderJaapInputField(entry, opts = {}) {
   return `
     <label>
       ${t("todayJaapLabel")}<br>
-      <input type="number"${idAttr} class="${className}" value="${entry.jaap ?? ""}" placeholder="${t("todayJaapPlaceholder")}">
+      <input type="number"${idAttr} class="${className}" value="${entry.jaap ?? ""}" placeholder="${tAttr("todayJaapPlaceholder")}">
     </label>
   `;
 }
@@ -1217,9 +1320,23 @@ function focusTodayInputIfRequested() {
 // Catch that by refreshing whenever the app is brought back to the
 // foreground, which is exactly when a phone user re-opening the app across
 // a day boundary would notice the staleness.
+// Shared by both rollover paths below. The Sunday check has to happen here
+// and not only in initApp(): a PWA left open across Saturday midnight never
+// re-launches, so it would silently skip that week's reminder entirely —
+// exactly the habitual user who leaves the app open is the one who'd never
+// be prompted. shouldShowSundayBackupReminder() is already idempotent for a
+// given day (lastSundayBackupPromptDate), so re-checking on every rollover
+// cannot double-prompt.
+function handleDateRollover() {
+  renderToday();
+  if (shouldShowSundayBackupReminder(todayISO, readStoredPreference("lastSundayBackupPromptDate"))) {
+    openSundayBackupModal();
+  }
+}
+
 document.addEventListener("visibilitychange", () => {
   if (document.visibilityState === "visible" && getTodayISO() !== todayISO) {
-    renderToday();
+    handleDateRollover();
   }
 });
 
@@ -1234,7 +1351,7 @@ document.addEventListener("visibilitychange", () => {
 // before this interval next fires — see its own comment.)
 setInterval(() => {
   if (document.visibilityState === "visible" && getTodayISO() !== todayISO) {
-    renderToday();
+    handleDateRollover();
   }
 }, 60000);
 
@@ -1299,6 +1416,17 @@ async function restoreFromBackup() {
 
   if (!backup || !backup.entries) {
     alert(t("ledgerNoBackupFound"));
+    return;
+  }
+
+  // A corrupt backup must be refused, not loaded. Restoring one with a
+  // non-string `notes` used to crash the very next render (see
+  // areLedgerEntriesValid) — and because renderToday() is the single render
+  // entry point, that takes the entire app down, leaving the user no way
+  // back even though their live ledger was still fine a moment earlier.
+  if (!areLedgerEntriesValid(backup.entries)) {
+    console.error("Refusing to restore a structurally invalid backup.");
+    alert(t("ledgerBackupCorrupt"));
     return;
   }
 
@@ -1543,7 +1671,7 @@ function buildYearRows(yearContainer, entries, { sparklineMap, milestoneByDate }
           ${hasExplicitPoornima(entry.notes) ? " 🌕" : ""}
         </span>
 
-        <span class="ledger-jaap">${entry.jaap == null ? "—" : (malaViewEnabled ? formatAsMala(entry.jaap) : entry.jaap)}</span>
+        <span class="ledger-jaap">${entry.jaap == null ? "—" : (malaViewEnabled ? formatAsMala(entry.jaap) : escapeHTML(String(entry.jaap)))}</span>
 
         <span class="ledger-sparkline">${sparklineHTML}</span>
       </div>
@@ -1586,6 +1714,16 @@ function buildYearRows(yearContainer, entries, { sparklineMap, milestoneByDate }
       saveBtn.addEventListener("click", async (e) => {
         e.stopPropagation();
 
+        // Re-check at SAVE time, not just at render time. The button was
+        // rendered when this row was still inside the window, but a row
+        // opened at 23:59 and saved at 00:01 is editing a day that has since
+        // aged out — the render-time check alone can't see that.
+        if (!isEditableEntry(entry.date)) {
+          showToast(t("ledgerListEntryLocked"));
+          renderToday();
+          return;
+        }
+
         const jaapInput = row.querySelector(".edit-jaap").value;
         const notesInput = row.querySelector(".edit-notes").value;
 
@@ -1599,6 +1737,10 @@ function buildYearRows(yearContainer, entries, { sparklineMap, milestoneByDate }
         const previousJaap = entry.jaap;
         const previousNotes = entry.notes;
 
+        // Milestone state BEFORE this save, so a crossing that already
+        // existed isn't celebrated again — see updateTodayEntry().
+        const milestoneBefore = getCroreMilestone(entry.date);
+
         entry.jaap = newJaap;
         entry.notes = notesInput;
 
@@ -1606,7 +1748,8 @@ function buildYearRows(yearContainer, entries, { sparklineMap, milestoneByDate }
         // just as saving today's entry can — previously only the Today Card
         // path checked this, so the same milestone crossing via a Ledger row
         // silently skipped the petal celebration.
-        const crossedNewMilestone = getCroreMilestone(entry.date);
+        const milestoneAfter = getCroreMilestone(entry.date);
+        const crossedNewMilestone = milestoneAfter !== null && milestoneAfter !== milestoneBefore;
 
         try {
           await saveLedger(ledgerData);
@@ -1777,8 +1920,8 @@ function renderLedgerList(milestoneHistory) {
       type="search"
       id="ledger-search"
       class="ledger-search-input"
-      placeholder="${t("ledgerSearchPlaceholder")}"
-      aria-label="${t("ledgerSearchPlaceholder")}"
+      placeholder="${tAttr("ledgerSearchPlaceholder")}"
+      aria-label="${tAttr("ledgerSearchPlaceholder")}"
     >
   `;
   container.appendChild(searchBar);
@@ -1931,7 +2074,7 @@ function renderTodayCard(entry) {
         id="today-notes"
         class="edit-notes"
         rows="3"
-        placeholder="${t("commonNotesPlaceholder")}"
+        placeholder="${tAttr("commonNotesPlaceholder")}"
       >${escapeHTML(entry.notes || "")}</textarea>
     </label>
 
@@ -2028,10 +2171,18 @@ async function updateTodayEntry() {
   const previousJaap = entry.jaap;
   const previousNotes = entry.notes;
 
+  // Milestone state BEFORE the mutation. Without this, re-saving an entry
+  // that had ALREADY crossed a Crore boundary — changing only the note, or
+  // just tapping Save twice — re-fired the whole 96-petal celebration, since
+  // getCroreMilestone() reports that the crossing exists, not that this save
+  // created it. Keep in step with the Ledger row handler in buildYearRows().
+  const milestoneBefore = getCroreMilestone(entry.date);
+
   entry.jaap = newJaap;
   entry.notes = notesInput;
 
-  const crossedNewMilestone = getCroreMilestone(entry.date);
+  const milestoneAfter = getCroreMilestone(entry.date);
+  const crossedNewMilestone = milestoneAfter !== null && milestoneAfter !== milestoneBefore;
 
   try {
     await saveLedger(ledgerData);
@@ -2466,21 +2617,21 @@ async function renderSankalpaPage() {
     page.innerHTML = `
       <div class="fullscreen-header">
         <h2>${t("sankalpaHeading")}</h2>
-        <button id="sankalpa-close" class="fullscreen-close" aria-label="${t("commonCloseAria")}">✕</button>
+        <button id="sankalpa-close" class="fullscreen-close" aria-label="${tAttr("commonCloseAria")}">✕</button>
       </div>
       <div class="sankalpa-body">
         <p class="sankalpa-intro">${t("sankalpaIntro")}</p>
 
         <label>
           ${t("sankalpaHeading")}<br>
-          <textarea id="sankalpa-text" class="edit-notes" rows="4" placeholder="${t("sankalpaVowPlaceholder")}"></textarea>
+          <textarea id="sankalpa-text" class="edit-notes" rows="4" placeholder="${tAttr("sankalpaVowPlaceholder")}"></textarea>
         </label>
 
         <br><br>
 
         <label>
           ${t("sankalpaContextLabel")}<br>
-          <input type="text" id="sankalpa-context" class="edit-jaap" placeholder="${t("sankalpaContextPlaceholder")}">
+          <input type="text" id="sankalpa-context" class="edit-jaap" placeholder="${tAttr("sankalpaContextPlaceholder")}">
         </label>
 
         <br><br>
@@ -2525,7 +2676,7 @@ async function renderSankalpaPage() {
   page.innerHTML = `
     <div class="fullscreen-header">
       <h2>${t("sankalpaHeading")}</h2>
-      <button id="sankalpa-close" class="fullscreen-close" aria-label="${t("commonCloseAria")}">✕</button>
+      <button id="sankalpa-close" class="fullscreen-close" aria-label="${tAttr("commonCloseAria")}">✕</button>
     </div>
     <div class="sankalpa-body">
       <div class="sankalpa-view">
@@ -2645,7 +2796,12 @@ function sanitizeSankalpaForExport(sankalpa) {
   return {
     text: sankalpa.text,
     context: typeof sankalpa.context === "string" ? sankalpa.context : "",
-    date: typeof sankalpa.date === "string" ? sankalpa.date : ""
+    // Only a genuinely parseable date survives. A hand-edited or truncated
+    // one used to be passed through as "", which formatDate() then rendered
+    // as "undefined undefined NaN" on the Sankalpa page. Dropping it to ""
+    // here is safe now that formatDate() returns "" for unparseable input —
+    // the date line simply renders empty rather than wrong.
+    date: isParsableISODate(sankalpa.date) ? sankalpa.date : ""
   };
 }
 
@@ -2655,6 +2811,37 @@ function sanitizeSankalpaForExport(sankalpa) {
 // exported previously would become unimportable — so this compatibility is
 // not optional. Returns null for anything that isn't a recognizable ledger
 // file; per-entry validation is the caller's job.
+// True only if every entry is structurally sound. Pure, so it's directly
+// unit-testable, and shared by all three paths that can put foreign data
+// into ledgerData: Import, Restore from Backup, and the backup-recovery
+// branch of loadLedgerFromDB().
+//
+// Only Import validated before. The other two applied nothing but an
+// Array.isArray check, so the exact crash this guard exists to prevent — a
+// non-string `notes` blowing up hasExplicitPoornima()'s notes.toLowerCase()
+// on the very next render, taking the whole app down since renderToday() is
+// the single render entry point — was reachable through a different door.
+//
+// Deliberately NOT checked here: `entry.date <= todayISO`. Import enforces
+// that separately, because accepting a future-dated entry from a file the
+// user chose is a different question from rejecting one already sitting in
+// their own backup, where dropping it would mean silent data loss on a
+// device whose clock has since been corrected.
+function areLedgerEntriesValid(entries) {
+  if (!Array.isArray(entries)) return false;
+
+  const seenDates = new Set();
+  for (const entry of entries) {
+    if (!entry || typeof entry !== "object") return false;
+    if (typeof entry.date !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(entry.date)) return false;
+    if (!("jaap" in entry) || !isValidJaapValue(entry.jaap)) return false;
+    if (typeof entry.notes !== "string") return false;
+    if (seenDates.has(entry.date)) return false;
+    seenDates.add(entry.date);
+  }
+  return true;
+}
+
 function parseImportedLedgerFile(parsed) {
   if (Array.isArray(parsed)) {
     return { entries: parsed, sankalpa: null }; // legacy (pre-v2) export
@@ -2732,31 +2919,16 @@ importInput?.addEventListener("change", async (event) => {
     const importedData = parsed.entries;
     const importedSankalpa = parsed.sankalpa;
 
-    const seenDates = new Set();
-    for (const entry of importedData) {
-      // isValidJaapValue() is the same guard both live save paths (Today
-      // Card, Ledger row) already use — reject anything they'd reject,
-      // including negative numbers (Number.isFinite(-500) is true, so a
-      // plain finite check alone would have silently let negatives through
-      // to corrupt every downstream sum).
-      const jaapIsValid = isValidJaapValue(entry.jaap);
-      const dateIsValid = typeof entry.date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(entry.date) && entry.date <= todayISO;
-      // notes must actually be a string, not merely present — a truthy
-      // non-string (e.g. a hand-edited "notes": 123) crashes the very next
-      // render via hasExplicitPoornima()'s notes.toLowerCase() call, and by
-      // then the bad entry has already been persisted to IndexedDB.
-      const notesIsValid = typeof entry.notes === "string";
-      if (
-        !dateIsValid ||
-        !("jaap" in entry) ||
-        !jaapIsValid ||
-        !notesIsValid ||
-        seenDates.has(entry.date)
-      ) {
-        alert(t("ledgerInvalidEntryFormat"));
-        return;
-      }
-      seenDates.add(entry.date);
+    // Shared structural validation (see areLedgerEntriesValid), plus the one
+    // rule that is specific to importing a file the user chose: no future
+    // dates. Restore and backup-recovery deliberately don't apply that part
+    // — see the note on areLedgerEntriesValid.
+    if (
+      !areLedgerEntriesValid(importedData) ||
+      importedData.some(entry => entry.date > todayISO)
+    ) {
+      alert(t("ledgerInvalidEntryFormat"));
+      return;
     }
 
     const confirmReplace = confirm(t("ledgerImportConfirm", { count: importedData.length }));
@@ -2826,6 +2998,21 @@ let googleIdentityScriptPromise = null;
 // Lazily injects the Google Identity Services script (idempotent) — only
 // called when a backup is actually attempted, so users who never touch this
 // feature never load it.
+//
+// The cached promise is cleared on failure. It used to be kept forever, so a
+// single failed load — a tunnel, a dropped connection, airplane mode — made
+// every backup attempt for the rest of the session fail instantly from the
+// cached rejection, without ever retrying. That is precisely backwards for a
+// feature whose whole purpose is to work once the network comes back, and
+// the user's only recourse was to relaunch the app.
+//
+// The old `existing` branch is gone with it: it attached load/error
+// listeners to a script that had already finished loading, so those events
+// had fired long before and the promise would simply hang forever. It was
+// also unreachable in practice, since the only way a tagged script exists is
+// if this function put it there, in which case the memo above already
+// returned. A stale tag CAN survive a cleared memo now, so remove it before
+// injecting a fresh one rather than accumulating dead tags.
 function loadGoogleIdentityScript() {
   if (window.google && window.google.accounts && window.google.accounts.oauth2) {
     return Promise.resolve();
@@ -2833,12 +3020,9 @@ function loadGoogleIdentityScript() {
   if (googleIdentityScriptPromise) return googleIdentityScriptPromise;
 
   googleIdentityScriptPromise = new Promise((resolve, reject) => {
-    const existing = document.querySelector("script[data-google-identity]");
-    if (existing) {
-      existing.addEventListener("load", () => resolve());
-      existing.addEventListener("error", () => reject(new Error(t("backupErrLoadGis"))));
-      return;
-    }
+    const stale = document.querySelector("script[data-google-identity]");
+    if (stale) stale.remove();
+
     const script = document.createElement("script");
     script.src = "https://accounts.google.com/gsi/client";
     script.async = true;
@@ -2847,6 +3031,9 @@ function loadGoogleIdentityScript() {
     script.onload = () => resolve();
     script.onerror = () => reject(new Error(t("backupErrLoadGis")));
     document.head.appendChild(script);
+  }).catch((err) => {
+    googleIdentityScriptPromise = null; // let the next attempt genuinely retry
+    throw err;
   });
 
   return googleIdentityScriptPromise;
