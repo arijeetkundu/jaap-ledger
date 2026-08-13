@@ -1,8 +1,11 @@
 {
   "scripts": {
+    "lint": "eslint .",
     "test": "node tests/test.js && node tests/test-unit.js && node tests/test-e2e.js && node tests/test-redesign.js && node tests/test-splash-custom.js && node tests/test-sunday-backup.js && node tests/test-i18n.js && node tests/test-service-worker.js"
   },
   "devDependencies": {
+    "eslint": "^10.8.1",
+    "globals": "^17.11.0",
     "puppeteer": "^24.40.0",
     "sharp": "^0.34.5"
   }
