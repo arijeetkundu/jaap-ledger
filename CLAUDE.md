@@ -30,9 +30,14 @@ node tests/test-splash-custom.js # custom splash image upload/rotation/delete
 node tests/test-sunday-backup.js # Sunday backup modal + Google Drive backup (mocked network)
 node tests/test-i18n.js         # language picker, Settings switcher, translations-load-failure fallback
 node tests/test-service-worker.js # offline launch, precache, deploy pickup, shortcut target
+
+# Lint (fast, no server needed, independent of npm test)
+npm run lint
 ```
 
-There is no build step, linter, or CI pipeline — `npm test` must be run locally before pushing. 408 assertions across the 8 suites as of this writing.
+There is no build step and no CI pipeline — `npm test` and `npm run lint` must both be run locally before pushing. 408 assertions across the 8 suites as of this writing.
+
+**Lint is a correctness net, not a style checker.** `eslint.config.js` enables only rules that catch genuine mistakes (`no-undef`, `no-unreachable`, `no-dupe-keys`, unused vars, …) and deliberately no formatting/style rules — `app.js`'s conventions predate the config, and reformatting it would bury real findings in noise. Its real value in a no-modules codebase is catching a typo'd global, which nothing else here would. Two rules are switched off on purpose, both recorded in the config: **`no-implicit-globals` everywhere** (app.js's top-level functions and `let`s are *intended* to be globals — enabling it produced 103 errors, all false), and **`no-undef` in `tests/**`** (`page.evaluate()` callbacks are serialized and run in the page against `app.js`'s globals, which ESLint can't see). Lint is deliberately *not* wired into `npm test` — it stays a separate, fast, opt-in command.
 
 ## Architecture
 

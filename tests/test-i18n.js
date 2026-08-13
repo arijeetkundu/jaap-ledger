@@ -207,7 +207,15 @@ async function newFreshPage(browser) {
 
     await page.click("#maintenance-toggle");
     await page.waitForSelector("#maintenance-drawer.open");
+    // The drawer slides in via `transform: translateX(...)`, so the .open
+    // class landing does NOT mean the button has reached a clickable
+    // position — Puppeteer hit-tests against the live rect and throws
+    // "Node is either not clickable" if it clicks mid-slide. Let the
+    // transition settle first, exactly as test-e2e.js already does before
+    // this same click.
+    await new Promise((r) => setTimeout(r, 400));
     await page.click("#sankalpa-open-btn");
+    await page.waitForSelector("#sankalpa-page.open");
     await new Promise((r) => setTimeout(r, 300));
 
     const beforeSwitch = await page.$eval("#sankalpa-page h2", (el) => el.textContent);
