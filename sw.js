@@ -117,7 +117,16 @@ async function staleWhileRevalidate(event) {
       // Only store genuinely successful, non-opaque responses — caching an
       // error page would serve that error back on every later launch.
       if (response && response.ok && response.type === "basic") {
-        cache.put(request, response.clone());
+        // RETURN the put, so this promise settles when the cache write has
+        // actually landed rather than when the response headers arrived.
+        // Without the return, event.waitUntil(networkFetch) below covered
+        // only the fetch and not the write — so the browser was free to kill
+        // the worker mid-write, the cache silently never updated, and
+        // stale-while-revalidate quietly degraded into cache-forever. The
+        // comment on that waitUntil claimed this protection; it did not have
+        // it. Chaining .then(() => response) keeps the resolved value the
+        // same for the no-cache path further down, which returns it.
+        return cache.put(request, response.clone()).then(() => response);
       }
       return response;
     })

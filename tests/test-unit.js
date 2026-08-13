@@ -27,7 +27,16 @@ function assert(label, condition) {
 }
 
 (async () => {
-  const browser = await puppeteer.launch({ headless: true, args: ["--no-sandbox"] });
+  const browser = await puppeteer.launch({
+    headless: true,
+    args: ["--no-sandbox"],
+    // Puppeteer's 30s default is not enough on a loaded machine: by the
+    // time the later suites in `npm test` start, seven browsers have
+    // already been launched and torn down, and the launch itself timed
+    // out -- a capacity limit, not a failing assertion. Costs nothing
+    // when the machine is idle.
+    timeout: 90000,
+  });
   const page = await browser.newPage();
   await page.evaluateOnNewDocument(() => localStorage.setItem("appLanguage", "en"));
 

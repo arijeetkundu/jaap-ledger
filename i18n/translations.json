@@ -419,11 +419,6 @@
     "hi": "सहेजें",
     "bn": "সংরক্ষণ করুন"
   },
-  "todayLockedMsg": {
-    "en": "This entry is locked (older than 7 days).",
-    "hi": "यह एंट्री लॉक है (7 दिन से पुरानी है)।",
-    "bn": "এই এন্ট্রিটি লক করা হয়েছে (৭ দিনের বেশি পুরোনো)।"
-  },
   "commonInvalidNumber": {
     "en": "Please enter a valid, non-negative number.",
     "hi": "कृपया एक मान्य, ऋणेतर संख्या दर्ज करें।",
@@ -463,6 +458,11 @@
     "en": "Saved ✓",
     "hi": "सहेजा गया ✓",
     "bn": "সংরক্ষিত ✓"
+  },
+  "sankalpaLoadFailed": {
+    "en": "Could not open your Sankalpa. Please try again.",
+    "hi": "आपका संकल्प नहीं खुल सका। कृपया पुनः प्रयास करें।",
+    "bn": "আপনার সংকল্প খোলা যায়নি। আবার চেষ্টা করুন।"
   },
   "commonSaveFailed": {
     "en": "Could not save. Please try again.",

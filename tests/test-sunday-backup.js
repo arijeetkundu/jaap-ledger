@@ -107,8 +107,13 @@ async function mockGoogleDriveApis(page) {
   });
 }
 
-async function newMockedPage(browser, { dateISO, mockGoogle = true }) {
-  const context = await browser.createBrowserContext();
+// Builds a fully-mocked page inside an EXISTING context. Split out of
+// newMockedPage() so a test can advance the mocked clock by opening a second
+// page in the same context rather than re-running evaluateOnNewDocument
+// mocks over a reload — same origin, so localStorage carries over, which is
+// exactly what the "next Sunday" test needs while avoiding a reload race
+// that intermittently detached the frame outright.
+async function mockedPageIn(context, { dateISO, mockGoogle = true }) {
   const page = await context.newPage();
   await page.setViewport({ width: 390, height: 844 });
   const errors = [];
@@ -128,12 +133,27 @@ async function newMockedPage(browser, { dateISO, mockGoogle = true }) {
   // — and steals clicks from — the Sunday Backup modal under test here.
   await page.evaluateOnNewDocument(() => localStorage.setItem("appLanguage", "en"));
   await page.goto(BASE, { waitUntil: "networkidle0", timeout: 15000 });
+  return { page, errors };
+}
+
+async function newMockedPage(browser, { dateISO, mockGoogle = true }) {
+  const context = await browser.createBrowserContext();
+  const { page, errors } = await mockedPageIn(context, { dateISO, mockGoogle });
   await page.evaluate(() => localStorage.clear());
   return { context, page, errors };
 }
 
 (async () => {
-  const browser = await puppeteer.launch({ headless: true, args: ["--no-sandbox"] });
+  const browser = await puppeteer.launch({
+    headless: true,
+    args: ["--no-sandbox"],
+    // Puppeteer's 30s default is not enough on a loaded machine: by the
+    // time the later suites in `npm test` start, seven browsers have
+    // already been launched and torn down, and the launch itself timed
+    // out -- a capacity limit, not a failing assertion. Costs nothing
+    // when the machine is idle.
+    timeout: 90000,
+  });
   const allErrors = [];
 
   // ── Modal visibility: Sunday vs. non-Sunday, once-per-day ────────────
@@ -205,6 +225,47 @@ async function newMockedPage(browser, { dateISO, mockGoogle = true }) {
     await context.close();
   }
 
+  // ── Dismissal must not depend on a storage write ─────────────────────
+  // markSundayBackupHandled() ran BEFORE closeSundayBackupModal() on every
+  // dismiss route, and wrote localStorage unguarded. On an origin whose
+  // storage is full, that throw meant the modal could not be closed at all:
+  // a full-screen backdrop with no way past it, on precisely the devices
+  // most likely to hit it. Verified to fail without its fix — the modal
+  // stays open on all three routes.
+  console.log("\n=== Dismissal survives a failing storage write ===");
+  {
+    const hostileCases = [
+      { label: "✕ close button", click: page => page.click("#sunday-backup-close-btn") },
+      { label: "\"Remind me next Sunday\"", click: page => page.click("#sunday-backup-dismiss-btn") },
+      { label: "backdrop click", click: page => page.click("#sunday-backup-modal", { offset: { x: 5, y: 5 } }) },
+    ];
+    for (const { label, click } of hostileCases) {
+      const { context, page } = await newMockedPage(browser, { dateISO: "2026-08-09" });
+      // Every write throws from here on, exactly as a full origin behaves.
+      await page.evaluateOnNewDocument(() => {
+        Storage.prototype.setItem = function () {
+          throw new DOMException("Quota exceeded", "QuotaExceededError");
+        };
+      });
+      await page.reload({ waitUntil: "networkidle0" });
+      await new Promise(r => setTimeout(r, SPLASH_WAIT_MS));
+
+      const modalOpened = await page.evaluate(() =>
+        document.getElementById("sunday-backup-modal").classList.contains("open")
+      );
+      assert(`${label}: the modal is open to begin with (test setup sanity)`, modalOpened);
+
+      await click(page);
+      await new Promise(r => setTimeout(r, 300));
+      const closed = await page.evaluate(() =>
+        !document.getElementById("sunday-backup-modal").classList.contains("open")
+      );
+      assert(`${label}: still closes when localStorage.setItem throws`, closed);
+
+      await context.close();
+    }
+  }
+
   // ── Reappears on the next Sunday ─────────────────────────────────────
   console.log("\n=== Modal reappears on the next Sunday ===");
   {
@@ -214,11 +275,16 @@ async function newMockedPage(browser, { dateISO, mockGoogle = true }) {
     await page.click("#sunday-backup-dismiss-btn");
     await new Promise(r => setTimeout(r, 300));
 
-    // Jump to the following Sunday without clearing localStorage.
-    await mockPageDate(page, "2026-08-16T10:00:00");
-    await page.reload({ waitUntil: "networkidle0" });
+    // Jump to the following Sunday without clearing localStorage. Done by
+    // opening a SECOND page in the same context (same origin, so last
+    // week's dismissal is still recorded) rather than re-mocking the clock
+    // over a reload — that reload intermittently detached the frame and
+    // took the whole suite down with it, and a retry couldn't recover
+    // because the target was already destroyed.
+    await page.close();
+    const { page: nextSundayPage } = await mockedPageIn(context, { dateISO: "2026-08-16" });
     await new Promise(r => setTimeout(r, SPLASH_WAIT_MS));
-    const reopensNextSunday = await page.evaluate(() =>
+    const reopensNextSunday = await nextSundayPage.evaluate(() =>
       document.getElementById("sunday-backup-modal").classList.contains("open")
     );
     assert("modal reopens on the following Sunday despite last week's dismissal", reopensNextSunday);
