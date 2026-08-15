@@ -412,12 +412,35 @@ async function freshLoad(page, { clearStorage = false } = {}) {
   );
   assertInsideCreamPanel("the deity image's frame", framing);
 
-  // The background stays full-bleed (`cover`), so on any viewport wider
-  // than the art's own 37/80 the art's top and bottom — and with them most
-  // of the cream panel — are cropped away, and an art-anchored frame would
-  // hang below the fold. A min-aspect-ratio rule collapses the anchor to
-  // the viewport there. A tablet shape is far enough from a phone's 0.462
-  // to catch a regression in either half of that arrangement.
+  // Regression guard for a bug that shipped: the wide-viewport fallback's
+  // threshold was originally the artwork's own ratio (37/80 = 0.4625), which
+  // is a hair BELOW an ordinary phone's once its browser chrome is taken out
+  // of the viewport — an installed PWA's status bar and gesture bar leave the
+  // page shorter than the screen. Real phones were therefore handed the
+  // tablet fallback and their frame dropped from the capital line to
+  // mid-viewport, while every test here passed, because a nominal 390x844 is
+  // 0.4621 and squeaked under the line. These three are the same device at
+  // full screen, minus a status bar, and minus both bars; all must hang from
+  // the capital line. Don't reduce this to one viewport — the whole point is
+  // that ratios straddling 0.4625 have to behave identically.
+  for (const [label, width, height] of [
+    ["at full screen", 731, 1600],
+    ["minus a status bar", 731, 1520],
+    ["minus status and gesture bars", 731, 1420],
+  ]) {
+    await page.setViewport({ width, height });
+    await page.reload({ waitUntil: "networkidle0" });
+    await new Promise(r => setTimeout(r, 300));
+    const f = await measureFraming();
+    assertInsideCreamPanel(`the frame on a tall phone ${label}`, f);
+  }
+
+  // The background stays full-bleed (`cover`), so on a genuinely wide
+  // viewport the art's top and bottom — and with them most of the cream
+  // panel — are cropped away, and an art-anchored frame would hang below the
+  // fold. A min-aspect-ratio rule collapses the anchor to the viewport
+  // there. A tablet shape is far enough from a phone to catch a regression
+  // in either half of that arrangement.
   await page.setViewport({ width: 820, height: 1180 });
   await page.reload({ waitUntil: "networkidle0" });
   await new Promise(r => setTimeout(r, 300));

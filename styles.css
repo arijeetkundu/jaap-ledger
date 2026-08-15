@@ -904,12 +904,11 @@ button {
   animation: splash-entrance 0.9s var(--ease-premium) both;
 }
 
-/* Viewports wider than the artwork's own 37/80 (= 0.4625) ratio — a tablet,
-   or a phone turned landscape. `cover` keeps the arch full-bleed there by
-   cropping its top and bottom away, which takes most of the cream panel
-   off-screen with them: anchored to the art, the frame would hang below the
-   fold. So for these shapes only, the anchor collapses to the viewport and
-   the frame is placed in the lower half of it.
+/* Genuinely wide viewports — a tablet, or a phone turned landscape. `cover`
+   keeps the arch full-bleed by cropping its top and bottom away, and past
+   some ratio that crops the capital line, and the frame hanging from it,
+   off-screen entirely. For those shapes only, the anchor collapses to the
+   viewport and the frame is placed in the lower half of it.
 
    That placement is still on cream by construction rather than by luck.
    cover leaves the middle `0.4625 / (vw/vh)` of the art visible, centred —
@@ -917,8 +916,20 @@ button {
    its lower half therefore always falls inside the art's 48%-98.5% cream
    panel. Below the viewport's midline is below the arch, at every ratio in
    this range — which is why the top edge goes to 50% here rather than to
-   the 44.5% capital line, whose position on screen these shapes crop away. */
-@media (min-aspect-ratio: 37/80) {
+   the 44.5% capital line, whose position on screen these shapes crop away.
+
+   The threshold is 13/20 (0.65), NOT the artwork's own 37/80 (0.4625). That
+   was the obvious number and it was wrong, by enough to ship a real bug: an
+   installed PWA's viewport is a little shorter than the physical screen
+   (status bar, gesture bar), which pushed ordinary phones just PAST 0.4625,
+   handed them this tablet fallback, and dropped their frame from the capital
+   line to mid-viewport — while tests on a nominal 390x844 (0.4621) squeaked
+   under the line and passed. The art-anchored placement is in fact valid far
+   beyond that point: cover leaves the middle 0.4625/R of the art visible, so
+   the frame's lowest possible edge (44.5% + 40% = 84.5%) stays on screen
+   while 50 + 50 x 0.4625/R >= 84.5, i.e. up to R ~ 0.67. 0.65 keeps a margin
+   under that limit and clears every phone in portrait by a wide distance. */
+@media (min-aspect-ratio: 13/20) {
   #splash-panel {
     width: 100vw;
     height: 100vh;
