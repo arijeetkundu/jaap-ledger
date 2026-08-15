@@ -853,12 +853,19 @@ button {
    pixels (cream mask over rgb(255,241,214)):
 
      straight-walled cream panel   x 15.5%-84.3%,  y 48%-98.5%
+     at the column capitals        x 18.1%-81.8%,  y 44.4%
      cream at the arch throat      x   18%-82%  (y ~40%)
-     largest inscribed 2:3 box     64.7% x 44.9%, spanning y 44.9%-89.8%
 
-   The frame is centred at 50% / 68% and capped at 58% x 40%, which leaves
-   roughly 5.5% side clearance from the painted columns and 10% above the
-   bottom edge of the cream, for every shape the app can display.
+   The frame's TOP edge is pinned to 44.5% — the line where the columns'
+   capitals meet the springing of the arch — so every image starts from the
+   same height on the wall however tall it is, the way a real picture hangs
+   from a fixed hook. Hence `top` plus translateX only, not the usual
+   translate(-50%, -50%) centring; the entrance keyframes match.
+
+   Capped at 58% x 40%. 58% is the binding constraint at the top edge, and
+   at 44.4% the cream is 63.6% wide, so the widest possible frame keeps
+   ~2.9% clearance from the painted columns on each side. The tallest
+   possible frame ends at 84.5%, well above the cream's 98.5% floor.
 
    The size is expressed purely as MAXIMA with width/height auto, never a
    fixed width: given both bounds and no fixed dimension, the browser
@@ -874,16 +881,16 @@ button {
    left a measured 15px white band on a 0.690-ratio image.) */
 #splash-screen img {
   position: absolute;
-  top: 68%;
+  top: 44.5%;
   left: 50%;
   width: auto;
   height: auto;
   max-width: 58%;
   max-height: 40%;
-  /* Static fallback so centering still holds if the animation is disabled
-     (prefers-reduced-motion below sets animation: none, which would
-     otherwise drop this transform along with the animation). */
-  transform: translate(-50%, -50%);
+  /* Static fallback so the horizontal centring still holds if the animation
+     is disabled (prefers-reduced-motion below sets animation: none, which
+     would otherwise drop this transform along with the animation). */
+  transform: translateX(-50%);
   /* A no-op while the box matches the image's ratio (which the auto/maxima
      sizing above keeps true); kept as a guarantee of no distortion. */
   object-fit: contain;
@@ -909,14 +916,15 @@ button {
    so the visible band always runs 50%±k of the art for some k <= 50%, and
    its lower half therefore always falls inside the art's 48%-98.5% cream
    panel. Below the viewport's midline is below the arch, at every ratio in
-   this range. */
+   this range — which is why the top edge goes to 50% here rather than to
+   the 44.5% capital line, whose position on screen these shapes crop away. */
 @media (min-aspect-ratio: 37/80) {
   #splash-panel {
     width: 100vw;
     height: 100vh;
   }
   #splash-screen img {
-    top: 70%;
+    top: 50%;
   }
 }
 
@@ -928,11 +936,11 @@ button {
 @keyframes splash-entrance {
   from {
     opacity: 0;
-    transform: translate(-50%, -50%) scale(1.08) translateY(8px);
+    transform: translateX(-50%) scale(1.08) translateY(8px);
   }
   to {
     opacity: 1;
-    transform: translate(-50%, -50%) scale(1) translateY(0);
+    transform: translateX(-50%) scale(1) translateY(0);
   }
 }
 

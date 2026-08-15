@@ -62,12 +62,15 @@ async function measureFraming(page) {
 // pixels: straight-walled section x 15.5%-84.3%, y 48%-98.5%, narrowing
 // above that as the arch curves in. These are the bounds the gold frame
 // must stay inside so it reads as a picture hung on that wall rather than
-// overlapping the painted arch and columns.
+// overlapping the painted arch and columns. Its top edge is pinned to the
+// 44.5% line where the columns' capitals meet the arch, so every image —
+// whatever its shape — hangs from the same height on that wall.
 function assertInsideCreamPanel(assertFn, label, framing) {
   assertFn(
-    `${label} stays inside the artwork's cream panel`,
+    `${label} hangs from the capital line, inside the artwork's cream panel`,
     !!framing &&
-      framing.panelTopPct >= 44 && framing.panelBottomPct <= 92 &&
+      framing.panelTopPct >= 43 && framing.panelTopPct <= 46 &&
+      framing.panelBottomPct <= 92 &&
       framing.panelLeftPct >= 17 && framing.panelRightPct <= 83
   );
 }
