@@ -62,7 +62,12 @@
   <!-- Reflection Summary -->
   <div id="reflection-summary"></div>
 
-  <hr>
+  <!-- Ledger heading. Deliberately OUTSIDE #ledger-list: renderLedgerList()
+       clears that section's innerHTML on every save, toggle and language
+       switch, so a heading placed inside would vanish on the first
+       re-render. Static markup also means applyStaticTranslations() drives
+       it, which keeps this readable English if translations.json fails. -->
+  <h2 id="ledger-heading" data-i18n="ledgerHeading">Ledger</h2>
 
   <!-- Ledger List -->
   <section id="ledger-list">
@@ -164,6 +169,16 @@
     <button id="splash-images-reset-btn" class="maintenance-btn" data-i18n="settingsRemoveAllImagesBtn">
       Remove All Custom Images
     </button>
+
+    <!-- The version is a hand-maintained literal: this app has no build step
+         and no version field anywhere, so nothing can derive it. Bump it at
+         every release, alongside the git tag — see CLAUDE.md's release
+         checklist. Only the tagline translates. -->
+    <p class="app-version-line">
+      <span id="app-version">Sumiran Lite v3.1.0</span>
+      <span aria-hidden="true"> · </span>
+      <span data-i18n="settingsTagline">Built for Sadhaks everywhere</span>
+    </p>
   </div>
 </div>
 

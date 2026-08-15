@@ -221,6 +221,30 @@ p {
   opacity: 0.5;
   cursor: default;
 }
+/* Ledger section heading. Mirrors #today-card h2's rule set rather than
+   sharing a class with it: that heading's markup is generated inside
+   renderTodayCard()'s template, so factoring the two together would ripple
+   further than this heading warrants. The ::after draws the hairline rule
+   out to the right of the word, the same way "Today" does. */
+#ledger-heading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 24px;
+  margin-bottom: 4px;
+  font-family: var(--font-heading);
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--maroon);
+}
+
+#ledger-heading::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: rgba(122, 31, 43, 0.18);
+}
+
 /* Ledger list */
 #ledger-list {
   margin-top: 16px;
@@ -899,10 +923,18 @@ button {
   object-position: center;
   background-color: var(--surface);
   border: 7px solid var(--gold);
-  /* A soft cast shadow plus a tight contact shadow, warmed towards maroon
-     rather than neutral black, so the frame reads as hanging slightly
-     proud of the cream wall instead of printed onto it. */
-  box-shadow: 0 14px 34px rgba(90, 26, 26, 0.30), 0 3px 8px rgba(90, 26, 26, 0.22);
+  /* Three layers, because a single soft one disappears here. The panel's
+     cream is very bright (rgb(255,241,214)) and sits right beside a gold
+     border, so a warm low-alpha shadow tints it rather than darkening it —
+     the previous `0 14px 34px / 0 3px 8px` pair at 0.30/0.22 maroon was
+     measurably present and visually absent. The tight first layer is the
+     one that does the work: a crisp contact line where the frame meets the
+     wall is what the eye reads as "standing off it". The colour is darker
+     and less saturated than the old maroon for the same reason. */
+  box-shadow:
+    0 2px 3px rgba(64, 14, 20, 0.42),
+    0 10px 20px rgba(64, 14, 20, 0.38),
+    0 28px 56px rgba(64, 14, 20, 0.28);
   animation: splash-entrance 0.9s var(--ease-premium) both;
 }
 
@@ -1055,6 +1087,19 @@ body.loading {
 .maintenance-panel {
   padding: 16px;
   padding-top: calc(env(safe-area-inset-top, 0px) + 16px);
+}
+
+/* Version + tagline, closing the Settings drawer. Kept quiet: it is a
+   signature, not a control. */
+.app-version-line {
+  margin-top: 28px;
+  margin-bottom: 0;
+  padding-top: 14px;
+  border-top: 1px solid var(--gold-hairline);
+  text-align: center;
+  font-size: 0.75rem;
+  line-height: 1.5;
+  color: var(--ink-muted);
 }
 
 #maintenance-toggle {

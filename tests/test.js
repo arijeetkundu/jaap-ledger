@@ -50,8 +50,12 @@ function assert(label, condition) {
   console.log("\n=== Loading app ===");
   await page.goto(BASE, { waitUntil: "networkidle0", timeout: 15000 });
 
-  // Wait for splash to finish and app to render (splash takes 2s + 0.5s fade)
-  await new Promise(r => setTimeout(r, 3000));
+  // Wait for the splash to clear (SPLASH_HOLD_MS 3200 + SPLASH_FADE_MS 800).
+  // This suite predates the named SPLASH_WAIT_MS constant the other suites
+  // use, so it kept a bare 3000 with a comment still describing the old
+  // 2000+500 timing — enough only because networkidle0 resolves well after
+  // `load`, where app.js actually starts the timer.
+  await new Promise(r => setTimeout(r, 4200));
 
   // ── 1. Basic structure ──────────────────────────────────────────
   console.log("\n=== Structure ===");
@@ -59,6 +63,42 @@ function assert(label, condition) {
   assert("#today-card rendered", await page.$eval("#today-card", el => el.innerHTML.trim().length > 0));
   assert("#reflection-summary rendered", await page.$eval("#reflection-summary", el => el.innerHTML.trim().length > 0));
   assert("#ledger-list rendered", await page.$eval("#ledger-list", el => el.innerHTML.trim().length > 0));
+
+  // The Ledger heading lives in static markup, deliberately OUTSIDE
+  // #ledger-list — renderLedgerList() clears that section's innerHTML on
+  // every save, toggle and language switch, so a heading inside it would
+  // disappear on the first re-render. Assert both that it exists and that it
+  // still precedes the search box, which is what would break if it were ever
+  // moved inside.
+  const ledgerHeading = await page.evaluate(() => {
+    const h = document.getElementById("ledger-heading");
+    const search = document.getElementById("ledger-search");
+    if (!h || !search) return null;
+    return {
+      text: h.textContent.trim(),
+      aboveSearch: h.getBoundingClientRect().bottom <= search.getBoundingClientRect().top,
+    };
+  });
+  assert("#ledger-heading present", !!ledgerHeading && ledgerHeading.text === "Ledger");
+  assert("#ledger-heading sits above the search box", !!ledgerHeading && ledgerHeading.aboveSearch);
+
+  // The version is a hand-maintained literal (no build step, no version field
+  // anywhere to derive it from), so this guards the shape rather than the
+  // number — a malformed or emptied line is the realistic failure.
+  const versionLine = await page.evaluate(() => {
+    const el = document.querySelector(".app-version-line");
+    const ver = document.getElementById("app-version");
+    if (!el || !ver) return null;
+    return { version: ver.textContent.trim(), full: el.textContent.replace(/\s+/g, " ").trim() };
+  });
+  assert(
+    "Settings version line is present and well-formed",
+    !!versionLine && /^Sumiran Lite v\d+\.\d+\.\d+$/.test(versionLine.version)
+  );
+  assert(
+    "version line carries the tagline too",
+    !!versionLine && versionLine.full.includes("Built for Sadhaks everywhere")
+  );
 
   // ── 2. Progress bar ─────────────────────────────────────────────
   console.log("\n=== Progress bar ===");
