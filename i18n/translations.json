@@ -129,6 +129,11 @@
     "hi": "गुरुदेव हनुमान जी की तस्वीर हमेशा शामिल रहेगी। अपनी 4 तस्वीरें तक जोड़ें, जो एक-एक करके दिखाई देंगी।",
     "bn": "গুরুদেব হনুমানজির ছবি সবসময় অন্তর্ভুক্ত থাকবে। আপনার নিজের সর্বোচ্চ ৪টি ছবি যোগ করুন, যেগুলি একটির পর একটি দেখা যাবে।"
   },
+  "settingsTagline": {
+    "en": "Built for Sadhaks everywhere",
+    "hi": "सभी साधकों के लिए",
+    "bn": "সব সাধকদের জন্য"
+  },
   "settingsRemoveAllImagesBtn": {
     "en": "Remove All Custom Images",
     "hi": "सभी कस्टम तस्वीरें हटाएँ",
@@ -438,6 +443,11 @@
     "en": "Search notes…",
     "hi": "टिप्पणियाँ खोजें…",
     "bn": "মন্তব্য খুঁজুন…"
+  },
+  "ledgerHeading": {
+    "en": "Ledger",
+    "hi": "लेजर",
+    "bn": "লেজার"
   },
   "ledgerSearchNoResults": {
     "en": "No entries match that search.",

@@ -116,10 +116,21 @@ async function newFreshPage(browser) {
       pickerOpen: document.getElementById("language-picker").classList.contains("open"),
       storedLang: localStorage.getItem("appLanguage"),
       todayHeading: document.querySelector("#today-card h2")?.textContent,
+      // Both of these are static data-i18n markup driven by
+      // applyStaticTranslations(), unlike the Today Card above which is
+      // rebuilt from scratch — so they exercise the other translation path.
+      ledgerHeading: document.getElementById("ledger-heading")?.textContent.trim(),
+      versionLine: document.querySelector(".app-version-line")?.textContent.replace(/\s+/g, " ").trim(),
     }));
     assert("picking a language immediately dismisses the picker (no Continue button)", !afterPick.pickerOpen);
     assert("the choice is persisted to localStorage", afterPick.storedLang === "hi");
     assert("already-rendered UI (Today Card) updates immediately, no reload needed", afterPick.todayHeading.includes("आज"));
+    assert("the static Ledger heading translates too", afterPick.ledgerHeading === "लेजर");
+    assert("the Settings tagline translates", !!afterPick.versionLine && afterPick.versionLine.includes("सभी साधकों के लिए"));
+    assert(
+      "the version number itself does NOT translate",
+      !!afterPick.versionLine && afterPick.versionLine.includes("Sumiran Lite v")
+    );
 
     await page.reload({ waitUntil: "networkidle0" });
     await new Promise((r) => setTimeout(r, 4200));
