@@ -32,10 +32,13 @@ function assert(label, condition) {
 
 async function measureFraming(page) {
   return page.evaluate(() => {
-    const s = document.getElementById("splash-screen");
+    // #splash-panel is the rectangle the background artwork actually renders
+    // into, so measuring against it gives percentages OF THE ARTWORK — which
+    // is what the cream panel's bounds are expressed in.
+    const panel = document.getElementById("splash-panel");
     const img = document.getElementById("splash-img");
-    if (!s || !img) return null;
-    const rS = s.getBoundingClientRect();
+    if (!panel || !img) return null;
+    const rP = panel.getBoundingClientRect();
     const rImg = img.getBoundingClientRect();
     const cs = getComputedStyle(img);
     const border = parseFloat(cs.borderTopWidth) * 2;
@@ -47,8 +50,26 @@ async function measureFraming(page) {
       contentRatio: contentW / contentH,
       naturalRatio,
       letterboxPx: contentH - contentW / naturalRatio,
+      panelTopPct: ((rImg.top - rP.top) / rP.height) * 100,
+      panelBottomPct: ((rImg.bottom - rP.top) / rP.height) * 100,
+      panelLeftPct: ((rImg.left - rP.left) / rP.width) * 100,
+      panelRightPct: ((rImg.right - rP.left) / rP.width) * 100,
     };
   });
+}
+
+// The background artwork's plain cream panel, measured from the art's own
+// pixels: straight-walled section x 15.5%-84.3%, y 48%-98.5%, narrowing
+// above that as the arch curves in. These are the bounds the gold frame
+// must stay inside so it reads as a picture hung on that wall rather than
+// overlapping the painted arch and columns.
+function assertInsideCreamPanel(assertFn, label, framing) {
+  assertFn(
+    `${label} stays inside the artwork's cream panel`,
+    !!framing &&
+      framing.panelTopPct >= 44 && framing.panelBottomPct <= 92 &&
+      framing.panelLeftPct >= 17 && framing.panelRightPct <= 83
+  );
 }
 
 (async () => {
@@ -368,6 +389,11 @@ async function measureFraming(page) {
     !!framing && Math.abs(framing.contentRatio - framing.naturalRatio) < 0.01
   );
   assert("no white space above/below the custom image", !!framing && Math.abs(framing.letterboxPx) < 1.5);
+  // The fixture here is a 2:1 landscape — a shape nothing like Hanuman's
+  // 0.667 — so this also guards that the panel box is expressed as maxima
+  // rather than a fixed width, which is what lets any shape sit inside the
+  // cream without being reshaped to fit it.
+  assertInsideCreamPanel(assert, "the custom image's frame", framing);
 
   // ── Corrupt-data resilience ───────────────────────────────────────────
   console.log("\n=== Corrupt-data resilience ===");

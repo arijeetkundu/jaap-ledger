@@ -336,11 +336,17 @@ async function freshLoad(page, { clearStorage = false } = {}) {
   console.log("\n=== Splash deity image framing ===");
   await page.reload({ waitUntil: "networkidle0" });
   await new Promise(r => setTimeout(r, 300)); // steady display window, safely before the ~2s fade (900ms was occasionally flaky under system load)
-  const framing = await page.evaluate(() => {
+  const measureFraming = () => page.evaluate(() => {
     const s = document.getElementById("splash-screen");
+    // #splash-panel is the rectangle the background artwork actually
+    // renders into (background-size: contain), so measuring against it
+    // gives percentages OF THE ARTWORK rather than of the viewport —
+    // which is what the cream panel's measured bounds are expressed in.
+    const panel = document.getElementById("splash-panel");
     const img = document.getElementById("splash-img");
-    if (!s || !img) return null;
+    if (!s || !panel || !img) return null;
     const rS = s.getBoundingClientRect();
+    const rP = panel.getBoundingClientRect();
     const rImg = img.getBoundingClientRect();
     const cs = getComputedStyle(img);
     // Compare against the CONTENT box (border-box minus the border on each
@@ -361,8 +367,26 @@ async function freshLoad(page, { clearStorage = false } = {}) {
       insetLeftPct: ((rImg.left - rS.left) / rS.width) * 100,
       insetBottomPct: ((rS.bottom - rImg.bottom) / rS.height) * 100,
       insetRightPct: ((rS.right - rImg.right) / rS.width) * 100,
+      panelTopPct: ((rImg.top - rP.top) / rP.height) * 100,
+      panelBottomPct: ((rImg.bottom - rP.top) / rP.height) * 100,
+      panelLeftPct: ((rImg.left - rP.left) / rP.width) * 100,
+      panelRightPct: ((rImg.right - rP.left) / rP.width) * 100,
     };
   });
+
+  // The background artwork's plain cream panel, measured from the art's own
+  // pixels: straight-walled section x 15.5%-84.3%, y 48%-98.5%, narrowing
+  // above that as the arch curves in. The gold frame must land inside these
+  // bounds so it reads as a picture hung on that wall, clear of the painted
+  // arch and columns.
+  const assertInsideCreamPanel = (label, f) => assert(
+    `${label} stays inside the artwork's cream panel`,
+    !!f &&
+      f.panelTopPct >= 44 && f.panelBottomPct <= 92 &&
+      f.panelLeftPct >= 17 && f.panelRightPct <= 83
+  );
+
+  const framing = await measureFraming();
   assert("deity image has a visible border", !!framing && framing.borderWidth >= 4);
   assert(
     "deity image is inset on all four sides (a framed picture, not full-bleed)",
@@ -383,6 +407,42 @@ async function freshLoad(page, { clearStorage = false } = {}) {
     "no white space above/below the deity image",
     !!framing && Math.abs(framing.letterboxPx) < 1.5
   );
+  assertInsideCreamPanel("the deity image's frame", framing);
+
+  // The background stays full-bleed (`cover`), so on any viewport wider
+  // than the art's own 37/80 the art's top and bottom — and with them most
+  // of the cream panel — are cropped away, and an art-anchored frame would
+  // hang below the fold. A min-aspect-ratio rule collapses the anchor to
+  // the viewport there. A tablet shape is far enough from a phone's 0.462
+  // to catch a regression in either half of that arrangement.
+  await page.setViewport({ width: 820, height: 1180 });
+  await page.reload({ waitUntil: "networkidle0" });
+  await new Promise(r => setTimeout(r, 300));
+  const wide = await page.evaluate(() => {
+    const img = document.getElementById("splash-img");
+    if (!img) return null;
+    const r = img.getBoundingClientRect();
+    const cs = getComputedStyle(img);
+    const border = parseFloat(cs.borderTopWidth) * 2;
+    const naturalRatio = img.naturalWidth / img.naturalHeight;
+    return {
+      fullyOnScreen: r.top >= 0 && r.left >= 0 &&
+        r.bottom <= window.innerHeight && r.right <= window.innerWidth,
+      // Below the viewport's midline is below the arch at every ratio in
+      // this range, so this is also the check that it sits on cream.
+      belowTheArch: r.top >= window.innerHeight * 0.45,
+      contentRatio: (r.width - border) / (r.height - border),
+      naturalRatio,
+    };
+  });
+  assert("on a tablet-shaped viewport the frame is fully on screen", !!wide && wide.fullyOnScreen);
+  assert("on a tablet-shaped viewport the frame sits below the arch, on the cream", !!wide && wide.belowTheArch);
+  assert(
+    "frame still hugs the image's own aspect ratio on a tablet-shaped viewport",
+    !!wide && Math.abs(wide.contentRatio - wide.naturalRatio) < 0.01
+  );
+  // Restore the phone viewport the rest of the suite is written against.
+  await page.setViewport({ width: 390, height: 844 });
 
   // ── Reflection card progress bar contrast ───────────────────────────
   console.log("\n=== Progress bar contrast ===");

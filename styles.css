@@ -776,7 +776,6 @@ button {
   transform: translateX(-50%) translateY(0);
 }
 /* Splash Screen Styling */
-/* Splash Screen Styling */
 /* The splash background is fixed/unconditional — deliberately independent
    of the app's selectable background theme (Alpana/Mandala/Jharokha),
    which must never appear here. See #splash-screen img below for the
@@ -788,8 +787,14 @@ button {
   /* Use viewport units to ensure it hits all 4 corners */
   width: 100vw;
   height: 100vh;
-  background-color: var(--cream);
+  /* The artwork's own panel cream, sampled from splash-background.webp —
+     deliberately NOT var(--cream) (#fbf1de), which is close enough to
+     read as a seam anywhere the fill meets the art. */
+  background-color: rgb(255, 241, 214);
   background-image: url('splash/splash-background.webp');
+  /* Full-bleed: the arch must fill the phone screen edge to edge, with no
+     letterbox bars. The art is 740x1600 (0.4625) and a phone viewport is
+     ~0.462, so on the target device cover crops essentially nothing. */
   background-size: cover;
   background-repeat: no-repeat;
   background-position: center;
@@ -805,52 +810,114 @@ button {
   content: "";
   position: absolute;
   inset: 0;
-  background: radial-gradient(circle at 50% 45%, rgba(233, 197, 101, 0.5), transparent 62%);
+  /* Centred on the artwork's cream panel (~68% down), not the screen's
+     middle — at 50% 45% the glow sat squarely on the arch's carved head
+     and washed out its detail. Alpha is also lower than the old 0.5 for
+     the same reason: it should lift the framed picture off the cream
+     wall, not veil the painted arch. */
+  background: radial-gradient(circle at 50% 68%, rgba(233, 197, 101, 0.35), transparent 58%);
   opacity: 0;
   animation: splash-glow 1.8s ease-out both;
 }
 
-/* Deity image framed like a picture hanging on the background's plain
-   "wall" panel — inset percentages are measured from the artwork itself
-   (splash/splash-background.webp): the ornate floral border occupies
-   roughly the top 12% / bottom 8%, with the arch's peak tapering to about
-   20% — these insets keep the frame comfortably inside that panel on all
-   sides. Every rotating deity image (app.js's SPLASH_IMAGES) shares this
-   exact box, so they're all rendered at the same size regardless of
-   which one is currently loaded. */
-#splash-screen img {
-  /* height: auto (rather than a fixed aspect-ratio) lets the frame adopt
-     each image's OWN ratio, so there's no letterbox and no cropping. A
-     fixed aspect-ratio: 2/3 was tried first, but the 5 deity images range
-     0.665-0.690, so anything wider than 0.667 got letterboxed — Ram
-     Darbar (0.690) showed a measured 15px white band. This also means an
-     arbitrary image of any shape displays undistorted, which is what the
-     upcoming user-supplied splash images need.
+/* Geometry anchor for the framed picture. It paints nothing; it simply
+   reproduces the rectangle that #splash-screen's `background-size: cover`
+   renders the artwork into, so the frame's percentages below are
+   percentages OF THE ARTWORK rather than of the viewport.
 
-     Width stays a deliberate 74% (not measured from the art — it keeps
-     the frame clear of the screen edges). max-height is a safety cap that
-     doesn't engage for the current images (~48-51% tall); it exists so a
-     very tall image shrinks proportionally instead of overflowing the
-     background art's ~20%-88% "wall" panel. Centered on that panel's
-     vertical midpoint (~54%). */
+   cover scales the 740x1600 art by max(100vw/740, 100vh/1600), giving a
+   rendered size of max(100vw, 100vh * 0.4625) by max(100vh, 100vw / 0.4625).
+   Without this anchor the frame would only land inside the cream panel on
+   viewports near the art's own 0.4625 ratio — which a 390x844 phone
+   happens to be, but a tablet (0.695) is not, and there the frame drifted
+   onto the painted gold columns.
+
+   Anchoring to the art rather than the viewport is necessary but not
+   sufficient on wide viewports, where cover crops the art's top and bottom
+   away: see the min-aspect-ratio block after the frame rules. */
+#splash-panel {
   position: absolute;
-  top: 54%;
+  top: 50%;
   left: 50%;
-  width: 74%;
+  transform: translate(-50%, -50%);
+  width: max(100vw, calc(100vh * 0.4625));
+  height: max(100vh, calc(100vw / 0.4625));
+  pointer-events: none;
+}
+
+/* The splash image, framed in gold like a picture hanging on the plain
+   off-white "wall" panel inside the background artwork's arch.
+
+   Percentages here resolve against #splash-panel above, so they are
+   percentages of the ARTWORK. Measured from splash-background.webp's own
+   pixels (cream mask over rgb(255,241,214)):
+
+     straight-walled cream panel   x 15.5%-84.3%,  y 48%-98.5%
+     cream at the arch throat      x   18%-82%  (y ~40%)
+     largest inscribed 2:3 box     64.7% x 44.9%, spanning y 44.9%-89.8%
+
+   The frame is centred at 50% / 68% and capped at 58% x 40%, which leaves
+   roughly 5.5% side clearance from the painted columns and 10% above the
+   bottom edge of the cream, for every shape the app can display.
+
+   The size is expressed purely as MAXIMA with width/height auto, never a
+   fixed width: given both bounds and no fixed dimension, the browser
+   scales the intrinsic bitmap to fit inside them at its own ratio, so the
+   element's box always equals the image's ratio exactly. That is what
+   guarantees nothing is ever stretched, squished, cropped or letterboxed
+   — the locked Hanuman image (0.667) and up to four user uploads of any
+   shape all share this box without any of them being reshaped to it. The
+   previous `width: 74%; max-height: 62%` pair could not promise that: a
+   sufficiently tall image hit the max-height cap while its width stayed
+   pinned, and object-fit: contain then letterboxed it inside its own
+   frame. (An even earlier fixed `aspect-ratio: 2/3` was worse still — it
+   left a measured 15px white band on a 0.690-ratio image.) */
+#splash-screen img {
+  position: absolute;
+  top: 68%;
+  left: 50%;
+  width: auto;
   height: auto;
-  max-height: 62%;
+  max-width: 58%;
+  max-height: 40%;
   /* Static fallback so centering still holds if the animation is disabled
      (prefers-reduced-motion below sets animation: none, which would
      otherwise drop this transform along with the animation). */
   transform: translate(-50%, -50%);
-  /* No-op while the box matches the image's ratio, but guarantees no
-     distortion if max-height ever clamps. */
+  /* A no-op while the box matches the image's ratio (which the auto/maxima
+     sizing above keeps true); kept as a guarantee of no distortion. */
   object-fit: contain;
   object-position: center;
   background-color: var(--surface);
   border: 7px solid var(--gold);
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+  /* A soft cast shadow plus a tight contact shadow, warmed towards maroon
+     rather than neutral black, so the frame reads as hanging slightly
+     proud of the cream wall instead of printed onto it. */
+  box-shadow: 0 14px 34px rgba(90, 26, 26, 0.30), 0 3px 8px rgba(90, 26, 26, 0.22);
   animation: splash-entrance 0.9s var(--ease-premium) both;
+}
+
+/* Viewports wider than the artwork's own 37/80 (= 0.4625) ratio — a tablet,
+   or a phone turned landscape. `cover` keeps the arch full-bleed there by
+   cropping its top and bottom away, which takes most of the cream panel
+   off-screen with them: anchored to the art, the frame would hang below the
+   fold. So for these shapes only, the anchor collapses to the viewport and
+   the frame is placed in the lower half of it.
+
+   That placement is still on cream by construction rather than by luck.
+   cover leaves the middle `0.4625 / (vw/vh)` of the art visible, centred —
+   so the visible band always runs 50%±k of the art for some k <= 50%, and
+   its lower half therefore always falls inside the art's 48%-98.5% cream
+   panel. Below the viewport's midline is below the arch, at every ratio in
+   this range. */
+@media (min-aspect-ratio: 37/80) {
+  #splash-panel {
+    width: 100vw;
+    height: 100vh;
+  }
+  #splash-screen img {
+    top: 70%;
+  }
 }
 
 /* The centering translate(-50%, -50%) has to be folded into every

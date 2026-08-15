@@ -34,10 +34,16 @@
 <div id="app-background" aria-hidden="true"></div>
 <div id="petal-overlay" aria-hidden="true"></div>
 <div id="splash-screen">
-  <picture>
-    <source id="splash-source" srcset="splash/hanuman-splash.webp" type="image/webp">
-    <img id="splash-img" src="splash/hanuman-splash.png" alt="App Splash Screen">
-  </picture>
+  <!-- #splash-panel carries no art of its own: it reproduces the exact
+       rectangle #splash-screen's background-size: cover paints, so the
+       framed picture below can be positioned in percentages OF THE ARTWORK
+       rather than of the viewport. See styles.css for the measurements. -->
+  <div id="splash-panel">
+    <picture>
+      <source id="splash-source" srcset="splash/hanuman-splash.webp" type="image/webp">
+      <img id="splash-img" src="splash/hanuman-splash.png" alt="App Splash Screen">
+    </picture>
+  </div>
 </div>
 
   <main>
