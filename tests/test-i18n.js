@@ -71,7 +71,7 @@ async function newFreshPage(browser) {
     if (msg.type() === "error") errors.push(msg.text());
   });
   await page.goto(BASE, { waitUntil: "networkidle0", timeout: 15000 });
-  await new Promise((r) => setTimeout(r, 2600)); // outlast splash
+  await new Promise((r) => setTimeout(r, 4200)); // outlast splash
   // Then wait for the picker itself rather than trusting that fixed sleep.
   // Every page from this helper starts with no language chosen, so the
   // picker opening is the reliable signal that initApp() has finished; a
@@ -122,7 +122,7 @@ async function newFreshPage(browser) {
     assert("already-rendered UI (Today Card) updates immediately, no reload needed", afterPick.todayHeading.includes("आज"));
 
     await page.reload({ waitUntil: "networkidle0" });
-    await new Promise((r) => setTimeout(r, 2600));
+    await new Promise((r) => setTimeout(r, 4200));
     const afterReload = await page.evaluate(() => ({
       pickerOpen: document.getElementById("language-picker").classList.contains("open"),
       todayHeading: document.querySelector("#today-card h2")?.textContent,
@@ -145,7 +145,7 @@ async function newFreshPage(browser) {
     assert("choosing English explicitly still writes appLanguage to localStorage", storedLang === "en");
 
     await page.reload({ waitUntil: "networkidle0" });
-    await new Promise((r) => setTimeout(r, 2600));
+    await new Promise((r) => setTimeout(r, 4200));
     const pickerOpen = await page.$eval("#language-picker", (el) => el.classList.contains("open"));
     assert("picker stays suppressed on reload after an explicit English choice", !pickerOpen);
 
@@ -190,7 +190,7 @@ async function newFreshPage(browser) {
     // Reload and confirm the Settings-switcher pill state survives it too
     // (previously only the first-run-picker path was reload-tested).
     await page.reload({ waitUntil: "networkidle0" });
-    await new Promise((r) => setTimeout(r, 2600));
+    await new Promise((r) => setTimeout(r, 4200));
     await page.click("#maintenance-toggle");
     await page.waitForSelector("#maintenance-drawer.open");
     await new Promise((r) => setTimeout(r, 300));

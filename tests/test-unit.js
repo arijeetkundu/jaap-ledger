@@ -47,8 +47,8 @@ function assert(label, condition) {
   });
 
   await page.goto(BASE, { waitUntil: "networkidle0", timeout: 15000 });
-  // Outlast the splash screen (2000ms display + 500ms fade).
-  await new Promise(r => setTimeout(r, 2600));
+  // Outlast the splash screen (3200ms display + 800ms fade).
+  await new Promise(r => setTimeout(r, 4200));
 
   // ── formatIndianNumber ──────────────────────────────────────────
   console.log("\n=== formatIndianNumber ===");

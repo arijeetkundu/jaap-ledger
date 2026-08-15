@@ -17,7 +17,8 @@ const path = require("path");
 const puppeteer = require("puppeteer");
 
 const BASE = "http://localhost:3333";
-const SPLASH_WAIT_MS = 2600; // outlasts the 2000ms display + 500ms fade
+const SPLASH_WAIT_MS = 4200; // outlasts the 3200ms display + 800ms fade
+const SPLASH_FADE_MS = 800;  // keep in step with app.js / styles.css
 let passed = 0;
 let failed = 0;
 
@@ -335,7 +336,7 @@ async function freshLoad(page, { clearStorage = false } = {}) {
   // ── Splash deity image: framed, not full-bleed ──────────────────────
   console.log("\n=== Splash deity image framing ===");
   await page.reload({ waitUntil: "networkidle0" });
-  await new Promise(r => setTimeout(r, 300)); // steady display window, safely before the ~2s fade (900ms was occasionally flaky under system load)
+  await new Promise(r => setTimeout(r, 300)); // steady display window, safely inside the 3200ms hold (900ms was occasionally flaky under system load)
   const measureFraming = () => page.evaluate(() => {
     const s = document.getElementById("splash-screen");
     // #splash-panel is the rectangle the background artwork actually
@@ -469,6 +470,80 @@ async function freshLoad(page, { clearStorage = false } = {}) {
   );
   // Restore the phone viewport the rest of the suite is written against.
   await page.setViewport({ width: 390, height: 844 });
+
+  // ── Splash: darshan timing and "tap anywhere to continue" ───────────
+  console.log("\n=== Splash timing and tap-to-continue ===");
+  await page.reload({ waitUntil: "networkidle0" });
+  await new Promise(r => setTimeout(r, 300));
+  const hint = await page.evaluate(() => {
+    const el = document.getElementById("splash-hint");
+    const img = document.getElementById("splash-img");
+    const panel = document.getElementById("splash-panel");
+    if (!el || !img || !panel) return null;
+    const rH = el.getBoundingClientRect();
+    const rI = img.getBoundingClientRect();
+    const rP = panel.getBoundingClientRect();
+    return {
+      text: el.textContent.trim(),
+      // The hint must sit on the cream BELOW the picture. It must never
+      // overlap the deity's image.
+      belowThePicture: rH.top >= rI.bottom,
+      insidePanel: ((rH.bottom - rP.top) / rP.height) * 100 < 98.5,
+      onScreen: rH.bottom <= window.innerHeight,
+    };
+  });
+  assert("splash shows a hint that tapping continues", !!hint && hint.text === "Tap anywhere to continue");
+  assert("the hint sits below the picture, never over the deity's image", !!hint && hint.belowThePicture);
+  assert("the hint stays on the artwork's cream panel", !!hint && hint.insidePanel);
+  assert("the hint is on screen", !!hint && hint.onScreen);
+
+  // Measure the hold from the `load` event, which is where app.js starts the
+  // timer — NOT from when page.reload() resolves. waitUntil: "networkidle0"
+  // returns a good half-second after load (it waits for 500ms of network
+  // quiet on top), so timing from there silently under-measures the hold and
+  // makes a correct 3200ms look like a failure.
+  const heldMs = await page.evaluate(() => new Promise((resolve) => {
+    const nav = performance.getEntriesByType("navigation")[0];
+    const loadEnd = nav ? nav.loadEventEnd : 0;
+    const started = performance.now();
+    const poll = setInterval(() => {
+      const el = document.getElementById("splash-screen");
+      const fading = !el || getComputedStyle(el).opacity !== "1";
+      if (fading) {
+        clearInterval(poll);
+        resolve(performance.now() - loadEnd);
+      } else if (performance.now() - started > 8000) {
+        clearInterval(poll);
+        resolve(-1);
+      }
+    }, 50);
+  }));
+  // Allow scheduler slack below the nominal 3200, but it must clear the old
+  // 2000ms hold decisively or the extension has silently regressed.
+  assert(
+    `splash holds for ~3.2s before dissolving (measured ${Math.round(heldMs)}ms)`,
+    heldMs >= 3000 && heldMs < 4500
+  );
+
+  // A tap starts the dissolve immediately rather than waiting out the hold.
+  await page.reload({ waitUntil: "networkidle0" });
+  await new Promise(r => setTimeout(r, 300));
+  await page.mouse.click(195, 700);
+  await new Promise(r => setTimeout(r, 120));
+  assert(
+    "tapping the splash begins the dissolve at once",
+    await page.evaluate(() => {
+      const el = document.getElementById("splash-screen");
+      return !el || getComputedStyle(el).opacity !== "1";
+    })
+  );
+  // …and it is gone once the fade completes, well before the full hold.
+  await new Promise(r => setTimeout(r, SPLASH_FADE_MS + 200));
+  assert(
+    "the splash is fully gone after a tap, long before the hold would end",
+    await page.evaluate(() => !document.getElementById("splash-screen") &&
+      !document.body.classList.contains("loading"))
+  );
 
   // ── Reflection card progress bar contrast ───────────────────────────
   console.log("\n=== Progress bar contrast ===");
