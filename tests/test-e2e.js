@@ -378,11 +378,14 @@ async function freshLoad(page, { clearStorage = false } = {}) {
   // pixels: straight-walled section x 15.5%-84.3%, y 48%-98.5%, narrowing
   // above that as the arch curves in. The gold frame must land inside these
   // bounds so it reads as a picture hung on that wall, clear of the painted
-  // arch and columns.
+  // arch and columns. Its top edge is pinned to the 44.5% line where the
+  // columns' capitals meet the arch, so every image — whatever its shape —
+  // hangs from the same height; that pinning is asserted, not just the
+  // containment, since a frame that merely fits could still drift.
   const assertInsideCreamPanel = (label, f) => assert(
-    `${label} stays inside the artwork's cream panel`,
+    `${label} hangs from the capital line, inside the artwork's cream panel`,
     !!f &&
-      f.panelTopPct >= 44 && f.panelBottomPct <= 92 &&
+      f.panelTopPct >= 43 && f.panelTopPct <= 46 && f.panelBottomPct <= 92 &&
       f.panelLeftPct >= 17 && f.panelRightPct <= 83
   );
 
