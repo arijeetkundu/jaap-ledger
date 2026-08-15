@@ -789,17 +789,13 @@ button {
   height: 100vh;
   /* The artwork's own panel cream, sampled from splash-background.webp —
      deliberately NOT var(--cream) (#fbf1de), which is close enough to
-     leave a faint visible seam where the letterboxed art meets the fill. */
+     read as a seam anywhere the fill meets the art. */
   background-color: rgb(255, 241, 214);
   background-image: url('splash/splash-background.webp');
-  /* `contain`, not `cover`: the arch is a single composed illustration
-     with a framed picture positioned inside its panel, so cropping it
-     would push that picture off-screen on any viewport wider than the
-     art's 0.4625 ratio (a tablet cut the frame off at the bottom edge).
-     Letterboxing instead is invisible in practice — the fill above
-     matches the panel cream exactly, and on a phone (0.462) the bars are
-     sub-pixel anyway. */
-  background-size: contain;
+  /* Full-bleed: the arch must fill the phone screen edge to edge, with no
+     letterbox bars. The art is 740x1600 (0.4625) and a phone viewport is
+     ~0.462, so on the target device cover crops essentially nothing. */
+  background-size: cover;
   background-repeat: no-repeat;
   background-position: center;
   display: flex;
@@ -825,23 +821,27 @@ button {
 }
 
 /* Geometry anchor for the framed picture. It paints nothing; it simply
-   reproduces the rectangle that #splash-screen's `background-size: contain`
+   reproduces the rectangle that #splash-screen's `background-size: cover`
    renders the artwork into, so the frame's percentages below are
    percentages OF THE ARTWORK rather than of the viewport.
 
-   contain scales the 740x1600 art by min(100vw/740, 100vh/1600), giving a
-   rendered size of min(100vw, 100vh * 0.4625) by min(100vh, 100vw / 0.4625).
+   cover scales the 740x1600 art by max(100vw/740, 100vh/1600), giving a
+   rendered size of max(100vw, 100vh * 0.4625) by max(100vh, 100vw / 0.4625).
    Without this anchor the frame would only land inside the cream panel on
    viewports near the art's own 0.4625 ratio — which a 390x844 phone
    happens to be, but a tablet (0.695) is not, and there the frame drifted
-   onto the painted gold columns. */
+   onto the painted gold columns.
+
+   Anchoring to the art rather than the viewport is necessary but not
+   sufficient on wide viewports, where cover crops the art's top and bottom
+   away: see the min-aspect-ratio block after the frame rules. */
 #splash-panel {
   position: absolute;
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  width: min(100vw, calc(100vh * 0.4625));
-  height: min(100vh, calc(100vw / 0.4625));
+  width: max(100vw, calc(100vh * 0.4625));
+  height: max(100vh, calc(100vw / 0.4625));
   pointer-events: none;
 }
 
@@ -895,6 +895,29 @@ button {
      proud of the cream wall instead of printed onto it. */
   box-shadow: 0 14px 34px rgba(90, 26, 26, 0.30), 0 3px 8px rgba(90, 26, 26, 0.22);
   animation: splash-entrance 0.9s var(--ease-premium) both;
+}
+
+/* Viewports wider than the artwork's own 37/80 (= 0.4625) ratio — a tablet,
+   or a phone turned landscape. `cover` keeps the arch full-bleed there by
+   cropping its top and bottom away, which takes most of the cream panel
+   off-screen with them: anchored to the art, the frame would hang below the
+   fold. So for these shapes only, the anchor collapses to the viewport and
+   the frame is placed in the lower half of it.
+
+   That placement is still on cream by construction rather than by luck.
+   cover leaves the middle `0.4625 / (vw/vh)` of the art visible, centred —
+   so the visible band always runs 50%±k of the art for some k <= 50%, and
+   its lower half therefore always falls inside the art's 48%-98.5% cream
+   panel. Below the viewport's midline is below the arch, at every ratio in
+   this range. */
+@media (min-aspect-ratio: 37/80) {
+  #splash-panel {
+    width: 100vw;
+    height: 100vh;
+  }
+  #splash-screen img {
+    top: 70%;
+  }
 }
 
 /* The centering translate(-50%, -50%) has to be folded into every

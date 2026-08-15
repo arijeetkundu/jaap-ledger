@@ -409,19 +409,37 @@ async function freshLoad(page, { clearStorage = false } = {}) {
   );
   assertInsideCreamPanel("the deity image's frame", framing);
 
-  // The frame is positioned against #splash-panel — the rectangle the
-  // artwork renders into — precisely so it does NOT depend on the viewport
-  // happening to share the art's 0.4625 ratio (which a 390x844 phone very
-  // nearly does, making a viewport-relative bug invisible here). A tablet
-  // shape is far enough away to catch that regression.
+  // The background stays full-bleed (`cover`), so on any viewport wider
+  // than the art's own 37/80 the art's top and bottom — and with them most
+  // of the cream panel — are cropped away, and an art-anchored frame would
+  // hang below the fold. A min-aspect-ratio rule collapses the anchor to
+  // the viewport there. A tablet shape is far enough from a phone's 0.462
+  // to catch a regression in either half of that arrangement.
   await page.setViewport({ width: 820, height: 1180 });
   await page.reload({ waitUntil: "networkidle0" });
   await new Promise(r => setTimeout(r, 300));
-  const tabletFraming = await measureFraming();
-  assertInsideCreamPanel("the frame on a tablet-shaped viewport", tabletFraming);
+  const wide = await page.evaluate(() => {
+    const img = document.getElementById("splash-img");
+    if (!img) return null;
+    const r = img.getBoundingClientRect();
+    const cs = getComputedStyle(img);
+    const border = parseFloat(cs.borderTopWidth) * 2;
+    const naturalRatio = img.naturalWidth / img.naturalHeight;
+    return {
+      fullyOnScreen: r.top >= 0 && r.left >= 0 &&
+        r.bottom <= window.innerHeight && r.right <= window.innerWidth,
+      // Below the viewport's midline is below the arch at every ratio in
+      // this range, so this is also the check that it sits on cream.
+      belowTheArch: r.top >= window.innerHeight * 0.45,
+      contentRatio: (r.width - border) / (r.height - border),
+      naturalRatio,
+    };
+  });
+  assert("on a tablet-shaped viewport the frame is fully on screen", !!wide && wide.fullyOnScreen);
+  assert("on a tablet-shaped viewport the frame sits below the arch, on the cream", !!wide && wide.belowTheArch);
   assert(
     "frame still hugs the image's own aspect ratio on a tablet-shaped viewport",
-    !!tabletFraming && Math.abs(tabletFraming.contentRatio - tabletFraming.naturalRatio) < 0.01
+    !!wide && Math.abs(wide.contentRatio - wide.naturalRatio) < 0.01
   );
   // Restore the phone viewport the rest of the suite is written against.
   await page.setViewport({ width: 390, height: 844 });
