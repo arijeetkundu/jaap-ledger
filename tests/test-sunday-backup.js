@@ -11,7 +11,7 @@
 const puppeteer = require("puppeteer");
 
 const BASE = "http://localhost:3333";
-const SPLASH_WAIT_MS = 2600; // outlasts the 2000ms display + 500ms fade
+const SPLASH_WAIT_MS = 4200; // outlasts the 3200ms display + 800ms fade
 
 let passed = 0;
 let failed = 0;

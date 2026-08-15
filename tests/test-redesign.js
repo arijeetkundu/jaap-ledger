@@ -9,7 +9,7 @@
 const puppeteer = require("puppeteer");
 
 const BASE = "http://localhost:3333";
-const SPLASH_WAIT_MS = 2600;
+const SPLASH_WAIT_MS = 4200;
 let passed = 0;
 let failed = 0;
 

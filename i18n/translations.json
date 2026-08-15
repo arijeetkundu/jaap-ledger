@@ -144,6 +144,11 @@
     "hi": "आपकी कस्टम स्प्लैश तस्वीर",
     "bn": "আপনার কাস্টম স্প্ল্যাশ ছবি"
   },
+  "splashTapContinue": {
+    "en": "Tap anywhere to continue",
+    "hi": "आगे बढ़ने के लिए कहीं भी टैप करें",
+    "bn": "এগিয়ে যেতে যেকোনো স্থানে ট্যাপ করুন"
+  },
   "splashHanumanLockedMsg": {
     "en": "Gurudev Hanuman Ji is the default image and can't be changed",
     "hi": "गुरुदेव हनुमान जी डिफ़ॉल्ट तस्वीर हैं और इन्हें बदला नहीं जा सकता।",

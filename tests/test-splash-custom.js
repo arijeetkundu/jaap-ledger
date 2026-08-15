@@ -15,7 +15,7 @@ const puppeteer = require("puppeteer");
 const sharp = require("sharp");
 
 const BASE = "http://localhost:3333";
-const SPLASH_WAIT_MS = 300; // steady display window, safely before the ~2s fade
+const SPLASH_WAIT_MS = 300; // steady display window, safely inside the 3200ms hold
 
 let passed = 0;
 let failed = 0;
@@ -194,8 +194,8 @@ function assertInsideCreamPanel(assertFn, label, framing) {
   // ── Locked default tile ───────────────────────────────────────────────
   console.log("\n=== Locked default (Hanuman) tile ===");
   // The splash screen (z-index 9999) sits above the Settings toggle
-  // (z-index 9100) until its 2000ms display + 500ms fade finishes.
-  await new Promise(r => setTimeout(r, 2600));
+  // (z-index 9100) until its 3200ms display + 800ms fade finishes.
+  await new Promise(r => setTimeout(r, 4200));
   await page.click("#maintenance-toggle");
   await page.waitForSelector("#maintenance-drawer.open");
   await new Promise(r => setTimeout(r, 400));

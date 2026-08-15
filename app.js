@@ -322,21 +322,54 @@ function resolveSplashRotationPool() {
 })();
 
 // ---------- Splash Screen Logic ----------
-window.addEventListener("load", () => {
+// The splash is darshan, not a loading indicator: it is purely cosmetic and
+// entirely independent of initApp()'s bootstrap, which finishes well before
+// this timer does. SPLASH_HOLD_MS is the fully-opaque window; the picture's
+// own entrance animation takes the first 0.9s of it, so the settled viewing
+// time is roughly SPLASH_HOLD_MS minus that.
+//
+// SPLASH_FADE_MS must stay in step with #splash-screen's opacity transition
+// in styles.css — it times the removal from the DOM, so if it were shorter
+// the element would vanish mid-dissolve. The test suites' own SPLASH_WAIT_MS
+// constants must outlast HOLD + FADE.
+const SPLASH_HOLD_MS = 3200;
+const SPLASH_FADE_MS = 800;
+
+let splashDismissTimer = null;
+let splashClosing = false;
+
+// A sadhak takes darshan for as long as they wish; a tap anywhere continues
+// into the ledger without waiting out the rest of the hold. Guarded so a
+// second tap during the dissolve can't remove the element twice.
+function continueFromSplash() {
+  if (splashClosing) return;
+  splashClosing = true;
+  if (splashDismissTimer !== null) {
+    clearTimeout(splashDismissTimer);
+    splashDismissTimer = null;
+  }
   const splash = document.getElementById("splash-screen");
-  
-  // Wait 2 seconds (2000ms) then fade out
+  if (!splash) {
+    document.body.classList.remove("loading");
+    return;
+  }
+  splash.style.opacity = "0";
   setTimeout(() => {
-    if (splash) {
-      splash.style.opacity = "0";
-      
-      // Remove from DOM after fade animation completes
-      setTimeout(() => {
-        splash.remove();
-        document.body.classList.remove("loading");
-      }, 500); 
-    }
-  }, 2000);
+    splash.remove();
+    document.body.classList.remove("loading");
+  }, SPLASH_FADE_MS);
+}
+
+// Wired immediately rather than on `load`, so an early tap is honoured on a
+// slow first visit instead of being silently ignored.
+(function wireSplashTap() {
+  const splash = document.getElementById("splash-screen");
+  if (!splash) return;
+  splash.addEventListener("pointerdown", continueFromSplash);
+})();
+
+window.addEventListener("load", () => {
+  splashDismissTimer = setTimeout(continueFromSplash, SPLASH_HOLD_MS);
 });
 
 // Add 'loading' class to body immediately

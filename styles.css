@@ -803,7 +803,9 @@ button {
   align-items: center;
   z-index: 9999;
   opacity: 1;
-  transition: opacity 0.5s ease-out;
+  /* A slow dissolve into the ledger rather than a brisk one. Kept in step
+     with SPLASH_FADE_MS in app.js, which times the DOM removal. */
+  transition: opacity 0.8s ease-out;
 }
 
 #splash-screen::before {
@@ -904,6 +906,37 @@ button {
   animation: splash-entrance 0.9s var(--ease-premium) both;
 }
 
+/* The "tap anywhere to continue" line. Positioned like the frame — against
+   #splash-panel, so it is 90% of the ARTWORK — which puts it on the cream
+   wall BELOW the picture and clear of the painted arch: the frame's lowest
+   possible edge is 84.5% and the cream runs to 98.5%.
+
+   It must never sit over the deity's image. If the frame's caps ever change,
+   this number moves with them.
+
+   The 1.4s delay is deliberate: the picture's entrance animation runs 0.9s,
+   and the hint arrives once that has settled rather than competing with it. */
+#splash-hint {
+  position: absolute;
+  top: 90%;
+  left: 50%;
+  transform: translateX(-50%);
+  margin: 0;
+  width: max-content;
+  max-width: 80%;
+  text-align: center;
+  font-family: var(--font-body);
+  font-size: 0.78rem;
+  letter-spacing: 0.09em;
+  color: rgba(108, 28, 39, 0.55);
+  animation: splash-hint-in 0.6s ease-out 1.4s both;
+}
+
+@keyframes splash-hint-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
 /* Genuinely wide viewports — a tablet, or a phone turned landscape. `cover`
    keeps the arch full-bleed by cropping its top and bottom away, and past
    some ratio that crops the capital line, and the frame hanging from it,
@@ -937,6 +970,12 @@ button {
   #splash-screen img {
     top: 50%;
   }
+  /* The frame ends at 90% of the viewport here (50% + its 40% cap), so the
+     hint drops below that rather than staying at the artwork's 90%, which
+     these shapes have cropped away. */
+  #splash-hint {
+    top: 94%;
+  }
 }
 
 /* The centering translate(-50%, -50%) has to be folded into every
@@ -969,7 +1008,8 @@ button {
 
 @media (prefers-reduced-motion: reduce) {
   #splash-screen img,
-  #splash-screen::before {
+  #splash-screen::before,
+  #splash-hint {
     animation: none;
   }
 }

@@ -43,6 +43,11 @@
       <source id="splash-source" srcset="splash/hanuman-splash.webp" type="image/webp">
       <img id="splash-img" src="splash/hanuman-splash.png" alt="App Splash Screen">
     </picture>
+    <!-- Sits on the cream wall BELOW the framed picture, never over it. The
+         English here is deliberately baked in: the splash paints long before
+         i18n/translations.json is fetched, and applyStaticTranslations()
+         swaps it only once a real entry is available. -->
+    <p id="splash-hint" data-i18n="splashTapContinue">Tap anywhere to continue</p>
   </div>
 </div>
 

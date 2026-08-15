@@ -14,7 +14,7 @@ const path = require("path");
 const puppeteer = require("puppeteer");
 
 const BASE = "http://localhost:3333";
-const SPLASH_WAIT_MS = 2600;
+const SPLASH_WAIT_MS = 4200;
 const SW_SETTLE_MS = 3000; // registration + install precache
 let passed = 0;
 let failed = 0;
