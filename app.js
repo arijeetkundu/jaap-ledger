@@ -1666,7 +1666,16 @@ function renderReflectionSummary(milestoneHistory) {
 	  ${milestoneHistory.length > 0 ? `
   <div class="reflection-milestones">
     <div class="reflection-subtitle">${t("reflectionMilestonesHeading")}</div>
-    ${milestoneHistory.map(m => `
+    <!-- Newest milestone first. getMilestoneHistory() must return ascending
+         order — it walks the ledger forward to compute each crossing's
+         daysSincePrevious — so the reversal belongs here, at the point of
+         display. Copy, never reverse() in place: this same array is handed to
+         renderLedgerList() by renderToday(). That builds a Map from it, so a
+         mutation would not visibly break anything today, which is exactly what
+         would make it a nasty surprise later. Each line's daysSincePrevious
+         still refers to the milestone before it chronologically, which is what
+         the gap means regardless of display order. -->
+    ${[...milestoneHistory].reverse().map(m => `
       <div class="milestone-line">
         ${t("reflectionMilestoneLine", { crore: m.crore, date: formatDate(m.date) })}
         ${m.daysSincePrevious !== null

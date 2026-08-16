@@ -1362,6 +1362,49 @@ async function freshLoad(page, { clearStorage = false } = {}) {
     assert("re-saving the same milestone entry does not celebrate again", (await countPetals()) === 0);
   }
 
+  // ── Milestones list: newest first ────────────────────────────────────
+  console.log("\n=== The Milestones list reads newest first ===");
+  {
+    const milestones = await page.evaluate(async () => {
+      ledgerData = [
+        { date: "2024-03-01", jaap: 10000000, notes: "" },
+        { date: "2025-06-15", jaap: 10000000, notes: "" },
+        { date: "2026-02-20", jaap: 10000000, notes: "" },
+      ];
+      renderToday();
+      await new Promise(r => setTimeout(r, 150));
+      return {
+        lines: [...document.querySelectorAll(".milestone-line")]
+          .map(el => el.textContent.replace(/\s+/g, " ").trim()),
+        // getMilestoneHistory() must still hand back ASCENDING order: it walks
+        // the ledger forward to compute each crossing's daysSincePrevious, and
+        // renderToday() passes the same array on to renderLedgerList(). The
+        // reversal is display-only, on a copy.
+        sourceOrder: getMilestoneHistory(ledgerData).map(m => m.date),
+      };
+    });
+
+    assert(
+      "the newest milestone is listed first",
+      milestones.lines.length === 3 &&
+        milestones.lines[0].includes("3 Crore") &&
+        milestones.lines[1].includes("2 Crore") &&
+        milestones.lines[2].includes("1 Crore")
+    );
+    assert(
+      "getMilestoneHistory() itself is untouched and still ascending",
+      milestones.sourceOrder.join(",") === "2024-03-01,2025-06-15,2026-02-20"
+    );
+    // The gap belongs to the milestone before it in TIME, not in display
+    // order, so reversing the list must not re-attach it to the wrong line.
+    assert(
+      "each milestone keeps its own days-since-previous",
+      milestones.lines[0].includes("+250") &&
+        milestones.lines[1].includes("+471") &&
+        !milestones.lines[2].includes("+")
+    );
+  }
+
   // ── A hostile storage environment must not kill the app ──────────────
   // app.js is a classic script, so a throw at top-level scope aborts the
   // ENTIRE remaining file — no initApp(), no listeners, no service worker,
