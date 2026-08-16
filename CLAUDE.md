@@ -27,6 +27,7 @@ node tests/test-unit.js         # pure-logic unit tests
 node tests/test-e2e.js          # full user-flow E2E tests
 node tests/test-redesign.js     # design tokens, milestone celebration, motion
 node tests/test-splash-custom.js # custom splash image upload/rotation/delete
+node tests/test-mala-mode.js    # Mala Mode: counting, additive commits, draft safety, backup compatibility
 node tests/test-sunday-backup.js # Sunday backup modal + Google Drive backup (mocked network)
 node tests/test-i18n.js         # language picker, Settings switcher, translations-load-failure fallback
 node tests/test-service-worker.js # offline launch, precache, deploy pickup, shortcut target
@@ -35,7 +36,7 @@ node tests/test-service-worker.js # offline launch, precache, deploy pickup, sho
 npm run lint
 ```
 
-There is no build step and no CI pipeline — `npm test` and `npm run lint` must both be run locally before pushing. 511 assertions across the 9 suites as of this writing.
+There is no build step and no CI pipeline — `npm test` and `npm run lint` must both be run locally before pushing. 514 assertions across the 9 suites as of this writing.
 
 **Every browser context in every suite must call `seedAppState(page)` from `tests/test-helpers.js` before its first navigation.** That is the only shared module across the otherwise-standalone suites, and it earns the exception by being a correctness requirement rather than a convenience: it marks today's Sunday Backup Reminder as handled, and a context that omits it produces a run whose result depends on the day of the week. The modal is a real `position: fixed; inset: 0` backdrop at z-index 9800 — on a Sunday it opens over the whole app and silently swallows clicks meant for anything underneath (`#maintenance-toggle` above all), surfacing as a timeout that names the element it *couldn't* reach rather than the modal covering it. Two contexts had already drifted without it and the suite failed on a Sunday, having passed every day it happened to be run before.
 
