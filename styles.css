@@ -248,6 +248,10 @@ p {
 /* Ledger list */
 #ledger-list {
   margin-top: 16px;
+  /* Clear the Mala Mode floating button, which is fixed over the bottom-right
+     corner — without this the last ledger row can never be fully read or
+     tapped, since the button never scrolls away. */
+  padding-bottom: 84px;
 }
 
 /* Ledger row */
@@ -1102,11 +1106,24 @@ body.loading {
   color: var(--ink-muted);
 }
 
-#maintenance-toggle {
+/* The header controls sit in one fixed flex row rather than each carrying its
+   own hand-tuned `right` offset. The Jaap/Mala pill is a variable-width
+   element, so any button placed to its left had to be positioned against a
+   width nobody had measured — fine for two controls, fragile at three. Their
+   order in the DOM is now their order on screen. */
+#app-controls {
   position: fixed;
   top: calc(env(safe-area-inset-top, 0px) + 12px);
   right: 12px;
 
+  display: flex;
+  align-items: center;
+  gap: 10px;
+
+  z-index: 9100;
+}
+
+#maintenance-toggle {
   width: 44px;
   height: 44px;
   /* The global `button { padding: 10px 16px }` rule was squeezing the gear
@@ -1126,16 +1143,54 @@ body.loading {
   font-size: 1.6rem;
   line-height: 1;
   cursor: pointer;
+}
 
-  z-index: 9100;
+/* Mala Mode — a floating action button, deliberately NOT a third header
+   control. At html.text-large the app title and a three-control header
+   overlap by ~33px (the header controls scale with rem too, so both sides
+   grow at once). Bottom-right also puts the one action you reach for
+   one-handed, just before sitting down to practise, under the thumb.
+
+   z-index sits above page content but BELOW the Settings drawer (9000), the
+   Sankalpa page (9700) and every modal — it must never float over them.
+   Honours the gesture-bar inset so it isn't half-swallowed on a modern phone. */
+#mala-mode-fab {
+  position: fixed;
+  right: 18px;
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 18px);
+
+  width: 56px;
+  height: 56px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  border-radius: 50%;
+  border: 1px solid var(--gold);
+
+  background: var(--surface);
+  color: var(--maroon);
+  font-size: 1.7rem;
+  line-height: 1;
+  cursor: pointer;
+  box-shadow: 0 4px 14px rgba(90, 26, 26, 0.28), 0 1px 3px rgba(90, 26, 26, 0.20);
+
+  z-index: 8000;
+}
+
+#mala-mode-fab:active {
+  transform: scale(0.94);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #mala-mode-fab:active {
+    transform: none;
+  }
 }
 
 /* Mala View toggle — lives next to Settings, reachable in one tap */
 .mala-toggle-wrap {
-  position: fixed;
-  top: calc(env(safe-area-inset-top, 0px) + 15px);
-  right: 66px;
-
   display: flex;
   align-items: center;
   gap: 6px;
@@ -1143,8 +1198,6 @@ body.loading {
   border-radius: 999px;
   background: var(--surface);
   border: 1px solid var(--gold-hairline);
-
-  z-index: 9100;
 }
 
 .mala-toggle-icon {

@@ -75,19 +75,32 @@
   </section>
   </main>
 
-<!-- Mala View Toggle -->
-<div id="mala-toggle-wrap" class="mala-toggle-wrap" data-i18n-title="toggleMalaTitle" title="Toggle Mala View">
-  <span class="mala-toggle-icon mala-toggle-icon-off" aria-hidden="true">🔢</span>
-  <label class="mala-toggle-switch">
-    <input type="checkbox" id="mala-toggle" data-i18n-aria="toggleMalaAria" aria-label="Toggle Mala View">
-    <span class="mala-toggle-slider"></span>
-  </label>
-  <span class="mala-toggle-icon mala-toggle-icon-on" aria-hidden="true">📿</span>
+<!-- Header controls. One fixed flex row: DOM order is screen order, so no
+     element needs to know how wide its neighbour is. -->
+<div id="app-controls">
+  <!-- Mala View Toggle — changes how counts are DISPLAYED (jaap vs malas).
+       Not to be confused with Mala Mode beside it, which is an input method. -->
+  <div id="mala-toggle-wrap" class="mala-toggle-wrap" data-i18n-title="toggleMalaTitle" title="Toggle Mala View">
+    <span class="mala-toggle-icon mala-toggle-icon-off" aria-hidden="true">🔢</span>
+    <label class="mala-toggle-switch">
+      <input type="checkbox" id="mala-toggle" data-i18n-aria="toggleMalaAria" aria-label="Toggle Mala View">
+      <span class="mala-toggle-slider"></span>
+    </label>
+    <span class="mala-toggle-icon mala-toggle-icon-on" aria-hidden="true">📿</span>
+  </div>
+
+  <!-- Maintenance Toggle -->
+  <button id="maintenance-toggle" data-i18n-aria="settingsGearAria" aria-label="Settings">
+    ⚙︎
+  </button>
 </div>
 
-<!-- Maintenance Toggle -->
-<button id="maintenance-toggle" data-i18n-aria="settingsGearAria" aria-label="Settings">
-  ⚙︎
+<!-- Mala Mode — a thumb-reachable floating button rather than a third header
+     control: at the Large text size the app title and a three-control header
+     collide by ~33px, and this is a one-handed action reached just before
+     settling into practice. -->
+<button id="mala-mode-fab" data-i18n-aria="malaModeOpenAria" data-i18n-title="malaModeOpenTitle" aria-label="Open Mala Mode" title="Mala Mode">
+  📿
 </button>
 
 <!-- Maintenance Drawer -->
