@@ -1327,6 +1327,150 @@ body.loading {
   }
 }
 
+/* ---------- Mala Mode ---------- */
+
+/* Overrides .fullscreen-page's scrolling: this screen must never scroll. The
+   whole area is a tap target, and a stray drag that scrolls the page instead
+   of registering a bead would be maddening mid-practice. */
+#mala-page {
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+  padding-top: env(safe-area-inset-top, 0px);
+}
+
+#mala-top,
+#mala-bottom {
+  flex: none;
+  display: flex;
+  justify-content: center;
+  padding: 10px 16px;
+}
+
+#mala-top {
+  justify-content: flex-end;
+}
+
+#mala-bottom {
+  padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 12px);
+}
+
+#mala-exit-btn,
+#mala-undo-btn {
+  padding: 9px 20px;
+  border-radius: 999px;
+  border: 1px solid var(--gold-hairline);
+  background: var(--surface);
+  color: var(--maroon);
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+/* Deliberately quieter than Exit: undo is a correction, reached rarely. */
+#mala-undo-btn {
+  color: var(--ink-muted);
+  background: transparent;
+}
+
+#mala-undo-btn:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+/* The tap surface. `touch-action: manipulation` suppresses the double-tap-to-
+   zoom delay, so rapid counting registers every bead rather than dropping
+   every second one into a gesture the browser is still waiting to resolve. */
+#mala-tap-area {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  cursor: pointer;
+  touch-action: manipulation;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+#mala-deity {
+  flex: 0 1 auto;
+  min-height: 0;
+  display: flex;
+}
+
+#mala-deity-img {
+  max-height: 22vh;
+  max-width: 46vw;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  border: 4px solid var(--gold);
+  border-radius: 4px;
+  background: var(--surface);
+  box-shadow: 0 6px 16px rgba(64, 14, 20, 0.28);
+}
+
+#mala-mantra {
+  flex: none;
+  margin: 2px 0 0;
+  font-family: var(--font-heading);
+  font-size: 1.25rem;
+  color: var(--maroon);
+  letter-spacing: 0.02em;
+  text-align: center;
+}
+
+#mala-dial {
+  flex: none;
+  max-width: 76vw;
+  max-height: 40vh;
+  overflow: visible;
+}
+
+#mala-bead-count {
+  font-family: var(--font-heading);
+  font-size: 46px;
+  font-weight: 700;
+  fill: var(--maroon);
+}
+
+#mala-stats {
+  flex: none;
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  font-size: 0.95rem;
+  color: var(--ink-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+#mala-stats strong {
+  color: var(--maroon);
+  font-size: 1.15rem;
+}
+
+/* Fires once per completed mala. */
+#mala-count.mala-tick {
+  animation: mala-tick 0.3s var(--ease-premium);
+}
+
+@keyframes mala-tick {
+  50% { transform: scale(1.35); }
+}
+
+#mala-count {
+  display: inline-block;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #mala-count.mala-tick {
+    animation: none;
+  }
+}
+
 .fullscreen-header {
   display: flex;
   align-items: center;

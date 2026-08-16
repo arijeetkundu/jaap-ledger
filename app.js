@@ -640,6 +640,21 @@ function getCroreMilestone(dateISO) {
   return null;
 }
 
+// Did THIS save create a Crore crossing, as opposed to merely sitting on one
+// that already existed? getCroreMilestone() answers "does a crossing exist on
+// this date", not "did I just cause it" — so without this check, re-saving an
+// unchanged milestone entry (or simply tapping Save twice) re-fired all 96
+// petals. Callers capture getCroreMilestone(entry.date) before mutating and
+// again after, then pass both.
+//
+// Deliberately duplicated across the two save paths until now, and documented
+// as such. A third caller (Mala Mode) is past the point where that holds —
+// the same trajectory the 7-day window took before it became
+// EDITABLE_WINDOW_DAYS.
+function didCrossNewMilestone(before, after) {
+  return after !== null && after !== before;
+}
+
 // ---------- Sumiran-Lite: Milestone Tracking + Predictions ----------
 
 // Which Crore bracket the lifetime total currently sits in (0-indexed count of Crores fully completed).
@@ -1781,8 +1796,7 @@ function buildYearRows(yearContainer, entries, { sparklineMap, milestoneByDate }
         // just as saving today's entry can — previously only the Today Card
         // path checked this, so the same milestone crossing via a Ledger row
         // silently skipped the petal celebration.
-        const milestoneAfter = getCroreMilestone(entry.date);
-        const crossedNewMilestone = milestoneAfter !== null && milestoneAfter !== milestoneBefore;
+        const crossedNewMilestone = didCrossNewMilestone(milestoneBefore, getCroreMilestone(entry.date));
 
         try {
           await saveLedger(ledgerData);
@@ -2214,8 +2228,7 @@ async function updateTodayEntry() {
   entry.jaap = newJaap;
   entry.notes = notesInput;
 
-  const milestoneAfter = getCroreMilestone(entry.date);
-  const crossedNewMilestone = milestoneAfter !== null && milestoneAfter !== milestoneBefore;
+  const crossedNewMilestone = didCrossNewMilestone(milestoneBefore, getCroreMilestone(entry.date));
 
   try {
     await saveLedger(ledgerData);
@@ -2242,6 +2255,66 @@ async function updateTodayEntry() {
     celebrateMilestone();
   }
 }
+
+// Add n jaap to today's entry, without touching its notes. Used by Mala Mode,
+// which commits each completed mala as it happens and the remainder on exit.
+//
+// ADDITIVE, never replacing: a sadhak may already have saved a count through
+// the Today Card before sitting down with the mala, and that must survive.
+//
+// Honours the same contract as updateTodayEntry() — read its comments for the
+// reasoning behind each step; the notes below cover only what differs here.
+//
+// Returns true if the write committed, false if it failed and was rolled back.
+// Callers must treat false as "those beads are still uncounted" and keep them,
+// rather than assuming the total is banked.
+async function addJaapToToday(n) {
+  if (!Number.isFinite(n) || n <= 0) return false;
+
+  // Refreshed immediately before the write, exactly as updateTodayEntry()
+  // does. This matters more here than anywhere else in the app: a practice
+  // session can easily run across local midnight, and without this the beads
+  // counted after midnight would be added to yesterday's entry.
+  todayISO = getTodayISO();
+  const entry = ensureTodayEntryExists();
+
+  const previousJaap = entry.jaap;
+  const milestoneBefore = getCroreMilestone(entry.date);
+
+  // entry.jaap is null on a day nothing has been logged yet.
+  const newJaap = (entry.jaap || 0) + n;
+  if (!isValidJaapValue(newJaap)) {
+    showToast(t("commonInvalidNumber"));
+    return false;
+  }
+  entry.jaap = newJaap;
+
+  const crossedNewMilestone = didCrossNewMilestone(milestoneBefore, getCroreMilestone(entry.date));
+
+  try {
+    await saveLedger(ledgerData);
+    await saveAutomaticBackup(ledgerData);
+  } catch (err) {
+    entry.jaap = previousJaap;
+    console.error("Failed to add jaap to today's entry:", err);
+    showToast(t("commonSaveFailed"));
+    return false;
+  }
+
+  // The entry has changed underneath any half-typed Today Card input, so the
+  // draft is now stale and must go: computeJaapFromInput("") returns null and
+  // null is a VALID jaap, so a later Save from a stale draft would not merely
+  // overwrite the session — it could blank the day entirely. Mala Mode warns
+  // before opening if a draft exists, precisely because clearing it here also
+  // discards unsaved notes.
+  todayDraft = null;
+
+  if (crossedNewMilestone) {
+    celebrateMilestone();
+  }
+  return true;
+}
+
 document.getElementById("restore-backup-btn")
   ?.addEventListener("click", restoreFromBackup);
 
@@ -2625,6 +2698,292 @@ function closeSankalpaPage() {
   page.classList.remove("open");
   page.setAttribute("aria-hidden", "true");
 }
+
+// ---------- Sumiran-Lite: Mala Mode ----------
+//
+// A full-screen bead counter for sitting practice. Distinct from "Mala View"
+// (the header toggle, malaViewEnabled), which only changes how counts are
+// DISPLAYED — this is an input method.
+//
+// Persistence deliberately has no session store of its own. Each completed
+// mala is committed straight into today's ledger entry via addJaapToToday(),
+// and the remainder on exit. That keeps the tap path free of any I/O, leaves
+// the export payload and DB schema untouched (so existing backups keep
+// importing), and bounds what an app kill can lose to a single incomplete
+// mala — the same thing that happens when you lose your place on a real mala.
+
+const MALA_DIAL_R = 112;
+const MALA_DIAL_CX = 140;
+const MALA_DIAL_CY = 140;
+const MALA_DIAL_CIRCUMFERENCE = 2 * Math.PI * MALA_DIAL_R;
+const MALA_GURU_TURN_MS = 950;
+
+// Beads counted since the last commit (0..MALA_SIZE-1). Malas completed this
+// sitting, for display only. `malaBusy` blocks taps while a commit or the Guru
+// Manka turn is in flight.
+let malaBeadCount = 0;
+let malaSessionMalas = 0;
+let malaBusy = false;
+let malaWakeLock = null;
+
+function beadToDotPos(bead) {
+  const angle = (bead / MALA_SIZE) * 2 * Math.PI - Math.PI / 2;
+  return {
+    cx: MALA_DIAL_CX + MALA_DIAL_R * Math.cos(angle),
+    cy: MALA_DIAL_CY + MALA_DIAL_R * Math.sin(angle),
+  };
+}
+
+function beadToOffset(bead) {
+  return MALA_DIAL_CIRCUMFERENCE - (bead / MALA_SIZE) * MALA_DIAL_CIRCUMFERENCE;
+}
+
+// Paints the dial directly rather than going through renderToday(), which
+// rebuilds the entire app beneath this overlay.
+function paintMalaDial(bead) {
+  const ring = document.getElementById("mala-ring");
+  const dot = document.getElementById("mala-dot");
+  const label = document.getElementById("mala-bead-count");
+  if (ring) {
+    ring.style.strokeDasharray = MALA_DIAL_CIRCUMFERENCE;
+    ring.style.strokeDashoffset = beadToOffset(bead);
+  }
+  if (dot) {
+    const pos = beadToDotPos(bead);
+    dot.setAttribute("cx", pos.cx);
+    dot.setAttribute("cy", pos.cy);
+  }
+  if (label) label.textContent = String(bead);
+}
+
+function paintMalaStats() {
+  const malas = document.getElementById("mala-count");
+  const malasLabel = document.getElementById("mala-count-label");
+  const todayTotal = document.getElementById("mala-today-total");
+  if (malas) malas.textContent = formatIndianNumber(malaSessionMalas);
+  if (malasLabel) {
+    malasLabel.textContent = t(malaSessionMalas === 1 ? "malaModeMalaLabelOne" : "malaModeMalasLabel");
+  }
+  if (todayTotal) {
+    // Read from the ledger, not from a session counter: this way the number
+    // stays truthful across an interruption, and includes anything already
+    // saved through the Today Card before this sitting began.
+    const entry = ledgerData.find((e) => e.date === todayISO);
+    const banked = entry && entry.jaap ? entry.jaap : 0;
+    todayTotal.textContent = malaViewEnabled
+      ? formatAsMala(banked + malaBeadCount)
+      : formatIndianNumber(banked + malaBeadCount);
+  }
+  const undoBtn = document.getElementById("mala-undo-btn");
+  if (undoBtn) undoBtn.disabled = malaBeadCount === 0 && malaSessionMalas === 0;
+}
+
+function prefersReducedMotion() {
+  return window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+}
+
+// The lead dot travels the full circle back to the Guru Manka at 12 o'clock.
+function animateGuruTurn() {
+  return new Promise((resolve) => {
+    const dot = document.getElementById("mala-dot");
+    if (!dot || prefersReducedMotion()) {
+      paintMalaDial(0);
+      resolve();
+      return;
+    }
+    paintMalaDial(MALA_SIZE);
+    const start = performance.now();
+    const from = 3 * Math.PI / 2;
+    const to = -Math.PI / 2;
+    function step(now) {
+      const t = Math.min((now - start) / MALA_GURU_TURN_MS, 1);
+      const eased = t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+      const angle = from + (to - from) * eased;
+      dot.setAttribute("cx", MALA_DIAL_CX + MALA_DIAL_R * Math.cos(angle));
+      dot.setAttribute("cy", MALA_DIAL_CY + MALA_DIAL_R * Math.sin(angle));
+      if (t < 1) {
+        requestAnimationFrame(step);
+      } else {
+        paintMalaDial(0);
+        resolve();
+      }
+    }
+    requestAnimationFrame(step);
+  });
+}
+
+// Commit a full mala. Kept separate from counting so a failed write can be
+// retried by tapping again, without that tap also counting a further bead.
+async function commitCompletedMala() {
+  malaBusy = true;
+  const committed = await addJaapToToday(MALA_SIZE);
+  if (!committed) {
+    // The beads stay counted and the dial stays full: the sadhak can tap to
+    // retry, or exit (which re-attempts the same commit). Nothing is lost to
+    // a failed write.
+    malaBusy = false;
+    return;
+  }
+
+  malaBeadCount = 0;
+  malaSessionMalas++;
+  paintMalaStats();
+
+  const counter = document.getElementById("mala-count");
+  if (counter) {
+    counter.classList.add("mala-tick");
+    setTimeout(() => counter.classList.remove("mala-tick"), 320);
+  }
+
+  await animateGuruTurn();
+  malaBusy = false;
+}
+
+async function countMalaBead() {
+  if (malaBusy) return;
+
+  // A previous commit failed and left a full mala pending. Retry it rather
+  // than counting a 109th bead — otherwise the dial and the counter drift
+  // apart, and the next commit would bank 108 for a mala that had been
+  // tapped more times than that.
+  if (malaBeadCount >= MALA_SIZE) {
+    await commitCompletedMala();
+    return;
+  }
+
+  malaBeadCount++;
+  paintMalaDial(malaBeadCount);
+  paintMalaStats();
+
+  if (malaBeadCount >= MALA_SIZE) {
+    await commitCompletedMala();
+  }
+}
+
+// Correcting a mis-tap. Only ever walks back beads that have NOT been
+// committed — a completed mala is already in the ledger, and silently
+// subtracting from a saved entry is a different and more dangerous operation
+// than undoing an uncommitted tap.
+function undoMalaBead() {
+  if (malaBusy || malaBeadCount === 0) return;
+  malaBeadCount--;
+  paintMalaDial(malaBeadCount);
+  paintMalaStats();
+}
+
+async function requestMalaWakeLock() {
+  if (!("wakeLock" in navigator)) return;
+  try {
+    malaWakeLock = await navigator.wakeLock.request("screen");
+  } catch {
+    malaWakeLock = null; // denied, or unavailable in this context
+  }
+}
+
+// The browser drops a screen wake lock whenever the page is hidden, and never
+// restores it. Without re-requesting, the screen starts sleeping again mid-
+// practice after any interruption.
+async function handleMalaVisibilityChange() {
+  const page = document.getElementById("mala-page");
+  if (!page || !page.classList.contains("open")) return;
+  if (document.visibilityState === "visible") await requestMalaWakeLock();
+}
+
+async function releaseMalaWakeLock() {
+  if (!malaWakeLock) return;
+  try {
+    await malaWakeLock.release();
+  } catch {
+    /* already released by the browser */
+  }
+  malaWakeLock = null;
+}
+
+async function openMalaPage() {
+  // Clearing the draft on commit also discards unsaved notes, so ask first
+  // rather than silently dropping words the sadhak has typed.
+  if (todayDraft && (todayDraft.jaap !== "" || todayDraft.notes !== "")) {
+    if (!confirm(t("malaModeDraftWarning"))) return;
+  }
+
+  const page = document.getElementById("mala-page");
+  if (!page) return;
+
+  malaBeadCount = 0;
+  malaSessionMalas = 0;
+  malaBusy = false;
+
+  // Reuse the splash rotation pool so the practice screen shows the deity the
+  // sadhak chose. <source srcset> beats <img src> in a <picture>, so a custom
+  // (data URL) pick must clear it or the bundled webp silently wins.
+  const pool = resolveSplashRotationPool();
+  const chosen = pool[Math.floor(Math.random() * pool.length)];
+  const source = document.getElementById("mala-deity-source");
+  const img = document.getElementById("mala-deity-img");
+  if (chosen && chosen.custom) {
+    if (source) source.removeAttribute("srcset");
+    if (img) img.src = chosen.dataUrl;
+  } else if (chosen) {
+    if (source) source.srcset = chosen.webp;
+    if (img) img.src = chosen.png;
+  }
+
+  page.classList.add("open");
+  page.setAttribute("aria-hidden", "false");
+  document.body.classList.add("loading"); // reuse the existing scroll lock
+
+  paintMalaDial(0);
+  paintMalaStats();
+  await requestMalaWakeLock();
+}
+
+async function closeMalaPage() {
+  const page = document.getElementById("mala-page");
+
+  // Commit the partial mala. If it fails, keep the page open and the beads
+  // counted — exiting would silently discard them.
+  if (malaBeadCount > 0) {
+    const committed = await addJaapToToday(malaBeadCount);
+    if (!committed) return;
+    malaBeadCount = 0;
+  }
+
+  await releaseMalaWakeLock();
+
+  if (page) {
+    page.classList.remove("open");
+    page.setAttribute("aria-hidden", "true");
+  }
+  document.body.classList.remove("loading");
+
+  // One re-render for the whole sitting, rather than one per mala.
+  renderToday();
+  if (malaSessionMalas > 0) {
+    showToast(t("malaModeSavedToast", { malas: formatIndianNumber(malaSessionMalas) }));
+  }
+  malaSessionMalas = 0;
+}
+
+document.getElementById("mala-mode-fab")?.addEventListener("click", () => {
+  openMalaPage().catch((err) => {
+    console.error("Could not open Mala Mode:", err);
+    showToast(t("commonSaveFailed"));
+  });
+});
+document.getElementById("mala-tap-area")?.addEventListener("pointerdown", () => {
+  countMalaBead().catch((err) => {
+    console.error("Mala bead count failed:", err);
+    malaBusy = false;
+  });
+});
+document.getElementById("mala-undo-btn")?.addEventListener("click", undoMalaBead);
+document.getElementById("mala-exit-btn")?.addEventListener("click", () => {
+  closeMalaPage().catch((err) => {
+    console.error("Could not close Mala Mode:", err);
+    showToast(t("commonSaveFailed"));
+  });
+});
+document.addEventListener("visibilitychange", handleMalaVisibilityChange);
 
 // renderSankalpaPage() is async and writes ALL of the page's markup — close
 // button included — only after its first await on getSankalpa(). Called bare,
