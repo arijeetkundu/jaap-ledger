@@ -2756,26 +2756,30 @@ function paintMalaDial(bead) {
   if (label) label.textContent = String(bead);
 }
 
+// Both numbers derive from the ledger plus the uncommitted beads, never from
+// a session counter. Reopening Mala Mode after a completed sitting therefore
+// shows the malas already done today rather than starting from zero — the
+// count belongs to the day's practice, not to this visit to the screen.
 function paintMalaStats() {
+  const entry = ledgerData.find((e) => e.date === todayISO);
+  const banked = entry && entry.jaap ? entry.jaap : 0;
+  const total = banked + malaBeadCount;
+  const malasToday = jaapToMala(total);
+
   const malas = document.getElementById("mala-count");
   const malasLabel = document.getElementById("mala-count-label");
   const todayTotal = document.getElementById("mala-today-total");
-  if (malas) malas.textContent = formatIndianNumber(malaSessionMalas);
+
+  if (malas) malas.textContent = formatIndianNumber(malasToday);
   if (malasLabel) {
-    malasLabel.textContent = t(malaSessionMalas === 1 ? "malaModeMalaLabelOne" : "malaModeMalasLabel");
+    malasLabel.textContent = t(malasToday === 1 ? "malaModeMalaLabelOne" : "malaModeMalasLabel");
   }
-  if (todayTotal) {
-    // Read from the ledger, not from a session counter: this way the number
-    // stays truthful across an interruption, and includes anything already
-    // saved through the Today Card before this sitting began.
-    const entry = ledgerData.find((e) => e.date === todayISO);
-    const banked = entry && entry.jaap ? entry.jaap : 0;
-    todayTotal.textContent = malaViewEnabled
-      ? formatAsMala(banked + malaBeadCount)
-      : formatIndianNumber(banked + malaBeadCount);
-  }
+  // Deliberately raw jaap even in Mala View: the malas are already shown
+  // beside it, so repeating them here would say the same thing twice.
+  if (todayTotal) todayTotal.textContent = formatIndianNumber(total);
+
   const undoBtn = document.getElementById("mala-undo-btn");
-  if (undoBtn) undoBtn.disabled = malaBeadCount === 0 && malaSessionMalas === 0;
+  if (undoBtn) undoBtn.disabled = malaBeadCount === 0;
 }
 
 function prefersReducedMotion() {
@@ -2914,19 +2918,28 @@ async function openMalaPage() {
   malaBusy = false;
 
   // Reuse the splash rotation pool so the practice screen shows the deity the
-  // sadhak chose. <source srcset> beats <img src> in a <picture>, so a custom
-  // (data URL) pick must clear it or the bundled webp silently wins.
+  // sadhak chose. Same never-repeat rule as chooseSplashImage(): exclude the
+  // last image shown here, so opening Mala Mode repeatedly actually rotates
+  // rather than landing on the same picture again and again. Tracked under
+  // its own key, so Mala Mode and the splash rotate independently.
   const pool = resolveSplashRotationPool();
-  const chosen = pool[Math.floor(Math.random() * pool.length)];
+  const lastId = readStoredPreference("lastMalaImage");
+  const candidates = pool.filter((r) => r.id !== lastId);
+  const chosenFrom = candidates.length > 0 ? candidates : pool;
+  const chosen = chosenFrom[Math.floor(Math.random() * chosenFrom.length)];
+
   const source = document.getElementById("mala-deity-source");
   const img = document.getElementById("mala-deity-img");
   if (chosen && chosen.custom) {
+    // <source srcset> beats <img src> in a <picture>, so a custom (data URL)
+    // pick must clear it or the bundled webp silently wins.
     if (source) source.removeAttribute("srcset");
     if (img) img.src = chosen.dataUrl;
   } else if (chosen) {
     if (source) source.srcset = chosen.webp;
     if (img) img.src = chosen.png;
   }
+  if (chosen) writeStoredPreference("lastMalaImage", chosen.id);
 
   page.classList.add("open");
   page.setAttribute("aria-hidden", "false");

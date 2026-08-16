@@ -124,14 +124,12 @@ async function openMala(page) {
     await new Promise((r) => setTimeout(r, 1600)); // commit + Guru Manka turn
 
     assert("the bead count resets after 108", await beadCount(page) === 0);
-    assert("the mala counter increments",
-      await page.evaluate(() => document.getElementById("mala-count").textContent) === "1");
     assert("108 is ADDED to the existing entry, not written over it",
       await todayJaap(page) === 608);
-
-    // Singular/plural: only English inflects, but the label must not read "1 malas".
-    assert("the label reads the singular at one mala",
-      await page.evaluate(() => document.getElementById("mala-count-label").textContent) === "mala");
+    // The counter shows the malas completed TODAY, derived from the ledger —
+    // not a per-visit session count. 608 jaap is 5 completed malas.
+    assert("the mala counter reflects today's completed malas",
+      await page.evaluate(() => document.getElementById("mala-count").textContent) === "5");
 
     await tap(page, 7);
     await page.click("#mala-exit-btn");
@@ -140,6 +138,14 @@ async function openMala(page) {
       await todayJaap(page) === 615);
     assert("the page closes on exit",
       await page.evaluate(() => !document.getElementById("mala-page").classList.contains("open")));
+
+    // Reopening must NOT start from zero: the malas are the day's, not this
+    // visit's. This was reported from a real sitting — the count had reset.
+    await openMala(page);
+    assert("reopening shows the malas already completed today, not 0",
+      await page.evaluate(() => document.getElementById("mala-count").textContent) === "5");
+    assert("reopening shows today's running jaap total",
+      await page.evaluate(() => document.getElementById("mala-today-total").textContent) === "615");
 
     await context.close();
   }
@@ -160,6 +166,11 @@ async function openMala(page) {
 
     assert("the stale draft is cleared once the entry changes underneath it",
       await page.evaluate(() => todayDraft === null));
+
+    // Singular/plural. Only English inflects — Hindi and Bangla use one word
+    // for both — but the label must never read "1 malas".
+    assert("the label reads the singular at exactly one mala",
+      await page.evaluate(() => document.getElementById("mala-count-label").textContent) === "mala");
 
     await page.click("#mala-exit-btn");
     await new Promise((r) => setTimeout(r, 900));

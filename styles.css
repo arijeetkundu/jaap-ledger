@@ -1332,12 +1332,27 @@ body.loading {
 /* Overrides .fullscreen-page's scrolling: this screen must never scroll. The
    whole area is a tap target, and a stray drag that scrolls the page instead
    of registering a bead would be maddening mid-practice. */
+/* The backdrop is a dark arch niche (icons/bg-mala-mode.jpeg, 740x1600 — the
+   same 0.4625 ratio as the splash artwork, so `cover` behaves identically on
+   a phone). Its interior runs x 9.3%-90.5%, y 7.8%-98.4%, measured from the
+   art's own pixels; the padding below keeps every control inside that, clear
+   of the painted border.
+
+   Everything on this screen is therefore light-on-dark, the inverse of the
+   rest of the app. The maroon-on-cream palette used elsewhere is invisible
+   against rgb(72,41,23). */
 #mala-page {
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  padding: 0;
+  padding: 0 11%;
   padding-top: env(safe-area-inset-top, 0px);
+
+  background-color: #482917;
+  background-image: url('icons/bg-mala-mode.jpeg');
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
 }
 
 #mala-top,
@@ -1345,36 +1360,47 @@ body.loading {
   flex: none;
   display: flex;
   justify-content: center;
-  padding: 10px 16px;
+  padding: 10px 0;
 }
 
+/* Clears the niche's arched head (its interior starts at 7.8%), so Exit sits
+   on the dark interior rather than half on the painted cream border — where a
+   translucent light button is simply invisible. */
 #mala-top {
   justify-content: flex-end;
+  padding-top: 11vh;
 }
 
+/* Likewise keeps undo off the niche's bottom edge at 98.4%. */
 #mala-bottom {
-  padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 12px);
+  padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 28px);
 }
 
+/* Both buttons carry their OWN dark ground rather than a translucent one.
+   The niche's interior is only full-width below about 30%: higher up the arch
+   is still curving, so the top corners are painted cream. A translucent light
+   pill there is invisible — which is exactly how the first version of Exit
+   disappeared. An opaque pill reads on either ground, and stays readable when
+   `cover` shifts the artwork on a viewport that isn't 0.4625. */
 #mala-exit-btn,
 #mala-undo-btn {
   padding: 9px 20px;
   border-radius: 999px;
-  border: 1px solid var(--gold-hairline);
-  background: var(--surface);
-  color: var(--maroon);
+  border: 1px solid rgba(241, 207, 133, 0.6);
+  background: rgba(52, 28, 15, 0.92);
+  color: var(--gold-light);
   font-size: 0.9rem;
   cursor: pointer;
 }
 
 /* Deliberately quieter than Exit: undo is a correction, reached rarely. */
 #mala-undo-btn {
-  color: var(--ink-muted);
-  background: transparent;
+  border-color: rgba(241, 207, 133, 0.3);
+  color: rgba(241, 207, 133, 0.8);
 }
 
 #mala-undo-btn:disabled {
-  opacity: 0.35;
+  opacity: 0.3;
   cursor: default;
 }
 
@@ -1402,8 +1428,8 @@ body.loading {
 }
 
 #mala-deity-img {
-  max-height: 22vh;
-  max-width: 46vw;
+  max-height: 24vh;
+  max-width: 52vw;
   width: auto;
   height: auto;
   object-fit: contain;
@@ -1418,15 +1444,15 @@ body.loading {
   margin: 2px 0 0;
   font-family: var(--font-heading);
   font-size: 1.25rem;
-  color: var(--maroon);
+  color: var(--gold-light);
   letter-spacing: 0.02em;
   text-align: center;
 }
 
 #mala-dial {
   flex: none;
-  max-width: 76vw;
-  max-height: 40vh;
+  max-width: 72vw;
+  max-height: 34vh;
   overflow: visible;
 }
 
@@ -1434,7 +1460,7 @@ body.loading {
   font-family: var(--font-heading);
   font-size: 46px;
   font-weight: 700;
-  fill: var(--maroon);
+  fill: var(--gold-light);
 }
 
 #mala-stats {
@@ -1443,12 +1469,12 @@ body.loading {
   align-items: baseline;
   gap: 8px;
   font-size: 0.95rem;
-  color: var(--ink-muted);
+  color: rgba(251, 241, 222, 0.72);
   font-variant-numeric: tabular-nums;
 }
 
 #mala-stats strong {
-  color: var(--maroon);
+  color: var(--gold-light);
   font-size: 1.15rem;
 }
 
