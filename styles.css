@@ -1355,25 +1355,17 @@ body.loading {
   background-repeat: no-repeat;
 }
 
-#mala-top,
+/* Undo, then Exit beneath it — the foot of a single vertical stack. Exit was
+   previously pinned top-right, where it overlapped the painted arch: the
+   niche is only full width below about 30%, so that corner is cream. */
 #mala-bottom {
   flex: none;
   display: flex;
-  justify-content: center;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
   padding: 10px 0;
-}
-
-/* Clears the niche's arched head (its interior starts at 7.8%), so Exit sits
-   on the dark interior rather than half on the painted cream border — where a
-   translucent light button is simply invisible. */
-#mala-top {
-  justify-content: flex-end;
-  padding-top: 11vh;
-}
-
-/* Likewise keeps undo off the niche's bottom edge at 98.4%. */
-#mala-bottom {
-  padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 28px);
+  padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 22px);
 }
 
 /* Both buttons carry their OWN dark ground rather than a translucent one.
@@ -1407,14 +1399,22 @@ body.loading {
 /* The tap surface. `touch-action: manipulation` suppresses the double-tap-to-
    zoom delay, so rapid counting registers every bead rather than dropping
    every second one into a gesture the browser is still waiting to resolve. */
+/* Top-aligned rather than centred, so the whole stack sits high on the screen
+   with the slack collecting above the controls.
+
+   15vh is measured, not chosen by eye: the niche's arched head narrows to a
+   point, and the contiguous dark run through the centre is only 7.7% wide at
+   y=8%, 32.3% at y=14% and 52% at y=16%. The deity frame is ~32% of the
+   width, so anything above ~15% puts its top corners on the painted cream. */
 #mala-tap-area {
   flex: 1;
   min-height: 0;
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
-  gap: 8px;
+  justify-content: flex-start;
+  gap: 6px;
+  padding-top: 15vh;
   cursor: pointer;
   touch-action: manipulation;
   -webkit-user-select: none;
@@ -1439,20 +1439,48 @@ body.loading {
   box-shadow: 0 6px 16px rgba(64, 14, 20, 0.28);
 }
 
+/* The mantra is the largest thing on the screen after the count itself, at
+   Sumiran's scale. Silvery rather than gold: it sits directly under a gold
+   frame and above a gold dial, and a third gold element flattens all three.
+   The base `color` is a real silver, not a placeholder — if background-clip:
+   text is unsupported the gradient is simply skipped and this is what shows,
+   rather than the invisible text that -webkit-text-fill-color: transparent
+   would leave behind on its own. */
 #mala-mantra {
   flex: none;
-  margin: 2px 0 0;
+  margin: 4px 0 2px;
   font-family: var(--font-heading);
-  font-size: 1.25rem;
-  color: var(--gold-light);
-  letter-spacing: 0.02em;
+  font-size: 2.1rem;
+  font-weight: 700;
+  line-height: 1.25;
+  color: #e9ecf3;
+  letter-spacing: 0.01em;
   text-align: center;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.45);
+}
+
+@supports ((-webkit-background-clip: text) or (background-clip: text)) {
+  #mala-mantra {
+    background-image: linear-gradient(
+      175deg,
+      #ffffff 0%,
+      #f2f4f8 28%,
+      #b7bcc8 52%,
+      #f6f7fa 74%,
+      #ffffff 100%
+    );
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    /* text-shadow paints behind the clipped fill, so it survives and keeps
+       the light letters legible against the dark niche. */
+  }
 }
 
 #mala-dial {
   flex: none;
   max-width: 72vw;
-  max-height: 34vh;
+  max-height: 30vh;
   overflow: visible;
 }
 

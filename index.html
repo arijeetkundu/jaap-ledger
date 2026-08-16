@@ -229,11 +229,9 @@
      the user sealed inside an empty page with nothing to tap. Here the Exit
      button exists before any async work can fail. -->
 <div id="mala-page" class="fullscreen-page" aria-hidden="true">
-  <div id="mala-top">
-    <button id="mala-exit-btn" data-i18n="malaModeExit">Exit</button>
-  </div>
-
-  <!-- The whole area below the top bar is the tap target. -->
+  <!-- Everything above the controls is the tap target. Exit and undo sit
+       BELOW it, in that order, so neither overlaps the painted arch and a
+       stray tap near them cannot land on the counting surface. -->
   <div id="mala-tap-area">
     <picture id="mala-deity">
       <source id="mala-deity-source" srcset="splash/hanuman-splash.webp" type="image/webp">
@@ -268,6 +266,7 @@
 
   <div id="mala-bottom">
     <button id="mala-undo-btn" data-i18n="malaModeUndo">− 1 bead</button>
+    <button id="mala-exit-btn" data-i18n="malaModeExit">Exit</button>
   </div>
 </div>
 
