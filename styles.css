@@ -1440,12 +1440,13 @@ body.loading {
 }
 
 /* The mantra is the largest thing on the screen after the count itself, at
-   Sumiran's scale. Silvery rather than gold: it sits directly under a gold
-   frame and above a gold dial, and a third gold element flattens all three.
-   The base `color` is a real silver, not a placeholder — if background-clip:
-   text is unsupported the gradient is simply skipped and this is what shows,
-   rather than the invisible text that -webkit-text-fill-color: transparent
-   would leave behind on its own. */
+   Sumiran's scale. Brilliant ivory white — a flat, luminous fill rather than
+   a gradient: a silver sheen read as grey against the dark niche, dulling the
+   one line that should be the brightest thing on the screen.
+   Deliberately not gold, either: it sits directly under a gold frame and
+   above a gold dial, and a third gold element flattened all three.
+   The glow does the lifting a gradient cannot, and the dark shadow beneath it
+   keeps the strokes defined against the brown. */
 #mala-mantra {
   flex: none;
   margin: 4px 0 2px;
@@ -1453,28 +1454,13 @@ body.loading {
   font-size: 2.1rem;
   font-weight: 700;
   line-height: 1.25;
-  color: #e9ecf3;
+  color: #fffdf2;
   letter-spacing: 0.01em;
   text-align: center;
-  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.45);
-}
-
-@supports ((-webkit-background-clip: text) or (background-clip: text)) {
-  #mala-mantra {
-    background-image: linear-gradient(
-      175deg,
-      #ffffff 0%,
-      #f2f4f8 28%,
-      #b7bcc8 52%,
-      #f6f7fa 74%,
-      #ffffff 100%
-    );
-    -webkit-background-clip: text;
-    background-clip: text;
-    -webkit-text-fill-color: transparent;
-    /* text-shadow paints behind the clipped fill, so it survives and keeps
-       the light letters legible against the dark niche. */
-  }
+  text-shadow:
+    0 0 22px rgba(255, 250, 232, 0.38),
+    0 0 6px rgba(255, 252, 240, 0.28),
+    0 2px 8px rgba(30, 14, 6, 0.55);
 }
 
 #mala-dial {
