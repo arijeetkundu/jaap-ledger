@@ -75,19 +75,32 @@
   </section>
   </main>
 
-<!-- Mala View Toggle -->
-<div id="mala-toggle-wrap" class="mala-toggle-wrap" data-i18n-title="toggleMalaTitle" title="Toggle Mala View">
-  <span class="mala-toggle-icon mala-toggle-icon-off" aria-hidden="true">🔢</span>
-  <label class="mala-toggle-switch">
-    <input type="checkbox" id="mala-toggle" data-i18n-aria="toggleMalaAria" aria-label="Toggle Mala View">
-    <span class="mala-toggle-slider"></span>
-  </label>
-  <span class="mala-toggle-icon mala-toggle-icon-on" aria-hidden="true">📿</span>
+<!-- Header controls. One fixed flex row: DOM order is screen order, so no
+     element needs to know how wide its neighbour is. -->
+<div id="app-controls">
+  <!-- Mala View Toggle — changes how counts are DISPLAYED (jaap vs malas).
+       Not to be confused with Mala Mode beside it, which is an input method. -->
+  <div id="mala-toggle-wrap" class="mala-toggle-wrap" data-i18n-title="toggleMalaTitle" title="Toggle Mala View">
+    <span class="mala-toggle-icon mala-toggle-icon-off" aria-hidden="true">🔢</span>
+    <label class="mala-toggle-switch">
+      <input type="checkbox" id="mala-toggle" data-i18n-aria="toggleMalaAria" aria-label="Toggle Mala View">
+      <span class="mala-toggle-slider"></span>
+    </label>
+    <span class="mala-toggle-icon mala-toggle-icon-on" aria-hidden="true">📿</span>
+  </div>
+
+  <!-- Maintenance Toggle -->
+  <button id="maintenance-toggle" data-i18n-aria="settingsGearAria" aria-label="Settings">
+    ⚙︎
+  </button>
 </div>
 
-<!-- Maintenance Toggle -->
-<button id="maintenance-toggle" data-i18n-aria="settingsGearAria" aria-label="Settings">
-  ⚙︎
+<!-- Mala Mode — a thumb-reachable floating button rather than a third header
+     control: at the Large text size the app title and a three-control header
+     collide by ~33px, and this is a one-handed action reached just before
+     settling into practice. -->
+<button id="mala-mode-fab" data-i18n-aria="malaModeOpenAria" data-i18n-title="malaModeOpenTitle" aria-label="Open Mala Mode" title="Mala Mode">
+  📿
 </button>
 
 <!-- Maintenance Drawer -->
@@ -208,6 +221,53 @@
 <!-- Sankalpa Page (full-screen) -->
 <div id="sankalpa-page" class="fullscreen-page" aria-hidden="true">
   <!-- Filled by app.js -->
+</div>
+
+<!-- Mala Mode (full-screen bead counter).
+     All of this chrome is STATIC, unlike the Sankalpa page which writes its
+     own markup after an await — that shipped a bug where a rejected read left
+     the user sealed inside an empty page with nothing to tap. Here the Exit
+     button exists before any async work can fail. -->
+<div id="mala-page" class="fullscreen-page" aria-hidden="true">
+  <!-- Everything above the controls is the tap target. Exit and undo sit
+       BELOW it, in that order, so neither overlaps the painted arch and a
+       stray tap near them cannot land on the counting surface. -->
+  <div id="mala-tap-area">
+    <picture id="mala-deity">
+      <source id="mala-deity-source" srcset="splash/hanuman-splash.webp" type="image/webp">
+      <img id="mala-deity-img" src="splash/hanuman-splash.png" alt="">
+    </picture>
+
+    <p id="mala-mantra" data-i18n="malaModeMantra">Jai Siya Ram</p>
+
+    <svg id="mala-dial" width="280" height="280" viewBox="0 0 280 280" aria-hidden="true">
+      <!-- Track -->
+      <circle cx="140" cy="140" r="112" fill="none" stroke="rgba(241,207,133,0.18)" stroke-width="14" />
+      <!-- Progress arc. stroke-dasharray/offset are set by app.js. -->
+      <circle id="mala-ring" cx="140" cy="140" r="112" fill="none"
+              stroke="var(--gold)" stroke-width="14" stroke-linecap="round"
+              transform="rotate(-90 140 140)" />
+      <!-- Guru Manka marker at 12 o'clock -->
+      <circle cx="140" cy="28" r="5" fill="none" stroke="var(--gold)" stroke-width="2" opacity="0.55" />
+      <!-- Lead dot -->
+      <circle id="mala-dot" cx="140" cy="28" r="9" fill="var(--gold-light)" stroke="var(--gold)" stroke-width="2" />
+      <text id="mala-bead-count" x="140" y="140" text-anchor="middle" dominant-baseline="central">0</text>
+    </svg>
+
+    <div id="mala-stats">
+      <!-- The label is set by app.js, which picks the singular or plural key
+           by count. Hindi and Bangla use the same word for both; only English
+           inflects, so this cannot be one static string. -->
+      <span><strong id="mala-count">0</strong> <span id="mala-count-label">malas</span></span>
+      <span id="mala-stats-sep" aria-hidden="true">·</span>
+      <span><span data-i18n="malaModeTodayLabel">today</span> <strong id="mala-today-total">0</strong></span>
+    </div>
+  </div>
+
+  <div id="mala-bottom">
+    <button id="mala-undo-btn" data-i18n="malaModeUndo">− 1 bead</button>
+    <button id="mala-exit-btn" data-i18n="malaModeExit">Exit</button>
+  </div>
 </div>
 
 <!-- Sunday Backup Reminder Modal -->

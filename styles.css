@@ -248,6 +248,10 @@ p {
 /* Ledger list */
 #ledger-list {
   margin-top: 16px;
+  /* Clear the Mala Mode floating button, which is fixed over the bottom-right
+     corner — without this the last ledger row can never be fully read or
+     tapped, since the button never scrolls away. */
+  padding-bottom: 84px;
 }
 
 /* Ledger row */
@@ -1102,11 +1106,24 @@ body.loading {
   color: var(--ink-muted);
 }
 
-#maintenance-toggle {
+/* The header controls sit in one fixed flex row rather than each carrying its
+   own hand-tuned `right` offset. The Jaap/Mala pill is a variable-width
+   element, so any button placed to its left had to be positioned against a
+   width nobody had measured — fine for two controls, fragile at three. Their
+   order in the DOM is now their order on screen. */
+#app-controls {
   position: fixed;
   top: calc(env(safe-area-inset-top, 0px) + 12px);
   right: 12px;
 
+  display: flex;
+  align-items: center;
+  gap: 10px;
+
+  z-index: 9100;
+}
+
+#maintenance-toggle {
   width: 44px;
   height: 44px;
   /* The global `button { padding: 10px 16px }` rule was squeezing the gear
@@ -1126,16 +1143,54 @@ body.loading {
   font-size: 1.6rem;
   line-height: 1;
   cursor: pointer;
+}
 
-  z-index: 9100;
+/* Mala Mode — a floating action button, deliberately NOT a third header
+   control. At html.text-large the app title and a three-control header
+   overlap by ~33px (the header controls scale with rem too, so both sides
+   grow at once). Bottom-right also puts the one action you reach for
+   one-handed, just before sitting down to practise, under the thumb.
+
+   z-index sits above page content but BELOW the Settings drawer (9000), the
+   Sankalpa page (9700) and every modal — it must never float over them.
+   Honours the gesture-bar inset so it isn't half-swallowed on a modern phone. */
+#mala-mode-fab {
+  position: fixed;
+  right: 18px;
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 18px);
+
+  width: 56px;
+  height: 56px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  border-radius: 50%;
+  border: 1px solid var(--gold);
+
+  background: var(--surface);
+  color: var(--maroon);
+  font-size: 1.7rem;
+  line-height: 1;
+  cursor: pointer;
+  box-shadow: 0 4px 14px rgba(90, 26, 26, 0.28), 0 1px 3px rgba(90, 26, 26, 0.20);
+
+  z-index: 8000;
+}
+
+#mala-mode-fab:active {
+  transform: scale(0.94);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #mala-mode-fab:active {
+    transform: none;
+  }
 }
 
 /* Mala View toggle — lives next to Settings, reachable in one tap */
 .mala-toggle-wrap {
-  position: fixed;
-  top: calc(env(safe-area-inset-top, 0px) + 15px);
-  right: 66px;
-
   display: flex;
   align-items: center;
   gap: 6px;
@@ -1143,8 +1198,6 @@ body.loading {
   border-radius: 999px;
   background: var(--surface);
   border: 1px solid var(--gold-hairline);
-
-  z-index: 9100;
 }
 
 .mala-toggle-icon {
@@ -1271,6 +1324,190 @@ body.loading {
 @media (prefers-reduced-motion: reduce) {
   .fullscreen-page {
     transition: none;
+  }
+}
+
+/* ---------- Mala Mode ---------- */
+
+/* Overrides .fullscreen-page's scrolling: this screen must never scroll. The
+   whole area is a tap target, and a stray drag that scrolls the page instead
+   of registering a bead would be maddening mid-practice. */
+/* The backdrop is a dark arch niche (icons/bg-mala-mode.jpeg, 740x1600 — the
+   same 0.4625 ratio as the splash artwork, so `cover` behaves identically on
+   a phone). Its interior runs x 9.3%-90.5%, y 7.8%-98.4%, measured from the
+   art's own pixels; the padding below keeps every control inside that, clear
+   of the painted border.
+
+   Everything on this screen is therefore light-on-dark, the inverse of the
+   rest of the app. The maroon-on-cream palette used elsewhere is invisible
+   against rgb(72,41,23). */
+#mala-page {
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  padding: 0 11%;
+  padding-top: env(safe-area-inset-top, 0px);
+
+  background-color: #482917;
+  background-image: url('icons/bg-mala-mode.jpeg');
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+
+/* Undo, then Exit beneath it — the foot of a single vertical stack. Exit was
+   previously pinned top-right, where it overlapped the painted arch: the
+   niche is only full width below about 30%, so that corner is cream. */
+#mala-bottom {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 0;
+  padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 22px);
+}
+
+/* Both buttons carry their OWN dark ground rather than a translucent one.
+   The niche's interior is only full-width below about 30%: higher up the arch
+   is still curving, so the top corners are painted cream. A translucent light
+   pill there is invisible — which is exactly how the first version of Exit
+   disappeared. An opaque pill reads on either ground, and stays readable when
+   `cover` shifts the artwork on a viewport that isn't 0.4625. */
+#mala-exit-btn,
+#mala-undo-btn {
+  padding: 9px 20px;
+  border-radius: 999px;
+  border: 1px solid rgba(241, 207, 133, 0.6);
+  background: rgba(52, 28, 15, 0.92);
+  color: var(--gold-light);
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+/* Deliberately quieter than Exit: undo is a correction, reached rarely. */
+#mala-undo-btn {
+  border-color: rgba(241, 207, 133, 0.3);
+  color: rgba(241, 207, 133, 0.8);
+}
+
+#mala-undo-btn:disabled {
+  opacity: 0.3;
+  cursor: default;
+}
+
+/* The tap surface. `touch-action: manipulation` suppresses the double-tap-to-
+   zoom delay, so rapid counting registers every bead rather than dropping
+   every second one into a gesture the browser is still waiting to resolve. */
+/* Top-aligned rather than centred, so the whole stack sits high on the screen
+   with the slack collecting above the controls.
+
+   15vh is measured, not chosen by eye: the niche's arched head narrows to a
+   point, and the contiguous dark run through the centre is only 7.7% wide at
+   y=8%, 32.3% at y=14% and 52% at y=16%. The deity frame is ~32% of the
+   width, so anything above ~15% puts its top corners on the painted cream. */
+#mala-tap-area {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 6px;
+  padding-top: 15vh;
+  cursor: pointer;
+  touch-action: manipulation;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+#mala-deity {
+  flex: 0 1 auto;
+  min-height: 0;
+  display: flex;
+}
+
+#mala-deity-img {
+  max-height: 24vh;
+  max-width: 52vw;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  border: 4px solid var(--gold);
+  border-radius: 4px;
+  background: var(--surface);
+  box-shadow: 0 6px 16px rgba(64, 14, 20, 0.28);
+}
+
+/* The mantra is the largest thing on the screen after the count itself, at
+   Sumiran's scale. Brilliant ivory white — a flat, luminous fill rather than
+   a gradient: a silver sheen read as grey against the dark niche, dulling the
+   one line that should be the brightest thing on the screen.
+   Deliberately not gold, either: it sits directly under a gold frame and
+   above a gold dial, and a third gold element flattened all three.
+   The glow does the lifting a gradient cannot, and the dark shadow beneath it
+   keeps the strokes defined against the brown. */
+#mala-mantra {
+  flex: none;
+  margin: 4px 0 2px;
+  font-family: var(--font-heading);
+  font-size: 2.1rem;
+  font-weight: 700;
+  line-height: 1.25;
+  color: #fffdf2;
+  letter-spacing: 0.01em;
+  text-align: center;
+  text-shadow:
+    0 0 22px rgba(255, 250, 232, 0.38),
+    0 0 6px rgba(255, 252, 240, 0.28),
+    0 2px 8px rgba(30, 14, 6, 0.55);
+}
+
+#mala-dial {
+  flex: none;
+  max-width: 72vw;
+  max-height: 30vh;
+  overflow: visible;
+}
+
+#mala-bead-count {
+  font-family: var(--font-heading);
+  font-size: 46px;
+  font-weight: 700;
+  fill: var(--gold-light);
+}
+
+#mala-stats {
+  flex: none;
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  font-size: 0.95rem;
+  color: rgba(251, 241, 222, 0.72);
+  font-variant-numeric: tabular-nums;
+}
+
+#mala-stats strong {
+  color: var(--gold-light);
+  font-size: 1.15rem;
+}
+
+/* Fires once per completed mala. */
+#mala-count.mala-tick {
+  animation: mala-tick 0.3s var(--ease-premium);
+}
+
+@keyframes mala-tick {
+  50% { transform: scale(1.35); }
+}
+
+#mala-count {
+  display: inline-block;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #mala-count.mala-tick {
+    animation: none;
   }
 }
 

@@ -7,6 +7,7 @@
 // Run with the app already being served (e.g. `python -m http.server 3333`).
 
 const puppeteer = require("puppeteer");
+const { seedAppState } = require("./test-helpers");
 
 const BASE = "http://localhost:3333";
 const SPLASH_WAIT_MS = 4200;
@@ -35,16 +36,7 @@ function assert(label, condition) {
     timeout: 90000,
   });
   const page = await browser.newPage();
-  await page.evaluateOnNewDocument(() => localStorage.setItem("appLanguage", "en"));
-  // Also pre-seed today's date as the last Sunday-backup prompt date, so
-  // the Sunday Backup Reminder modal (a real position:fixed, inset:0
-  // backdrop) never opens and silently swallows a click meant for
-  // something underneath it whenever this suite actually runs on a Sunday.
-  await page.evaluateOnNewDocument(() => {
-    const today = new Date();
-    const iso = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
-    localStorage.setItem("lastSundayBackupPromptDate", iso);
-  });
+  await seedAppState(page);
 
   const pageErrors = [];
   page.on("pageerror", err => pageErrors.push(err.message));

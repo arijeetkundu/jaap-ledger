@@ -9,6 +9,7 @@
 // Run with the app already being served (e.g. `python -m http.server 3333`).
 
 const puppeteer = require("puppeteer");
+const { seedAppState } = require("./test-helpers");
 
 const BASE = "http://localhost:3333";
 let passed = 0;
@@ -52,24 +53,17 @@ async function bypassServiceWorker(page) {
 async function newFreshPage(browser) {
   const context = await browser.createBrowserContext();
   const page = await context.newPage();
-  // Orthogonal to the deliberate no-appLanguage-seed above — without this,
-  // the Sunday Backup Reminder modal (a real position:fixed, inset:0
-  // backdrop, opened unconditionally in initApp() regardless of language
-  // choice) would sit just below the language picker's own overlay and
-  // become the topmost interactive layer the moment a language is picked,
-  // silently swallowing whatever this suite clicks next whenever it
-  // actually runs on a Sunday.
-  await page.evaluateOnNewDocument(() => {
-    const today = new Date();
-    const iso = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
-    localStorage.setItem("lastSundayBackupPromptDate", iso);
-  });
   await page.setViewport({ width: 390, height: 844 });
   const errors = [];
   page.on("pageerror", (err) => errors.push(err.message));
   page.on("console", (msg) => {
     if (msg.type() === "error") errors.push(msg.text());
   });
+  // lang: null — this suite deliberately leaves appLanguage unset so each
+  // page starts like a genuinely new install and the first-run picker opens.
+  // The Sunday-reminder suppression is still needed, and must be installed
+  // before the navigation below.
+  await seedAppState(page, { lang: null });
   await page.goto(BASE, { waitUntil: "networkidle0", timeout: 15000 });
   await new Promise((r) => setTimeout(r, 4200)); // outlast splash
   // Then wait for the picker itself rather than trusting that fixed sleep.

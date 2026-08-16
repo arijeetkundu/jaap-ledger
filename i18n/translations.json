@@ -4,6 +4,56 @@
     "hi": "माला दृश्य टॉगल करें",
     "bn": "মালা ভিউ পরিবর্তন করুন"
   },
+  "malaModeOpenAria": {
+    "en": "Open Mala Mode",
+    "hi": "माला मोड खोलें",
+    "bn": "মালা মোড খুলুন"
+  },
+  "malaModeOpenTitle": {
+    "en": "Mala Mode",
+    "hi": "माला मोड",
+    "bn": "মালা মোড"
+  },
+  "malaModeMantra": {
+    "en": "Jai Siya Ram",
+    "hi": "जय सिया राम",
+    "bn": "জয় সিয়া রাম"
+  },
+  "malaModeExit": {
+    "en": "Exit",
+    "hi": "बाहर जाएँ",
+    "bn": "বেরিয়ে যান"
+  },
+  "malaModeUndo": {
+    "en": "− 1 bead",
+    "hi": "− 1 मनका",
+    "bn": "− ১ মণি"
+  },
+  "malaModeMalaLabelOne": {
+    "en": "mala",
+    "hi": "माला",
+    "bn": "মালা"
+  },
+  "malaModeMalasLabel": {
+    "en": "malas",
+    "hi": "माला",
+    "bn": "মালা"
+  },
+  "malaModeTodayLabel": {
+    "en": "today",
+    "hi": "आज",
+    "bn": "আজ"
+  },
+  "malaModeSavedToast": {
+    "en": "{malas} mala(s) added to today ✓",
+    "hi": "{malas} माला आज में जोड़ी गई ✓",
+    "bn": "{malas} মালা আজের হিসাবে যোগ হয়েছে ✓"
+  },
+  "malaModeDraftWarning": {
+    "en": "You have unsaved text in Today. Starting Mala Mode will discard it. Continue?",
+    "hi": "आज के कार्ड में बिना सहेजा हुआ पाठ है। माला मोड शुरू करने पर वह छूट जाएगा। आगे बढ़ें?",
+    "bn": "আজের কার্ডে অসংরক্ষিত লেখা আছে। মালা মোড শুরু করলে সেটি মুছে যাবে। এগিয়ে যাবেন?"
+  },
   "toggleMalaTitle": {
     "en": "Toggle Mala View",
     "hi": "माला दृश्य टॉगल करें",
