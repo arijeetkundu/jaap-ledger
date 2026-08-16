@@ -12,6 +12,7 @@ const fs = require("fs");
 const os = require("os");
 const path = require("path");
 const puppeteer = require("puppeteer");
+const { seedAppState } = require("./test-helpers");
 const sharp = require("sharp");
 
 const BASE = "http://localhost:3333";
@@ -105,16 +106,7 @@ function assertInsideCreamPanel(assertFn, label, framing) {
   // Survives every localStorage.clear() + reload() in this file — re-runs
   // before app.js on each navigation, so the first-run language picker
   // never appears and intercepts these tests' clicks.
-  await page.evaluateOnNewDocument(() => localStorage.setItem("appLanguage", "en"));
-  // Also pre-seed today's date as the last Sunday-backup prompt date, so
-  // the Sunday Backup Reminder modal (a real position:fixed, inset:0
-  // backdrop) never opens and silently swallows a click meant for
-  // something underneath it whenever this suite actually runs on a Sunday.
-  await page.evaluateOnNewDocument(() => {
-    const today = new Date();
-    const iso = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
-    localStorage.setItem("lastSundayBackupPromptDate", iso);
-  });
+  await seedAppState(page);
   await page.setViewport({ width: 390, height: 844 });
   trackErrors(page);
   page.on("dialog", async (dialog) => { await dialog.accept(); });
@@ -339,12 +331,7 @@ function assertInsideCreamPanel(assertFn, label, framing) {
   console.log("\n=== <picture> trap & adaptive frame (custom image) ===");
   const contextB = await browser.createBrowserContext();
   const pageB = await contextB.newPage();
-  await pageB.evaluateOnNewDocument(() => localStorage.setItem("appLanguage", "en"));
-  await pageB.evaluateOnNewDocument(() => {
-    const today = new Date();
-    const iso = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
-    localStorage.setItem("lastSundayBackupPromptDate", iso);
-  });
+  await seedAppState(pageB);
   await pageB.setViewport({ width: 390, height: 844 });
   trackErrors(pageB);
   // With the pool [hanuman, custom0] (length 2), floor(0.99 * 2) = 1 picks
@@ -421,12 +408,7 @@ function assertInsideCreamPanel(assertFn, label, framing) {
   console.log("\n=== Rotation invariant (Hanuman + custom images mixed in) ===");
   const contextC = await browser.createBrowserContext();
   const pageC = await contextC.newPage();
-  await pageC.evaluateOnNewDocument(() => localStorage.setItem("appLanguage", "en"));
-  await pageC.evaluateOnNewDocument(() => {
-    const today = new Date();
-    const iso = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
-    localStorage.setItem("lastSundayBackupPromptDate", iso);
-  });
+  await seedAppState(pageC);
   await pageC.setViewport({ width: 390, height: 844 });
   trackErrors(pageC);
   await pageC.goto(BASE, { waitUntil: "networkidle0", timeout: 15000 });

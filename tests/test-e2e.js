@@ -15,6 +15,7 @@ const fs = require("fs");
 const os = require("os");
 const path = require("path");
 const puppeteer = require("puppeteer");
+const { seedAppState } = require("./test-helpers");
 
 const BASE = "http://localhost:3333";
 const SPLASH_WAIT_MS = 4200; // outlasts the 3200ms display + 800ms fade
@@ -67,16 +68,7 @@ async function freshLoad(page, { clearStorage = false } = {}) {
   const cdpSession = await page.createCDPSession();
   await cdpSession.send("Page.setDownloadBehavior", { behavior: "allow", downloadPath: downloadDir });
 
-  await page.evaluateOnNewDocument(() => localStorage.setItem("appLanguage", "en"));
-  // Also pre-seed today's date as the last Sunday-backup prompt date, so
-  // the Sunday Backup Reminder modal (a real position:fixed, inset:0
-  // backdrop) never opens and silently swallows a click meant for
-  // something underneath it whenever this suite actually runs on a Sunday.
-  await page.evaluateOnNewDocument(() => {
-    const today = new Date();
-    const iso = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
-    localStorage.setItem("lastSundayBackupPromptDate", iso);
-  });
+  await seedAppState(page);
   // This app is a phone PWA; Puppeteer's 800x600 default is a desktop-ish
   // shape that doesn't reflect real usage and breaks viewport-relative
   // layout assertions (e.g. the splash screen's portrait-framed deity
@@ -1427,7 +1419,7 @@ async function freshLoad(page, { clearStorage = false } = {}) {
     const strandContext = await browser.createBrowserContext();
     const strandPage = await strandContext.newPage();
     await strandPage.setViewport({ width: 390, height: 844 });
-    await strandPage.evaluateOnNewDocument(() => localStorage.setItem("appLanguage", "en"));
+    await seedAppState(strandPage);
     const strandErrors = [];
     strandPage.on("console", msg => {
       if (msg.type() === "error") strandErrors.push(msg.text());

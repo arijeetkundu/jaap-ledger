@@ -12,6 +12,7 @@
 const fs = require("fs");
 const path = require("path");
 const puppeteer = require("puppeteer");
+const { seedAppState } = require("./test-helpers");
 
 const BASE = "http://localhost:3333";
 const SPLASH_WAIT_MS = 4200;
@@ -33,12 +34,7 @@ async function newPage(browser) {
   const context = await browser.createBrowserContext();
   const page = await context.newPage();
   await page.setViewport({ width: 390, height: 844 });
-  await page.evaluateOnNewDocument(() => localStorage.setItem("appLanguage", "en"));
-  await page.evaluateOnNewDocument(() => {
-    const today = new Date();
-    const iso = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
-    localStorage.setItem("lastSundayBackupPromptDate", iso);
-  });
+  await seedAppState(page);
   const errors = [];
   page.on("pageerror", (err) => errors.push(err.message));
   page.on("console", (msg) => {

@@ -1,4 +1,5 @@
 const puppeteer = require("puppeteer");
+const { seedAppState } = require("./test-helpers");
 
 const BASE = "http://localhost:3333";
 let passed = 0;
@@ -28,17 +29,7 @@ function assert(label, condition) {
   const page = await browser.newPage();
   // Pre-seed a chosen language so the first-run language picker never
   // appears and intercepts clicks — these tests aren't about i18n.
-  await page.evaluateOnNewDocument(() => localStorage.setItem("appLanguage", "en"));
-  // Also pre-seed today's date as the last Sunday-backup prompt date, so
-  // the Sunday Backup Reminder modal (a real position:fixed, inset:0
-  // backdrop) never opens and silently swallows this suite's first click
-  // whenever it's actually run on a Sunday — these tests aren't about that
-  // feature either (see tests/test-sunday-backup.js for that coverage).
-  await page.evaluateOnNewDocument(() => {
-    const today = new Date();
-    const iso = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
-    localStorage.setItem("lastSundayBackupPromptDate", iso);
-  });
+  await seedAppState(page);
 
   // Capture console errors from the page
   const pageErrors = [];

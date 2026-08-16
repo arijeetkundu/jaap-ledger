@@ -11,6 +11,7 @@
 // Run with the app already being served (e.g. `python -m http.server 3333`).
 
 const puppeteer = require("puppeteer");
+const { seedAppState } = require("./test-helpers");
 
 const BASE = "http://localhost:3333";
 let passed = 0;
@@ -38,7 +39,7 @@ function assert(label, condition) {
     timeout: 90000,
   });
   const page = await browser.newPage();
-  await page.evaluateOnNewDocument(() => localStorage.setItem("appLanguage", "en"));
+  await seedAppState(page);
 
   const pageErrors = [];
   page.on("pageerror", err => pageErrors.push(err.message));
