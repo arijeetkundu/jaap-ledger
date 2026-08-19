@@ -4144,8 +4144,17 @@ async function applyPulledLedger(payload) {
 
   syncApplyingRemote = true;
   try {
+    // The snapshot is taken from the ledger being REPLACED, and before the
+    // replacement lands — the same ordering Import learned the hard way, where
+    // backing up afterwards overwrote the only backup with the imported data
+    // in the same breath and the replaced ledger was gone immediately.
+    //
+    // Be precise about what this buys: there is one backup slot, overwritten
+    // by every subsequent save, so Restore from Backup can undo a bad pull
+    // only if nothing has been saved since. Export remains the durable escape
+    // hatch. This is a seatbelt, not a history.
+    await saveAutomaticBackup(previous);
     await saveLedger(ledgerData);
-    await saveAutomaticBackup(ledgerData);
   } catch (err) {
     // Same discipline as every other save path: leave nothing in memory that
     // is not on disk, or every total on screen reflects a value that vanishes

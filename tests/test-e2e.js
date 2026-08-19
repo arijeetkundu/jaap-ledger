@@ -1926,6 +1926,35 @@ async function freshLoad(page, { clearStorage = false } = {}) {
       });
       return { applied, unchanged: ledgerData.length === before };
     });
+    // A pull replaces the ledger, so the ledger it replaces must be snapshotted
+    // FIRST — the ordering Import already learned the hard way, where backing
+    // up afterwards overwrote the only backup with the incoming data in the
+    // same breath and the replaced ledger was gone immediately.
+    const backupBeforeReplace = await syncPage.evaluate(async () => {
+      const marker = "2019-07-07";
+      ledgerData.push({ date: marker, jaap: 4321, notes: "about to be replaced" });
+      await saveLedger(ledgerData);
+      await new Promise(r => setTimeout(r, 200));
+
+      await applyPulledLedger({
+        version: 2,
+        entries: [{ date: "2019-01-01", jaap: 108, notes: "the incoming ledger" }],
+        sankalpa: null,
+      });
+
+      const backup = await loadLatestBackup();
+      const entries = Array.isArray(backup) ? backup : (backup && backup.entries) || [];
+      return {
+        replaced: !ledgerData.some(e => e.date === marker),
+        recoverable: entries.some(e => e.date === marker && e.jaap === 4321),
+      };
+    });
+    assert("a pull does replace the local ledger", backupBeforeReplace.replaced);
+    assert(
+      "and the replaced ledger is snapshotted first, so it is still recoverable",
+      backupBeforeReplace.recoverable
+    );
+
     assert("a malformed synced ledger is refused", rejected.applied === false);
     assert("and the local ledger is left exactly as it was", rejected.unchanged);
 
