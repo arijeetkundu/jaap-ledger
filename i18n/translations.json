@@ -189,6 +189,16 @@
     "hi": "सभी कस्टम तस्वीरें हटाएँ",
     "bn": "সমস্ত কাস্টম ছবি সরিয়ে দিন"
   },
+  "settingsDataHeading": {
+    "en": "Your Data",
+    "hi": "आपका डेटा",
+    "bn": "আপনার তথ্য"
+  },
+  "settingsDestructiveHint": {
+    "en": "These replace your whole ledger with another copy.",
+    "hi": "ये आपके पूरे लेजर को दूसरी प्रति से बदल देते हैं।",
+    "bn": "এগুলি আপনার পুরো লেজারকে অন্য একটি প্রতিলিপি দিয়ে প্রতিস্থাপন করে।"
+  },
   "syncHeading": {
     "en": "Sync Across Devices",
     "hi": "सभी डिवाइस पर समन्वय",

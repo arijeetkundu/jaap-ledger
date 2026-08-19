@@ -1626,6 +1626,22 @@ body.loading {
   color: var(--ink-muted);
 }
 
+/* Import and Restore. Both discard the whole ledger and put another one in its
+   place, so they sit last in the panel and are visibly set apart — a hairline
+   and real space, not a colour change. The point is a pause before the tap,
+   not alarm: these are legitimate tools a sadhak may genuinely need, and
+   painting them as a hazard would discourage the very recovery they exist for.
+   The rule uses the gold hairline the rest of the app already separates with. */
+.settings-destructive {
+  margin-top: 22px;
+  padding-top: 14px;
+  border-top: 1px solid var(--gold-hairline);
+}
+
+.settings-destructive .maintenance-hint {
+  margin: 0 0 10px;
+}
+
 /* Data-safety status lines under the Drive backup / Restore buttons —
    informational by default, and deliberately quiet: these report state, they
    don't demand action. :empty collapses the line entirely when there's

@@ -108,38 +108,15 @@
   <div class="maintenance-panel">
     <h3 data-i18n="settingsHeading">Settings</h3>
 
+    <!-- Panel order is by purpose, and the ordering is deliberate: the vow
+         first, then what you check, then harmless preferences, and the two
+         actions that replace the whole ledger last of all. Import and Restore
+         used to sit in the upper half, so reaching Background or Language
+         meant scrolling straight past them — a mis-tap there costs practice
+         history, while a mis-tap on a background swatch costs nothing. -->
     <button id="sankalpa-open-btn" class="maintenance-btn" data-i18n="settingsSankalpaBtn">
 		🕉️ Sankalpa
 	</button>
-
-    <button id="export-json-btn" class="maintenance-btn" data-i18n="settingsExportBtn">
-		⬇️ Export Ledger (JSON)
-	</button>
-
-    <button id="drive-backup-btn" class="maintenance-btn" data-i18n="settingsDriveBackupBtn">
-      ☁️ Back Up to Google Drive
-    </button>
-
-    <!-- Both filled by app.js's renderDataSafetyStatus() — dynamic text, so
-         no data-i18n attribute (they go through t() at render time). -->
-    <p class="maintenance-status" id="drive-backup-status"></p>
-
-	<button id="import-json-btn" class="maintenance-btn" data-i18n="settingsImportBtn">
-		⬆️ Import Ledger (JSON)
-	</button>
-
-	<input
-		type="file"
-		id="import-json-input"
-		accept="application/json"
-		style="display:none"
-	/>
-
-    <button id="restore-backup-btn" class="maintenance-btn" data-i18n="settingsRestoreBtn">
-      Restore from Backup
-    </button>
-
-    <p class="maintenance-status" id="storage-status"></p>
 
     <h3 data-i18n="syncHeading">Sync Across Devices</h3>
     <p class="maintenance-hint" data-i18n="syncHint">Sign in to keep your ledger the same on every device you practise with. Your data goes only to your own account.</p>
@@ -157,13 +134,6 @@
     </button>
     <!-- Filled by renderSyncStatus() — dynamic text, so no data-i18n. -->
     <p class="maintenance-status" id="sync-status"></p>
-
-    <h3 data-i18n="langSettingsHeading">Language</h3>
-    <div id="lang-settings-wrap" class="lang-settings-wrap">
-      <button type="button" class="lang-settings-btn" data-lang="en" aria-pressed="false">English</button>
-      <button type="button" class="lang-settings-btn" data-lang="hi" aria-pressed="false">हिन्दी</button>
-      <button type="button" class="lang-settings-btn" data-lang="bn" aria-pressed="false">বাংলা</button>
-    </div>
 
     <h3 data-i18n="settingsTextSizeHeading">Text Size</h3>
     <div id="text-size-wrap" class="text-size-wrap">
@@ -199,6 +169,51 @@
     <button id="splash-images-reset-btn" class="maintenance-btn" data-i18n="settingsRemoveAllImagesBtn">
       Remove All Custom Images
     </button>
+
+    <h3 data-i18n="langSettingsHeading">Language</h3>
+    <div id="lang-settings-wrap" class="lang-settings-wrap">
+      <button type="button" class="lang-settings-btn" data-lang="en" aria-pressed="false">English</button>
+      <button type="button" class="lang-settings-btn" data-lang="hi" aria-pressed="false">हिन्दी</button>
+      <button type="button" class="lang-settings-btn" data-lang="bn" aria-pressed="false">বাংলা</button>
+    </div>
+
+    <h3 data-i18n="settingsDataHeading">Your Data</h3>
+
+    <button id="drive-backup-btn" class="maintenance-btn" data-i18n="settingsDriveBackupBtn">
+      ☁️ Back Up to Google Drive
+    </button>
+
+    <!-- Both filled by app.js's renderDataSafetyStatus() — dynamic text, so
+         no data-i18n attribute (they go through t() at render time). -->
+    <p class="maintenance-status" id="drive-backup-status"></p>
+
+    <button id="export-json-btn" class="maintenance-btn" data-i18n="settingsExportBtn">
+      ⬇️ Export Ledger (JSON)
+    </button>
+
+    <p class="maintenance-status" id="storage-status"></p>
+
+    <!-- Import and Restore both discard the entire ledger and put another one
+         in its place. Kept together, last, and visibly set apart, so they are
+         arrived at deliberately rather than passed through. -->
+    <div class="settings-destructive">
+      <p class="maintenance-hint" data-i18n="settingsDestructiveHint">These replace your whole ledger with another copy.</p>
+
+      <button id="import-json-btn" class="maintenance-btn" data-i18n="settingsImportBtn">
+        ⬆️ Import Ledger (JSON)
+      </button>
+
+      <input
+        type="file"
+        id="import-json-input"
+        accept="application/json"
+        style="display:none"
+      />
+
+      <button id="restore-backup-btn" class="maintenance-btn" data-i18n="settingsRestoreBtn">
+        Restore from Backup
+      </button>
+    </div>
 
     <!-- The version is a hand-maintained literal: this app has no build step
          and no version field anywhere, so nothing can derive it. Bump it at

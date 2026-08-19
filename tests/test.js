@@ -91,6 +91,49 @@ function assert(label, condition) {
     !!versionLine && versionLine.full.includes("Built for Sadhaks everywhere")
   );
 
+  // The Settings panel is ordered by purpose, and the half of that ordering
+  // worth pinning is the end: Import and Restore both discard the whole ledger
+  // and put another one in its place. They used to sit in the upper half, so
+  // reaching Background or Language meant scrolling straight past them. This
+  // asserts the property rather than the exact sequence, so the panel can be
+  // rearranged freely as long as the destructive pair stays last.
+  const panelOrder = await page.evaluate(() => {
+    const panel = document.querySelector(".maintenance-panel");
+    if (!panel) return null;
+    const ids = [...panel.querySelectorAll("button[id], h3[data-i18n], div[id]")]
+      .map(el => el.id || el.dataset.i18n)
+      .filter(Boolean);
+    return {
+      ids,
+      destructiveWrapped: ["import-json-btn", "restore-backup-btn"].every(
+        id => document.getElementById(id)?.closest(".settings-destructive") !== null
+      ),
+    };
+  });
+  const lastIndexOfAny = (ids, wanted) =>
+    Math.max(...wanted.map(w => ids.indexOf(w)));
+  assert("Settings panel is present and enumerable", !!panelOrder && panelOrder.ids.length > 0);
+  if (panelOrder) {
+    const harmless = ["settingsBackgroundHeading", "langSettingsHeading", "settingsTextSizeHeading", "settingsSplashHeading"];
+    const destructiveFirstIndex = Math.min(
+      panelOrder.ids.indexOf("import-json-btn"),
+      panelOrder.ids.indexOf("restore-backup-btn")
+    );
+    assert(
+      "Import and Restore come after every harmless preference, not before them",
+      destructiveFirstIndex > lastIndexOfAny(panelOrder.ids, harmless)
+    );
+    assert(
+      "they are the last two controls in the panel",
+      panelOrder.ids.indexOf("restore-backup-btn") === panelOrder.ids.length - 1 ||
+      panelOrder.ids.indexOf("import-json-btn") === panelOrder.ids.length - 1
+    );
+    assert(
+      "and are set apart in their own block rather than sitting inline",
+      panelOrder.destructiveWrapped
+    );
+  }
+
   // ── 2. Progress bar ─────────────────────────────────────────────
   console.log("\n=== Progress bar ===");
   const trackExists = await page.$(".progress-track") !== null;
