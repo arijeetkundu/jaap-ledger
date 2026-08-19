@@ -383,6 +383,53 @@ function assert(label, condition) {
     await page.evaluate(() => isValidJaapValue(computeJaapFromInput("not-a-number", 500))) === false
   );
 
+  // ── stampEntryEdited / entryEditedAt ───────────────────────────────
+  // The stamp is the only thing that decides which device wins a sync
+  // conflict, so its contract matters more than its complexity suggests.
+  console.log("\n=== Entry edit stamps ===");
+  assert(
+    "stamping writes an ISO-8601 timestamp",
+    await page.evaluate(() => {
+      const e = { date: "2026-08-16", jaap: 108, notes: "" };
+      stampEntryEdited(e);
+      return /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/.test(e.updatedAt);
+    })
+  );
+  assert(
+    "an unstamped entry sorts as the oldest possible, so a synced copy wins over it",
+    await page.evaluate(() => {
+      const stamped = { date: "2026-08-16", jaap: 1, notes: "" };
+      stampEntryEdited(stamped);
+      return entryEditedAt({ date: "2026-08-16", jaap: 1, notes: "" }) < entryEditedAt(stamped);
+    })
+  );
+  assert(
+    "a malformed stamp is treated as unstamped rather than trusted",
+    await page.evaluate(() => entryEditedAt({ updatedAt: 12345 }) === "")
+  );
+  // ISO strings are used precisely so conflict resolution needs no parsing.
+  assert(
+    "later stamps sort after earlier ones under plain string comparison",
+    await page.evaluate(() =>
+      "2026-08-16T09:12:00.000Z" < "2026-08-16T09:40:00.000Z" &&
+      "2026-08-16T23:59:59.000Z" < "2026-08-17T00:00:00.000Z")
+  );
+  // A stamped entry must still satisfy the validator every import/restore
+  // path runs, or sync would make the app reject its own data.
+  assert(
+    "a stamped entry still passes areLedgerEntriesValid()",
+    await page.evaluate(() => {
+      const e = { date: "2026-08-16", jaap: 108, notes: "" };
+      stampEntryEdited(e);
+      return areLedgerEntriesValid([e]);
+    })
+  );
+  assert(
+    "an entry with no stamp still passes, so older backups keep importing",
+    await page.evaluate(() =>
+      areLedgerEntriesValid([{ date: "2026-08-16", jaap: 108, notes: "" }]))
+  );
+
   // ── shouldShowSundayBackupReminder ─────────────────────────────────
   console.log("\n=== shouldShowSundayBackupReminder ===");
   // 2026-08-09 is a Sunday; 2026-08-10 (Monday) and 2026-08-16 (next Sunday) anchor the rest.

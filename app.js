@@ -1254,6 +1254,34 @@ function isValidJaapValue(value) {
   return value === null || (Number.isFinite(value) && value >= 0);
 }
 
+// Marks an entry as edited now. This is the only thing that decides which
+// device wins when the same day has been edited in two places, so it must be
+// called at EVERY site that changes an entry's jaap or notes — currently the
+// Today Card save, the Ledger row save, and Mala Mode's commit.
+//
+// ISO strings rather than epoch numbers: they sort correctly under plain
+// string comparison (so conflict resolution needs no parsing), and they stay
+// readable in an exported JSON file, which matters for a format a sadhak may
+// open and inspect.
+//
+// Deliberately NOT applied on import or restore. Those replace the whole
+// ledger with entries from a file, and stamping them all "now" would make an
+// old backup look freshly edited and let it overwrite newer data on the next
+// sync. Entries with no stamp — every entry written before this existed, and
+// everything in an older backup — are treated as the oldest possible, so a
+// synced version wins over them.
+function stampEntryEdited(entry) {
+  if (entry) entry.updatedAt = new Date().toISOString();
+}
+
+// Missing/malformed stamps sort as oldest. Kept as a named function so the
+// "no stamp means oldest" rule lives in one place rather than being spelled
+// out at each comparison.
+function entryEditedAt(entry) {
+  const stamp = entry && entry.updatedAt;
+  return typeof stamp === "string" ? stamp : "";
+}
+
 function updateMalaToggleButton() {
   const input = document.getElementById("mala-toggle");
   if (!input) return;
@@ -1798,8 +1826,10 @@ function buildYearRows(yearContainer, entries, { sparklineMap, milestoneByDate }
         // existed isn't celebrated again — see updateTodayEntry().
         const milestoneBefore = getCroreMilestone(entry.date);
 
+        const previousStamp = entry.updatedAt;
         entry.jaap = newJaap;
         entry.notes = notesInput;
+        stampEntryEdited(entry);
 
         // Editing a backdated (within-7-day) entry can cross a Crore boundary
         // just as saving today's entry can — previously only the Today Card
@@ -1813,6 +1843,11 @@ function buildYearRows(yearContainer, entries, { sparklineMap, milestoneByDate }
         } catch (err) {
           entry.jaap = previousJaap;
           entry.notes = previousNotes;
+          // The stamp is part of the entry's state, so it rolls back too —
+          // otherwise a failed write would leave the entry looking edited and
+          // it would win a later sync conflict on the strength of a change
+          // that never reached disk.
+          entry.updatedAt = previousStamp;
           console.error("Failed to save ledger entry:", err);
           showToast(t("commonSaveFailed"));
           return;
@@ -2226,6 +2261,7 @@ async function updateTodayEntry() {
   // value that was never persisted and vanishes on the next launch.
   const previousJaap = entry.jaap;
   const previousNotes = entry.notes;
+  const previousStamp = entry.updatedAt;
 
   // Milestone state BEFORE the mutation. Without this, re-saving an entry
   // that had ALREADY crossed a Crore boundary — changing only the note, or
@@ -2236,6 +2272,7 @@ async function updateTodayEntry() {
 
   entry.jaap = newJaap;
   entry.notes = notesInput;
+  stampEntryEdited(entry);
 
   const crossedNewMilestone = didCrossNewMilestone(milestoneBefore, getCroreMilestone(entry.date));
 
@@ -2248,6 +2285,7 @@ async function updateTodayEntry() {
     // they can correct or retry without losing the entry they just wrote.
     entry.jaap = previousJaap;
     entry.notes = previousNotes;
+    entry.updatedAt = previousStamp;
     console.error("Failed to save today's entry:", err);
     showToast(t("commonSaveFailed"));
     return;
@@ -2288,6 +2326,7 @@ async function addJaapToToday(n) {
   const entry = ensureTodayEntryExists();
 
   const previousJaap = entry.jaap;
+  const previousStamp = entry.updatedAt;
   const milestoneBefore = getCroreMilestone(entry.date);
 
   // entry.jaap is null on a day nothing has been logged yet.
@@ -2297,6 +2336,7 @@ async function addJaapToToday(n) {
     return false;
   }
   entry.jaap = newJaap;
+  stampEntryEdited(entry);
 
   const crossedNewMilestone = didCrossNewMilestone(milestoneBefore, getCroreMilestone(entry.date));
 
@@ -2305,6 +2345,7 @@ async function addJaapToToday(n) {
     await saveAutomaticBackup(ledgerData);
   } catch (err) {
     entry.jaap = previousJaap;
+    entry.updatedAt = previousStamp;
     console.error("Failed to add jaap to today's entry:", err);
     showToast(t("commonSaveFailed"));
     return false;
