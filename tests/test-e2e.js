@@ -1526,19 +1526,37 @@ async function freshLoad(page, { clearStorage = false } = {}) {
       crossOrigin.length === 0
     );
     assert(
-      "the Firebase SDK is not loaded until sign-in is actually requested",
+      "the Firebase SDK is not loaded on launch",
       await syncPage.evaluate(() => firebaseAuthPromise === null)
     );
 
+    // Opening Settings warms the SDK, which is what lets the sign-in popup
+    // open synchronously from the later tap. Stubbed rather than fetched, so
+    // the suite keeps working with no internet — the app tolerates that fetch
+    // failing, and a test suite that needs gstatic.com would be worse than
+    // one that does not.
+    await syncPage.evaluate(() => {
+      window.loadFirebaseAuth = () => {
+        firebaseAuthReady = { instance: {}, auth: {} };
+        return Promise.resolve(firebaseAuthReady);
+      };
+    });
     await syncPage.click("#maintenance-toggle");
     await syncPage.waitForSelector("#maintenance-drawer.open");
     await new Promise(r => setTimeout(r, 400));
 
+    assert(
+      "opening Settings warms the SDK, rather than waiting for the tap",
+      await syncPage.evaluate(() => firebaseAuthReady !== null)
+    );
+
     const syncUi = await syncPage.evaluate(() => ({
       btn: document.getElementById("sync-signin-btn")?.textContent.trim(),
       status: document.getElementById("sync-status")?.textContent.trim(),
+      enabled: document.getElementById("sync-signin-btn")?.disabled === false,
     }));
     assert("Settings offers a sign-in control", syncUi.btn === "Sign in with Google");
+    assert("it is tappable once the SDK is warm", syncUi.enabled);
     assert(
       "and states plainly that nothing is being synced yet",
       !!syncUi.status && syncUi.status.includes("Not signed in")
@@ -1576,18 +1594,26 @@ async function freshLoad(page, { clearStorage = false } = {}) {
     // forever: the button stayed disabled and the user got no error and no
     // retry. A promise that never settles is the case a plain try/catch
     // cannot see, so it is worth pinning explicitly.
+    // The SDK load can no longer hang the sign-in — it is awaited before the
+    // tap, never during it — so the only remaining source is the popup, which
+    // is exactly what hung on the phone. Stub one that never settles.
     const hung = await syncPage.evaluate(async () => {
-      const realLoader = window.loadFirebaseAuth;
-      window.loadFirebaseAuth = () => new Promise(() => {}); // never settles
+      firebaseAuthReady = {
+        instance: {},
+        auth: {
+          GoogleAuthProvider: function () {},
+          signInWithPopup: () => new Promise(() => {}),
+        },
+      };
       document.getElementById("sync-signin-btn").click();
       await new Promise(r => setTimeout(r, 250));
       const state = {
         disabledWhileWorking: document.getElementById("sync-signin-btn").disabled,
         statusWhileWorking: document.getElementById("sync-status").textContent.trim(),
       };
-      // Put the real loader back: the click above leaves a 60s timer running,
-      // and nothing after this should inherit a permanently hung sign-in.
-      window.loadFirebaseAuth = realLoader;
+      // The click leaves a 60s timer running; nothing after this should
+      // inherit a permanently pending sign-in.
+      firebaseAuthReady = null;
       return state;
     });
     assert("the button is disabled while a sign-in is in flight", hung.disabledWhileWorking);
@@ -1621,17 +1647,67 @@ async function freshLoad(page, { clearStorage = false } = {}) {
     assert("a stalled SDK load is named as such", staged.sdk === "sdk-load-timeout");
     assert("a stalled popup is named separately", staged.popup === "popup-timeout");
 
-    // Firebase did not report auth/popup-blocked on the installed PWA — it
-    // hung — so popup availability is asked directly instead of inferred.
-    // Headless Chrome allows popups, so this asserts the probe answers at all
-    // and cleans up after itself rather than leaving a window open.
-    const probe = await syncPage.evaluate(() => {
-      const before = typeof popupsAreAvailable;
-      const answer = popupsAreAvailable();
-      return { isFunction: before === "function", answer: typeof answer === "boolean" };
+    // ── The bug that sank the first attempt ──────────────────────────
+    // Browsers only permit window.open() synchronously inside a user gesture.
+    // The original click handler awaited the SDK's network fetch first and
+    // only then called signInWithPopup — by which point the gesture was spent,
+    // Safari silently refused the window, and Firebase hung forever. No error,
+    // no popup, a dead button.
+    //
+    // This asserts the property directly: signInWithPopup must have been
+    // called by the time signInForSync() returns, with no await in between.
+    const synchronous = await syncPage.evaluate(() => {
+      let calledSynchronously = false;
+      firebaseAuthReady = {
+        instance: {},
+        auth: {
+          GoogleAuthProvider: function () {},
+          // Never settles, exactly like the real hung popup did.
+          signInWithPopup: () => { calledSynchronously = true; return new Promise(() => {}); },
+        },
+      };
+      signInForSync();
+      // Read IMMEDIATELY: nothing has yielded to the event loop yet, so this
+      // is only true if the popup call happened inside the same task.
+      const result = calledSynchronously;
+      firebaseAuthReady = null;
+      return result;
     });
-    assert("popup availability is probed directly, not inferred", probe.isFunction);
-    assert("the probe returns a definite yes or no", probe.answer);
+    assert(
+      "signInWithPopup is called synchronously, so the user gesture is still live",
+      synchronous
+    );
+
+    // And with the SDK not yet loaded it must refuse by name rather than
+    // awaiting a fetch and losing the gesture the way the first attempt did.
+    const notReady = await syncPage.evaluate(async () => {
+      firebaseAuthReady = null;
+      try { await signInForSync(); return "resolved"; }
+      catch (e) { return describeSyncError(e); }
+    });
+    assert("sign-in refuses outright when the SDK is not in memory", notReady === "sdk-not-ready");
+
+    // Which is why the button must not be tappable until it is ready.
+    const gating = await syncPage.evaluate(() => {
+      firebaseAuthReady = null;
+      renderSyncStatus();
+      const notReady = {
+        disabled: document.getElementById("sync-signin-btn").disabled,
+        status: document.getElementById("sync-status").textContent.trim(),
+      };
+      firebaseAuthReady = { instance: {}, auth: {} };
+      renderSyncStatus();
+      const ready = {
+        disabled: document.getElementById("sync-signin-btn").disabled,
+        status: document.getElementById("sync-status").textContent.trim(),
+      };
+      firebaseAuthReady = null;
+      renderSyncStatus();
+      return { notReady, ready };
+    });
+    assert("the button is unavailable until the SDK is loaded", gating.notReady.disabled === true);
+    assert("and says so rather than looking broken", gating.notReady.status.includes("Preparing"));
+    assert("it becomes available once the SDK is in memory", gating.ready.disabled === false);
 
     // And the error code reaches the screen, since a phone has no console.
     const detail = await syncPage.evaluate(() => {

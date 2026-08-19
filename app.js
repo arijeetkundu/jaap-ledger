@@ -2391,6 +2391,11 @@ const maintenanceDrawer = document.getElementById("maintenance-drawer");
 maintenanceToggleBtn?.addEventListener("click", () => {
   const isOpen = maintenanceDrawer.classList.toggle("open");
   maintenanceDrawer.setAttribute("aria-hidden", !isOpen);
+  // Warm the Firebase SDK here rather than at the sign-in tap. See
+  // prepareSyncSdk() for why that distinction decides whether sign-in works
+  // at all. Opening Settings is a deliberate act, so the launch path stays
+  // free of any cross-origin request.
+  if (isOpen) prepareSyncSdk();
 });
 
 document.addEventListener("click", (e) => {
@@ -3737,6 +3742,11 @@ const FIREBASE_SDK_BASE = `https://www.gstatic.com/firebasejs/${FIREBASE_SDK_VER
 let firebaseAuthPromise = null;
 let syncUser = null;
 
+// The RESOLVED SDK, not a promise. Its existence is what lets the click
+// handler reach signInWithPopup() without awaiting anything first — see
+// signInForSync() for why that is the difference between working and not.
+let firebaseAuthReady = null;
+
 // Lazily pulls in the Firebase SDK, mirroring loadGoogleIdentityScript().
 // Two reasons this must stay lazy rather than a <script> in index.html:
 // the auth module alone is ~159KB, and sw.js deliberately never caches
@@ -3755,13 +3765,41 @@ function loadFirebaseAuth() {
       import(`${FIREBASE_SDK_BASE}/firebase-auth.js`),
     ]);
     const app = initializeApp(FIREBASE_CONFIG);
-    return { app, auth, instance: auth.getAuth(app) };
+    firebaseAuthReady = { app, auth, instance: auth.getAuth(app) };
+    return firebaseAuthReady;
   })().catch((err) => {
     firebaseAuthPromise = null; // so the next attempt genuinely retries
     throw err;
   });
 
   return firebaseAuthPromise;
+}
+
+// Warms the SDK ahead of the sign-in tap, and reflects readiness in the
+// button. Called when the Settings drawer opens.
+//
+// This exists because of the bug that sank the first attempt. Browsers only
+// permit window.open() synchronously inside a user gesture. The old click
+// handler awaited the SDK's network fetch FIRST and only then called
+// signInWithPopup() — by which point the gesture was spent, Safari silently
+// refused the window, and Firebase hung forever waiting for a popup that was
+// never going to appear. No error, no popup, just a dead button.
+//
+// The full Sumiran app bundles Firebase, so its popup call is already
+// synchronous with the tap; that is the entire difference between the two
+// apps, not anything about iOS.
+//
+// Failure is silent on purpose: being offline is normal for this app, and
+// Settings must open regardless. The button simply stays unavailable.
+function prepareSyncSdk() {
+  if (firebaseAuthReady) {
+    renderSyncStatus();
+    return;
+  }
+  renderSyncStatus();
+  loadFirebaseAuth()
+    .then(() => renderSyncStatus())
+    .catch(() => renderSyncStatus());
 }
 
 function renderSyncStatus() {
@@ -3772,10 +3810,17 @@ function renderSyncStatus() {
   if (syncUser) {
     statusEl.textContent = t("syncSignedInAs", { email: syncUser.email || "" });
     btn.textContent = t("syncSignOutBtn");
-  } else {
-    statusEl.textContent = t("syncSignedOut");
-    btn.textContent = t("syncSignInBtn");
+    btn.disabled = false;
+    return;
   }
+
+  btn.textContent = t("syncSignInBtn");
+  // Signing in is unavailable until the SDK is in memory, because the popup
+  // must open synchronously from the tap. Saying so is better than letting
+  // someone tap into the exact failure this was built to avoid.
+  const ready = firebaseAuthReady !== null;
+  btn.disabled = !ready;
+  statusEl.textContent = ready ? t("syncSignedOut") : t("syncPreparing");
 }
 
 // Staged deliberately. v3.3.1 reported a bare "timeout", which proved the
@@ -3788,37 +3833,29 @@ function renderSyncStatus() {
 // picking an account.
 const SYNC_SDK_TIMEOUT_MS = 20000;
 
-async function signInForSync() {
-  const { auth, instance } = await withTimeout(
-    loadFirebaseAuth(), SYNC_SDK_TIMEOUT_MS, "sdk-load-timeout"
-  );
-  const provider = new auth.GoogleAuthProvider();
-  const result = await withTimeout(
-    auth.signInWithPopup(instance, provider), SYNC_SIGNIN_TIMEOUT_MS, "popup-timeout"
-  );
-  syncUser = result.user;
-  renderSyncStatus();
-}
-
-// Whether this browser will open a popup at all, asked directly rather than
-// inferred from Firebase's behaviour. MUST be called synchronously inside the
-// click handler: outside a user gesture every browser refuses, and the answer
-// would be a false negative.
+// NOT async, and that is the whole point. Everything up to and including
+// signInWithPopup() runs synchronously, so window.open() happens while the
+// click's user gesture is still live. Adding an `await` anywhere above that
+// call — including awaiting the SDK, as the first attempt did — spends the
+// gesture, and Safari then refuses the popup without reporting anything.
 //
-// This exists because Firebase did not report auth/popup-blocked on the
-// installed PWA — it simply hung — so we could not tell a refused popup from
-// one that opened and lost its way back.
-function popupsAreAvailable() {
-  try {
-    const probe = window.open("", "_blank", "width=1,height=1,left=-1000,top=-1000");
-    if (!probe) return false;
-    probe.close();
-    return true;
-  } catch {
-    return false;
-  }
+// The SDK must therefore already be resolved; prepareSyncSdk() sees to that
+// when the Settings drawer opens, and the button stays unavailable until it is.
+function signInForSync() {
+  if (!firebaseAuthReady) return Promise.reject(new Error("sdk-not-ready"));
+
+  const { auth, instance } = firebaseAuthReady;
+  const provider = new auth.GoogleAuthProvider();
+
+  return withTimeout(
+    auth.signInWithPopup(instance, provider), SYNC_SIGNIN_TIMEOUT_MS, "popup-timeout"
+  ).then((result) => {
+    syncUser = result.user;
+    renderSyncStatus();
+  });
 }
 
+// Sign-out opens no window, so awaiting the SDK here is harmless.
 async function signOutFromSync() {
   const { auth, instance } = await loadFirebaseAuth();
   await auth.signOut(instance);
@@ -3882,17 +3919,15 @@ document.getElementById("sync-signin-btn")?.addEventListener("click", async () =
   const btn = document.getElementById("sync-signin-btn");
   const statusEl = document.getElementById("sync-status");
 
-  // Asked here, synchronously, while the user gesture is still live — the
-  // only moment the answer is meaningful. Reported rather than acted on: the
-  // aim is to learn whether this browser refuses popups outright, which
-  // Firebase's own hang could not tell us.
-  const popupsOk = syncUser ? true : popupsAreAvailable();
-
+  // Deliberately nothing between the tap and signInForSync() below: no probe,
+  // no await, no network. An earlier version opened a throwaway window here
+  // to test whether popups were available at all, which was worse than
+  // useless — browsers allow roughly one window.open per gesture, so the
+  // probe could consume the very allowance the real popup needed.
   if (btn) btn.disabled = true;
   if (statusEl) statusEl.textContent = t("syncWorking");
 
   try {
-    if (!popupsOk) throw new Error("popups-blocked-by-browser");
     if (syncUser) {
       await withTimeout(signOutFromSync(), SYNC_SIGNIN_TIMEOUT_MS, "timeout");
       showToast(t("syncSignedOutToast"));
