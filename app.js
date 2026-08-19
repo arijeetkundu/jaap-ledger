@@ -244,6 +244,13 @@ function applyAppLanguage(lang) {
   renderSplashSlotUI();
   renderToday();
   renderDataSafetyStatus();
+  // Both the sync status line and the sign-in button are rendered from t()
+  // rather than data-i18n, because their text depends on whether anyone is
+  // signed in. Without this call they kept whichever language was active when
+  // renderSyncStatus() last ran — so the status could sit in Bangla under an
+  // otherwise English UI, and the button reverted to "Sign in with Google"
+  // while still signed in, which read as the session having expired.
+  renderSyncStatus();
   if (document.getElementById("sankalpa-page")?.classList.contains("open")) {
     renderSankalpaPageSafely();
   }
@@ -1254,6 +1261,34 @@ function isValidJaapValue(value) {
   return value === null || (Number.isFinite(value) && value >= 0);
 }
 
+// Marks an entry as edited now. This is the only thing that decides which
+// device wins when the same day has been edited in two places, so it must be
+// called at EVERY site that changes an entry's jaap or notes — currently the
+// Today Card save, the Ledger row save, and Mala Mode's commit.
+//
+// ISO strings rather than epoch numbers: they sort correctly under plain
+// string comparison (so conflict resolution needs no parsing), and they stay
+// readable in an exported JSON file, which matters for a format a sadhak may
+// open and inspect.
+//
+// Deliberately NOT applied on import or restore. Those replace the whole
+// ledger with entries from a file, and stamping them all "now" would make an
+// old backup look freshly edited and let it overwrite newer data on the next
+// sync. Entries with no stamp — every entry written before this existed, and
+// everything in an older backup — are treated as the oldest possible, so a
+// synced version wins over them.
+function stampEntryEdited(entry) {
+  if (entry) entry.updatedAt = new Date().toISOString();
+}
+
+// Missing/malformed stamps sort as oldest. Kept as a named function so the
+// "no stamp means oldest" rule lives in one place rather than being spelled
+// out at each comparison.
+function entryEditedAt(entry) {
+  const stamp = entry && entry.updatedAt;
+  return typeof stamp === "string" ? stamp : "";
+}
+
 function updateMalaToggleButton() {
   const input = document.getElementById("mala-toggle");
   if (!input) return;
@@ -1289,6 +1324,7 @@ function updateBackgroundSwatchButtons() {
     renderSplashSlotUI();
     updateLanguagePickerSelection();
     renderDataSafetyStatus();
+    renderSyncStatus();
 
     // The splash screen's own <img alt> was set synchronously by the
     // chooseSplashImage() IIFE at the very top of this file, long before
@@ -1336,6 +1372,12 @@ appReady = true;
     }
 
     focusTodayInputIfRequested();
+
+    // Deliberately NOT awaited: this may fetch the Firebase SDK over the
+    // network, and the app must be usable the instant the ledger has
+    // rendered. It is also a no-op for anyone who has never signed in, so
+    // the common case costs nothing at all.
+    restoreSyncSession();
 
   } catch (err) {
     console.error("Initialization failed:", err);
@@ -1798,8 +1840,10 @@ function buildYearRows(yearContainer, entries, { sparklineMap, milestoneByDate }
         // existed isn't celebrated again — see updateTodayEntry().
         const milestoneBefore = getCroreMilestone(entry.date);
 
+        const previousStamp = entry.updatedAt;
         entry.jaap = newJaap;
         entry.notes = notesInput;
+        stampEntryEdited(entry);
 
         // Editing a backdated (within-7-day) entry can cross a Crore boundary
         // just as saving today's entry can — previously only the Today Card
@@ -1813,6 +1857,11 @@ function buildYearRows(yearContainer, entries, { sparklineMap, milestoneByDate }
         } catch (err) {
           entry.jaap = previousJaap;
           entry.notes = previousNotes;
+          // The stamp is part of the entry's state, so it rolls back too —
+          // otherwise a failed write would leave the entry looking edited and
+          // it would win a later sync conflict on the strength of a change
+          // that never reached disk.
+          entry.updatedAt = previousStamp;
           console.error("Failed to save ledger entry:", err);
           showToast(t("commonSaveFailed"));
           return;
@@ -2226,6 +2275,7 @@ async function updateTodayEntry() {
   // value that was never persisted and vanishes on the next launch.
   const previousJaap = entry.jaap;
   const previousNotes = entry.notes;
+  const previousStamp = entry.updatedAt;
 
   // Milestone state BEFORE the mutation. Without this, re-saving an entry
   // that had ALREADY crossed a Crore boundary — changing only the note, or
@@ -2236,6 +2286,7 @@ async function updateTodayEntry() {
 
   entry.jaap = newJaap;
   entry.notes = notesInput;
+  stampEntryEdited(entry);
 
   const crossedNewMilestone = didCrossNewMilestone(milestoneBefore, getCroreMilestone(entry.date));
 
@@ -2248,6 +2299,7 @@ async function updateTodayEntry() {
     // they can correct or retry without losing the entry they just wrote.
     entry.jaap = previousJaap;
     entry.notes = previousNotes;
+    entry.updatedAt = previousStamp;
     console.error("Failed to save today's entry:", err);
     showToast(t("commonSaveFailed"));
     return;
@@ -2288,6 +2340,7 @@ async function addJaapToToday(n) {
   const entry = ensureTodayEntryExists();
 
   const previousJaap = entry.jaap;
+  const previousStamp = entry.updatedAt;
   const milestoneBefore = getCroreMilestone(entry.date);
 
   // entry.jaap is null on a day nothing has been logged yet.
@@ -2297,6 +2350,7 @@ async function addJaapToToday(n) {
     return false;
   }
   entry.jaap = newJaap;
+  stampEntryEdited(entry);
 
   const crossedNewMilestone = didCrossNewMilestone(milestoneBefore, getCroreMilestone(entry.date));
 
@@ -2305,6 +2359,7 @@ async function addJaapToToday(n) {
     await saveAutomaticBackup(ledgerData);
   } catch (err) {
     entry.jaap = previousJaap;
+    entry.updatedAt = previousStamp;
     console.error("Failed to add jaap to today's entry:", err);
     showToast(t("commonSaveFailed"));
     return false;
@@ -3648,3 +3703,215 @@ if ("serviceWorker" in navigator) {
 }
 
 
+
+// ---------- Sumiran-Lite: Sync Across Devices (Firebase) ----------
+//
+// The app's SECOND network dependency, after Google Drive backup — and, like
+// it, entirely dormant until a sadhak signs in. Nothing here loads, runs or
+// reaches the network on a normal launch.
+//
+// This slice deliberately does sign-in ONLY. No ledger data moves yet: the
+// point is to prove the sign-in survives an installed iOS PWA before push,
+// pull and merge are built on top of it, because signInWithPopup is known to
+// be unreliable in Safari standalone and that would change the design.
+//
+// The config below is NOT a secret, despite `apiKey`. It identifies the
+// project; it authorises nothing. It ships in every client that loads the app
+// and Google documents it as public. What actually protects the ledger is the
+// Firestore security rule (a request must carry a signed-in uid matching the
+// document path) and the authorized-domain list — both server-side, neither
+// bypassable by editing this file. Sumiran keeps the same values in Vite env
+// vars, which only looks more private: Vite inlines them into the bundle.
+const FIREBASE_CONFIG = {
+  apiKey: "AIzaSyBuDaio69MbWQ_Nkt1ezP20WlIQsI90O_U",
+  authDomain: "sumiran-lite-83668.firebaseapp.com",
+  projectId: "sumiran-lite-83668",
+  storageBucket: "sumiran-lite-83668.firebasestorage.app",
+  messagingSenderId: "407718825196",
+  appId: "1:407718825196:web:f0481811df6aac192529c9",
+};
+
+const FIREBASE_SDK_VERSION = "12.4.0";
+const FIREBASE_SDK_BASE = `https://www.gstatic.com/firebasejs/${FIREBASE_SDK_VERSION}`;
+
+let firebaseAuthPromise = null;
+let syncUser = null;
+
+// Lazily pulls in the Firebase SDK, mirroring loadGoogleIdentityScript().
+// Two reasons this must stay lazy rather than a <script> in index.html:
+// the auth module alone is ~159KB, and sw.js deliberately never caches
+// cross-origin requests — so a bundle loaded up front would be fetched from
+// the network on every launch and would fail outright when offline, breaking
+// the app's central promise for a feature most launches never use.
+//
+// app.js is a classic script, but dynamic import() works in one, which is
+// what lets an ES-module SDK be used here at all.
+function loadFirebaseAuth() {
+  if (firebaseAuthPromise) return firebaseAuthPromise;
+
+  firebaseAuthPromise = (async () => {
+    const [{ initializeApp }, auth] = await Promise.all([
+      import(`${FIREBASE_SDK_BASE}/firebase-app.js`),
+      import(`${FIREBASE_SDK_BASE}/firebase-auth.js`),
+    ]);
+    const app = initializeApp(FIREBASE_CONFIG);
+    return { app, auth, instance: auth.getAuth(app) };
+  })().catch((err) => {
+    firebaseAuthPromise = null; // so the next attempt genuinely retries
+    throw err;
+  });
+
+  return firebaseAuthPromise;
+}
+
+function renderSyncStatus() {
+  const statusEl = document.getElementById("sync-status");
+  const btn = document.getElementById("sync-signin-btn");
+  if (!statusEl || !btn) return;
+
+  if (syncUser) {
+    statusEl.textContent = t("syncSignedInAs", { email: syncUser.email || "" });
+    btn.textContent = t("syncSignOutBtn");
+  } else {
+    statusEl.textContent = t("syncSignedOut");
+    btn.textContent = t("syncSignInBtn");
+  }
+}
+
+// Staged deliberately. v3.3.1 reported a bare "timeout", which proved the
+// attempt never settled but not WHICH step hung — and "the SDK never loaded"
+// and "the popup never came back" have completely different fixes. Each stage
+// now fails under its own name.
+//
+// The SDK budget is short because a module fetch either arrives quickly or is
+// not coming; the sign-in budget is long because a real one involves a human
+// picking an account.
+const SYNC_SDK_TIMEOUT_MS = 20000;
+
+async function signInForSync() {
+  const { auth, instance } = await withTimeout(
+    loadFirebaseAuth(), SYNC_SDK_TIMEOUT_MS, "sdk-load-timeout"
+  );
+  const provider = new auth.GoogleAuthProvider();
+  const result = await withTimeout(
+    auth.signInWithPopup(instance, provider), SYNC_SIGNIN_TIMEOUT_MS, "popup-timeout"
+  );
+  syncUser = result.user;
+  renderSyncStatus();
+}
+
+// Whether this browser will open a popup at all, asked directly rather than
+// inferred from Firebase's behaviour. MUST be called synchronously inside the
+// click handler: outside a user gesture every browser refuses, and the answer
+// would be a false negative.
+//
+// This exists because Firebase did not report auth/popup-blocked on the
+// installed PWA — it simply hung — so we could not tell a refused popup from
+// one that opened and lost its way back.
+function popupsAreAvailable() {
+  try {
+    const probe = window.open("", "_blank", "width=1,height=1,left=-1000,top=-1000");
+    if (!probe) return false;
+    probe.close();
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+async function signOutFromSync() {
+  const { auth, instance } = await loadFirebaseAuth();
+  await auth.signOut(instance);
+  syncUser = null;
+  renderSyncStatus();
+}
+
+// Restores an existing session without any user action — but ONLY if one
+// already exists. Firebase persists the session in IndexedDB, so a sadhak who
+// signed in yesterday is still signed in today. Deliberately gated on a flag
+// we set ourselves at sign-in: without it, this would pull ~159KB of SDK over
+// the network on every launch of an app whose whole point is working offline.
+async function restoreSyncSession() {
+  if (readStoredPreference("syncEverSignedIn") !== "true") return;
+  try {
+    const { auth, instance } = await loadFirebaseAuth();
+    await new Promise((resolve) => {
+      const stop = auth.onAuthStateChanged(instance, (user) => {
+        syncUser = user;
+        stop();
+        resolve();
+      });
+    });
+    renderSyncStatus();
+  } catch (err) {
+    // Offline, or the CDN is unreachable. The app is fully usable without
+    // sync, so this must never surface as an error.
+    console.warn("Could not restore the sync session:", err);
+  }
+}
+
+// How long to wait before declaring a sign-in attempt stuck. Generous, since
+// a genuine sign-in involves picking an account and possibly typing a
+// password — but finite, because the alternative is what shipped in v3.3.0:
+// on an installed iOS PWA the popup never opened AND never rejected, so this
+// promise hung forever, the button stayed disabled, and the user was left
+// with no error and no way to retry. A hang is a failure; it just doesn't
+// announce itself.
+const SYNC_SIGNIN_TIMEOUT_MS = 60000;
+
+function withTimeout(promise, ms, label) {
+  let timer;
+  const timeout = new Promise((_, reject) => {
+    timer = setTimeout(() => reject(new Error(label)), ms);
+  });
+  return Promise.race([promise, timeout]).finally(() => clearTimeout(timer));
+}
+
+// Firebase reports why a sign-in failed in err.code, and on a phone there is
+// no console to read it in. Surfacing it in the status line is the difference
+// between "nothing happens" and knowing whether the popup was blocked, closed,
+// superseded, or never reached the network at all — which is what decides
+// whether the fix is a redirect flow, a different provider, or something else
+// entirely.
+function describeSyncError(err) {
+  const code = (err && err.code) || (err && err.message) || "unknown";
+  return String(code).replace(/^auth\//, "");
+}
+
+document.getElementById("sync-signin-btn")?.addEventListener("click", async () => {
+  const btn = document.getElementById("sync-signin-btn");
+  const statusEl = document.getElementById("sync-status");
+
+  // Asked here, synchronously, while the user gesture is still live — the
+  // only moment the answer is meaningful. Reported rather than acted on: the
+  // aim is to learn whether this browser refuses popups outright, which
+  // Firebase's own hang could not tell us.
+  const popupsOk = syncUser ? true : popupsAreAvailable();
+
+  if (btn) btn.disabled = true;
+  if (statusEl) statusEl.textContent = t("syncWorking");
+
+  try {
+    if (!popupsOk) throw new Error("popups-blocked-by-browser");
+    if (syncUser) {
+      await withTimeout(signOutFromSync(), SYNC_SIGNIN_TIMEOUT_MS, "timeout");
+      showToast(t("syncSignedOutToast"));
+    } else {
+      await withTimeout(signInForSync(), SYNC_SIGNIN_TIMEOUT_MS, "timeout");
+      writeStoredPreference("syncEverSignedIn", "true");
+      showToast(t("syncSignedInToast"));
+    }
+    renderSyncStatus();
+  } catch (err) {
+    console.error("Sync sign-in failed:", err);
+    const detail = describeSyncError(err);
+    showToast(t("syncSignInFailed"));
+    // Deliberately overwrites the status line rather than only toasting: a
+    // toast is gone in seconds, and this is the one piece of information
+    // worth still being on screen when someone reports what happened.
+    if (statusEl) statusEl.textContent = t("syncSignInFailedDetail", { detail });
+  } finally {
+    // Unconditional, so the control can never again be left dead.
+    if (btn) btn.disabled = false;
+  }
+});

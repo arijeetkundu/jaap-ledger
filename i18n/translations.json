@@ -189,6 +189,61 @@
     "hi": "सभी कस्टम तस्वीरें हटाएँ",
     "bn": "সমস্ত কাস্টম ছবি সরিয়ে দিন"
   },
+  "syncHeading": {
+    "en": "Sync Across Devices",
+    "hi": "सभी डिवाइस पर समन्वय",
+    "bn": "সব ডিভাইসে সমন্বয়"
+  },
+  "syncHint": {
+    "en": "Sign in to keep your ledger the same on every device you practise with. Your data goes only to your own account.",
+    "hi": "अपने सभी डिवाइस पर लेजर एक जैसा रखने के लिए साइन इन करें। आपका डेटा केवल आपके अपने खाते में जाता है।",
+    "bn": "আপনার সব ডিভাইসে লেজার এক রাখতে সাইন ইন করুন। আপনার তথ্য কেবল আপনার নিজের অ্যাকাউন্টে যায়।"
+  },
+  "syncSignInBtn": {
+    "en": "Sign in with Google",
+    "hi": "Google से साइन इन करें",
+    "bn": "Google দিয়ে সাইন ইন করুন"
+  },
+  "syncSignOutBtn": {
+    "en": "Sign out",
+    "hi": "साइन आउट करें",
+    "bn": "সাইন আউট করুন"
+  },
+  "syncSignedOut": {
+    "en": "Not signed in — this device only.",
+    "hi": "साइन इन नहीं — केवल यह डिवाइस।",
+    "bn": "সাইন ইন করা নেই — কেবল এই ডিভাইস।"
+  },
+  "syncSignedInAs": {
+    "en": "Signed in as {email}",
+    "hi": "{email} के रूप में साइन इन",
+    "bn": "{email} হিসাবে সাইন ইন"
+  },
+  "syncSignedInToast": {
+    "en": "Signed in ✓",
+    "hi": "साइन इन हो गए ✓",
+    "bn": "সাইন ইন হয়েছে ✓"
+  },
+  "syncSignedOutToast": {
+    "en": "Signed out",
+    "hi": "साइन आउट हो गए",
+    "bn": "সাইন আউট হয়েছে"
+  },
+  "syncSignInFailed": {
+    "en": "Could not sign in. Your practice data is unaffected.",
+    "hi": "साइन इन नहीं हो सका। आपका डेटा अपरिवर्तित है।",
+    "bn": "সাইন ইন করা যায়নি। আপনার তথ্য अপরিবর্তিত।"
+  },
+  "syncWorking": {
+    "en": "Working…",
+    "hi": "कार्य जारी…",
+    "bn": "চলছে…"
+  },
+  "syncSignInFailedDetail": {
+    "en": "Sign-in did not complete ({detail}).",
+    "hi": "साइन इन पूर्ण नहीं हुआ ({detail})।",
+    "bn": "সাইন ইন সম্পূর্ণ হয়নি ({detail})।"
+  },
   "splashHanumanAlt": {
     "en": "Hanuman meditating",
     "hi": "ध्यान करते हनुमान जी",

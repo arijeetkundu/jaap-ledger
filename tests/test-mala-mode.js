@@ -270,6 +270,49 @@ async function openMala(page) {
     assert("its entries still pass validation", legacy.valid);
     assert("all of its entries survive parsing", legacy.count === 2);
 
+    // The real-world case: a Drive backup taken before updatedAt existed,
+    // imported into a fresh install. Every entry lacks a stamp, so nothing
+    // downstream may assume one is there — not validation, not rendering,
+    // and not the comparison sync uses to resolve conflicts.
+    const timestampFree = await page.evaluate(async () => {
+      const payload = {
+        version: 2,
+        entries: [
+          { date: "2026-08-14", jaap: 65016, notes: "" },
+          { date: "2026-08-15", jaap: 43200, notes: "80th Independence Day" },
+        ],
+        sankalpa: null,
+      };
+      const parsed = parseImportedLedgerFile(payload);
+      if (!parsed || !areLedgerEntriesValid(parsed.entries)) return { valid: false };
+
+      // Drive it through the app exactly as the import handler does.
+      ledgerData = parsed.entries;
+      renderToday();
+      await new Promise(r => setTimeout(r, 200));
+
+      // Now edit one of those unstamped entries, as a returning sadhak would.
+      const entry = ledgerData.find(e => e.date === "2026-08-15");
+      const hadStamp = "updatedAt" in entry;
+      stampEntryEdited(entry);
+
+      return {
+        valid: true,
+        rendered: document.querySelectorAll(".ledger-row").length > 0,
+        reflectionRendered: document.getElementById("reflection-summary").innerHTML.trim().length > 0,
+        comparisonSafe: entryEditedAt({ date: "2026-08-14", jaap: 1, notes: "" }) === "",
+        hadStampBeforeEdit: hadStamp,
+        stampedAfterEdit: typeof entry.updatedAt === "string",
+      };
+    });
+
+    assert("a timestamp-free backup imports without being rejected", timestampFree.valid);
+    assert("the Ledger renders from timestamp-free entries", timestampFree.rendered);
+    assert("the Reflection Card renders from timestamp-free entries", timestampFree.reflectionRendered);
+    assert("comparing an unstamped entry does not throw", timestampFree.comparisonSafe);
+    assert("imported entries are NOT retro-stamped on import", !timestampFree.hadStampBeforeEdit);
+    assert("editing an imported entry stamps it from then on", timestampFree.stampedAfterEdit);
+
     // And an export from this build carries no new keys, so a backup taken
     // now still imports into an older build.
     const exported = await page.evaluate(() => {
@@ -281,8 +324,14 @@ async function openMala(page) {
     });
     assert("the export payload still has exactly {version, entries, sankalpa}",
       exported.topLevel.join(",") === "entries,sankalpa,version");
-    assert("entries still carry exactly {date, jaap, notes} — no mala fields added",
-      exported.entryKeys.length === 0 || exported.entryKeys.join(",") === "date,jaap,notes");
+    // updatedAt was added deliberately, to let sync decide which device wins
+    // a conflict. It is the ONLY field added since v2 and it is optional:
+    // areLedgerEntriesValid() never required it, so backups written before it
+    // existed still import, and an older build ignores it on the way back in.
+    // Anything beyond this set is an accident — which is what this guards.
+    assert("entries carry only {date, jaap, notes} plus the optional updatedAt",
+      exported.entryKeys.length === 0 ||
+      exported.entryKeys.every(k => ["date", "jaap", "notes", "updatedAt"].includes(k)));
 
     await context.close();
   }

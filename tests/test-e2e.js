@@ -1501,9 +1501,199 @@ async function freshLoad(page, { clearStorage = false } = {}) {
     await strandContext.close();
   }
 
+  // ── Sync: dormant until asked for ────────────────────────────────────
+  // The app's second network dependency. What matters is not that sign-in
+  // works — that needs a real Google account and cannot run headless — but
+  // that its mere existence costs a normal launch nothing, since the app's
+  // central promise is working offline.
+  console.log("\n=== Sync stays dormant until used ===");
+  {
+    const syncContext = await browser.createBrowserContext();
+    const syncPage = await syncContext.newPage();
+    await syncPage.setViewport({ width: 390, height: 844 });
+    await seedAppState(syncPage);
+
+    const crossOrigin = [];
+    syncPage.on("request", (req) => {
+      if (new URL(req.url()).origin !== new URL(BASE).origin) crossOrigin.push(req.url());
+    });
+
+    await syncPage.goto(BASE, { waitUntil: "networkidle0", timeout: 15000 });
+    await new Promise(r => setTimeout(r, SPLASH_WAIT_MS));
+
+    assert(
+      "a normal launch makes no cross-origin request at all",
+      crossOrigin.length === 0
+    );
+    assert(
+      "the Firebase SDK is not loaded until sign-in is actually requested",
+      await syncPage.evaluate(() => firebaseAuthPromise === null)
+    );
+
+    await syncPage.click("#maintenance-toggle");
+    await syncPage.waitForSelector("#maintenance-drawer.open");
+    await new Promise(r => setTimeout(r, 400));
+
+    const syncUi = await syncPage.evaluate(() => ({
+      btn: document.getElementById("sync-signin-btn")?.textContent.trim(),
+      status: document.getElementById("sync-status")?.textContent.trim(),
+    }));
+    assert("Settings offers a sign-in control", syncUi.btn === "Sign in with Google");
+    assert(
+      "and states plainly that nothing is being synced yet",
+      !!syncUi.status && syncUi.status.includes("Not signed in")
+    );
+
+    // A sadhak who has never signed in must not pay for the feature on
+    // launch — restoreSyncSession() is gated on a flag, so it returns
+    // without touching the network.
+    assert(
+      "restoring a session is a no-op for someone who never signed in",
+      await syncPage.evaluate(async () => {
+        await restoreSyncSession();
+        return firebaseAuthPromise === null;
+      })
+    );
+
+    // Signing in when the SDK cannot be fetched (offline, blocked CDN) must
+    // report and leave the app entirely usable, never half-initialised.
+    const offlineFailure = await syncPage.evaluate(async () => {
+      window.loadFirebaseAuth = () => Promise.reject(new Error("offline"));
+      document.getElementById("sync-signin-btn").click();
+      await new Promise(r => setTimeout(r, 400));
+      return {
+        toast: document.querySelector(".toast, #toast")?.textContent || "",
+        stillUsable: !!document.getElementById("today-jaap"),
+        buttonReenabled: document.getElementById("sync-signin-btn").disabled === false,
+      };
+    });
+    assert("a sign-in that cannot reach the network is reported", offlineFailure.toast.includes("Could not sign in"));
+    assert("the app remains fully usable after a failed sign-in", offlineFailure.stillUsable);
+    assert("the sign-in button is re-enabled rather than left stuck", offlineFailure.buttonReenabled);
+
+    // The failure that actually shipped in v3.3.0. On an installed iOS PWA
+    // the popup never opened AND never rejected, so the sign-in promise hung
+    // forever: the button stayed disabled and the user got no error and no
+    // retry. A promise that never settles is the case a plain try/catch
+    // cannot see, so it is worth pinning explicitly.
+    const hung = await syncPage.evaluate(async () => {
+      const realLoader = window.loadFirebaseAuth;
+      window.loadFirebaseAuth = () => new Promise(() => {}); // never settles
+      document.getElementById("sync-signin-btn").click();
+      await new Promise(r => setTimeout(r, 250));
+      const state = {
+        disabledWhileWorking: document.getElementById("sync-signin-btn").disabled,
+        statusWhileWorking: document.getElementById("sync-status").textContent.trim(),
+      };
+      // Put the real loader back: the click above leaves a 60s timer running,
+      // and nothing after this should inherit a permanently hung sign-in.
+      window.loadFirebaseAuth = realLoader;
+      return state;
+    });
+    assert("the button is disabled while a sign-in is in flight", hung.disabledWhileWorking);
+    assert("and the status says something is happening", hung.statusWhileWorking.includes("Working"));
+
+    // The real timeout is 60s, far too long for a test to wait, so drive
+    // withTimeout() directly rather than through the click handler. What is
+    // being asserted is that a never-settling promise becomes a rejection at
+    // all — which is the property the stuck button lacked.
+    const timedOut = await syncPage.evaluate(async () => {
+      try {
+        await withTimeout(new Promise(() => {}), 120, "timeout");
+        return "resolved";
+      } catch (err) {
+        return err.message;
+      }
+    });
+    assert("a sign-in that never settles is turned into a failure, not a hang", timedOut === "timeout");
+
+    // v3.3.1 reported a bare "timeout", which proved the attempt never
+    // settled but not which step hung — and "the SDK never loaded" and "the
+    // popup never came back" have completely different fixes. Each stage now
+    // fails under its own name.
+    const staged = await syncPage.evaluate(async () => {
+      const label = async (l) => {
+        try { await withTimeout(new Promise(() => {}), 60, l); return "resolved"; }
+        catch (e) { return describeSyncError(e); }
+      };
+      return { sdk: await label("sdk-load-timeout"), popup: await label("popup-timeout") };
+    });
+    assert("a stalled SDK load is named as such", staged.sdk === "sdk-load-timeout");
+    assert("a stalled popup is named separately", staged.popup === "popup-timeout");
+
+    // Firebase did not report auth/popup-blocked on the installed PWA — it
+    // hung — so popup availability is asked directly instead of inferred.
+    // Headless Chrome allows popups, so this asserts the probe answers at all
+    // and cleans up after itself rather than leaving a window open.
+    const probe = await syncPage.evaluate(() => {
+      const before = typeof popupsAreAvailable;
+      const answer = popupsAreAvailable();
+      return { isFunction: before === "function", answer: typeof answer === "boolean" };
+    });
+    assert("popup availability is probed directly, not inferred", probe.isFunction);
+    assert("the probe returns a definite yes or no", probe.answer);
+
+    // And the error code reaches the screen, since a phone has no console.
+    const detail = await syncPage.evaluate(() => {
+      const el = document.getElementById("sync-status");
+      el.textContent = t("syncSignInFailedDetail", { detail: describeSyncError({ code: "auth/popup-blocked" }) });
+      return el.textContent;
+    });
+    assert(
+      "the underlying Firebase error code is shown on screen, not just logged",
+      detail.includes("popup-blocked")
+    );
+
+    // Both the status line and the button are rendered from t() rather than
+    // data-i18n, because their text depends on the signed-in state. That put
+    // them outside applyStaticTranslations() and they were left behind on a
+    // language switch: the status kept whatever language it was last rendered
+    // in, and the button — which DID carry data-i18n — was reset to "Sign in
+    // with Google" while still signed in, reading as an expired session.
+    // A real sign-in can't run headless, so fake the user object.
+    const acrossLanguages = await syncPage.evaluate(async () => {
+      syncUser = { email: "sadhak@example.com" };
+      const seen = {};
+      for (const lang of ["hi", "bn", "en"]) {
+        applyAppLanguage(lang);
+        await new Promise(r => setTimeout(r, 120));
+        seen[lang] = {
+          status: document.getElementById("sync-status").textContent.trim(),
+          btn: document.getElementById("sync-signin-btn").textContent.trim(),
+        };
+      }
+      syncUser = null;
+      applyAppLanguage("en");
+      return seen;
+    });
+
+    assert(
+      "the status line follows the chosen language, not the one it was rendered in",
+      acrossLanguages.hi.status.includes("साइन इन") &&
+      acrossLanguages.bn.status.includes("সাইন ইন") &&
+      acrossLanguages.en.status.includes("Signed in as")
+    );
+    assert(
+      "the signed-in email survives every language switch",
+      ["hi", "bn", "en"].every(l => acrossLanguages[l].status.includes("sadhak@example.com"))
+    );
+    assert(
+      "the button keeps saying Sign out while signed in, in each language",
+      acrossLanguages.en.btn === "Sign out" &&
+      acrossLanguages.hi.btn === "साइन आउट करें" &&
+      acrossLanguages.bn.btn === "সাইন আউট করুন"
+    );
+
+    await syncContext.close();
+  }
+
   // ── Console errors ───────────────────────────────────────────────────
   console.log("\n=== Console errors ===");
-  assert("no JS errors on page across the whole run", pageErrors.length === 0);
+  // The deliberate offline sign-in failure above logs its own console.error;
+  // that is the app reporting correctly, not a defect.
+  const unexpectedErrors = pageErrors.filter(e => !e.includes("Sync sign-in failed"));
+  assert("no JS errors on page across the whole run", unexpectedErrors.length === 0);
+  if (unexpectedErrors.length > 0) console.log("  errors:", unexpectedErrors);
   if (pageErrors.length > 0) console.log("  errors:", pageErrors);
 
   await browser.close();
