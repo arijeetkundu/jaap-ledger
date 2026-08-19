@@ -234,6 +234,16 @@
     "hi": "साइन इन नहीं हो सका। आपका डेटा अपरिवर्तित है।",
     "bn": "সাইন ইন করা যায়নি। আপনার তথ্য अপরিবর্তিত।"
   },
+  "syncWorking": {
+    "en": "Working…",
+    "hi": "कार्य जारी…",
+    "bn": "চলছে…"
+  },
+  "syncSignInFailedDetail": {
+    "en": "Sign-in did not complete ({detail}).",
+    "hi": "साइन इन पूर्ण नहीं हुआ ({detail})।",
+    "bn": "সাইন ইন সম্পূর্ণ হয়নি ({detail})।"
+  },
   "splashHanumanAlt": {
     "en": "Hanuman meditating",
     "hi": "ध्यान करते हनुमान जी",

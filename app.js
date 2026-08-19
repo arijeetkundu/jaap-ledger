@@ -3817,25 +3817,60 @@ async function restoreSyncSession() {
   }
 }
 
+// How long to wait before declaring a sign-in attempt stuck. Generous, since
+// a genuine sign-in involves picking an account and possibly typing a
+// password — but finite, because the alternative is what shipped in v3.3.0:
+// on an installed iOS PWA the popup never opened AND never rejected, so this
+// promise hung forever, the button stayed disabled, and the user was left
+// with no error and no way to retry. A hang is a failure; it just doesn't
+// announce itself.
+const SYNC_SIGNIN_TIMEOUT_MS = 60000;
+
+function withTimeout(promise, ms, label) {
+  let timer;
+  const timeout = new Promise((_, reject) => {
+    timer = setTimeout(() => reject(new Error(label)), ms);
+  });
+  return Promise.race([promise, timeout]).finally(() => clearTimeout(timer));
+}
+
+// Firebase reports why a sign-in failed in err.code, and on a phone there is
+// no console to read it in. Surfacing it in the status line is the difference
+// between "nothing happens" and knowing whether the popup was blocked, closed,
+// superseded, or never reached the network at all — which is what decides
+// whether the fix is a redirect flow, a different provider, or something else
+// entirely.
+function describeSyncError(err) {
+  const code = (err && err.code) || (err && err.message) || "unknown";
+  return String(code).replace(/^auth\//, "");
+}
+
 document.getElementById("sync-signin-btn")?.addEventListener("click", async () => {
   const btn = document.getElementById("sync-signin-btn");
+  const statusEl = document.getElementById("sync-status");
   if (btn) btn.disabled = true;
+  if (statusEl) statusEl.textContent = t("syncWorking");
+
   try {
     if (syncUser) {
-      await signOutFromSync();
+      await withTimeout(signOutFromSync(), SYNC_SIGNIN_TIMEOUT_MS, "timeout");
       showToast(t("syncSignedOutToast"));
     } else {
-      await signInForSync();
+      await withTimeout(signInForSync(), SYNC_SIGNIN_TIMEOUT_MS, "timeout");
       writeStoredPreference("syncEverSignedIn", "true");
       showToast(t("syncSignedInToast"));
     }
-  } catch (err) {
-    // Covers the cancelled popup, a popup blocked by the browser (the iOS
-    // standalone-PWA case this slice exists to test), and an unreachable CDN.
-    console.error("Sync sign-in failed:", err);
-    showToast(t("syncSignInFailed"));
-  } finally {
-    if (btn) btn.disabled = false;
     renderSyncStatus();
+  } catch (err) {
+    console.error("Sync sign-in failed:", err);
+    const detail = describeSyncError(err);
+    showToast(t("syncSignInFailed"));
+    // Deliberately overwrites the status line rather than only toasting: a
+    // toast is gone in seconds, and this is the one piece of information
+    // worth still being on screen when someone reports what happened.
+    if (statusEl) statusEl.textContent = t("syncSignInFailedDetail", { detail });
+  } finally {
+    // Unconditional, so the control can never again be left dead.
+    if (btn) btn.disabled = false;
   }
 });

@@ -1571,6 +1571,53 @@ async function freshLoad(page, { clearStorage = false } = {}) {
     assert("the app remains fully usable after a failed sign-in", offlineFailure.stillUsable);
     assert("the sign-in button is re-enabled rather than left stuck", offlineFailure.buttonReenabled);
 
+    // The failure that actually shipped in v3.3.0. On an installed iOS PWA
+    // the popup never opened AND never rejected, so the sign-in promise hung
+    // forever: the button stayed disabled and the user got no error and no
+    // retry. A promise that never settles is the case a plain try/catch
+    // cannot see, so it is worth pinning explicitly.
+    const hung = await syncPage.evaluate(async () => {
+      const realLoader = window.loadFirebaseAuth;
+      window.loadFirebaseAuth = () => new Promise(() => {}); // never settles
+      document.getElementById("sync-signin-btn").click();
+      await new Promise(r => setTimeout(r, 250));
+      const state = {
+        disabledWhileWorking: document.getElementById("sync-signin-btn").disabled,
+        statusWhileWorking: document.getElementById("sync-status").textContent.trim(),
+      };
+      // Put the real loader back: the click above leaves a 60s timer running,
+      // and nothing after this should inherit a permanently hung sign-in.
+      window.loadFirebaseAuth = realLoader;
+      return state;
+    });
+    assert("the button is disabled while a sign-in is in flight", hung.disabledWhileWorking);
+    assert("and the status says something is happening", hung.statusWhileWorking.includes("Working"));
+
+    // The real timeout is 60s, far too long for a test to wait, so drive
+    // withTimeout() directly rather than through the click handler. What is
+    // being asserted is that a never-settling promise becomes a rejection at
+    // all — which is the property the stuck button lacked.
+    const timedOut = await syncPage.evaluate(async () => {
+      try {
+        await withTimeout(new Promise(() => {}), 120, "timeout");
+        return "resolved";
+      } catch (err) {
+        return err.message;
+      }
+    });
+    assert("a sign-in that never settles is turned into a failure, not a hang", timedOut === "timeout");
+
+    // And the error code reaches the screen, since a phone has no console.
+    const detail = await syncPage.evaluate(() => {
+      const el = document.getElementById("sync-status");
+      el.textContent = t("syncSignInFailedDetail", { detail: describeSyncError({ code: "auth/popup-blocked" }) });
+      return el.textContent;
+    });
+    assert(
+      "the underlying Firebase error code is shown on screen, not just logged",
+      detail.includes("popup-blocked")
+    );
+
     // Both the status line and the button are rendered from t() rather than
     // data-i18n, because their text depends on the signed-in state. That put
     // them outside applyStaticTranslations() and they were left behind on a
