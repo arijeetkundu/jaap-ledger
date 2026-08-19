@@ -3778,12 +3778,45 @@ function renderSyncStatus() {
   }
 }
 
+// Staged deliberately. v3.3.1 reported a bare "timeout", which proved the
+// attempt never settled but not WHICH step hung — and "the SDK never loaded"
+// and "the popup never came back" have completely different fixes. Each stage
+// now fails under its own name.
+//
+// The SDK budget is short because a module fetch either arrives quickly or is
+// not coming; the sign-in budget is long because a real one involves a human
+// picking an account.
+const SYNC_SDK_TIMEOUT_MS = 20000;
+
 async function signInForSync() {
-  const { auth, instance } = await loadFirebaseAuth();
+  const { auth, instance } = await withTimeout(
+    loadFirebaseAuth(), SYNC_SDK_TIMEOUT_MS, "sdk-load-timeout"
+  );
   const provider = new auth.GoogleAuthProvider();
-  const result = await auth.signInWithPopup(instance, provider);
+  const result = await withTimeout(
+    auth.signInWithPopup(instance, provider), SYNC_SIGNIN_TIMEOUT_MS, "popup-timeout"
+  );
   syncUser = result.user;
   renderSyncStatus();
+}
+
+// Whether this browser will open a popup at all, asked directly rather than
+// inferred from Firebase's behaviour. MUST be called synchronously inside the
+// click handler: outside a user gesture every browser refuses, and the answer
+// would be a false negative.
+//
+// This exists because Firebase did not report auth/popup-blocked on the
+// installed PWA — it simply hung — so we could not tell a refused popup from
+// one that opened and lost its way back.
+function popupsAreAvailable() {
+  try {
+    const probe = window.open("", "_blank", "width=1,height=1,left=-1000,top=-1000");
+    if (!probe) return false;
+    probe.close();
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 async function signOutFromSync() {
@@ -3848,10 +3881,18 @@ function describeSyncError(err) {
 document.getElementById("sync-signin-btn")?.addEventListener("click", async () => {
   const btn = document.getElementById("sync-signin-btn");
   const statusEl = document.getElementById("sync-status");
+
+  // Asked here, synchronously, while the user gesture is still live — the
+  // only moment the answer is meaningful. Reported rather than acted on: the
+  // aim is to learn whether this browser refuses popups outright, which
+  // Firebase's own hang could not tell us.
+  const popupsOk = syncUser ? true : popupsAreAvailable();
+
   if (btn) btn.disabled = true;
   if (statusEl) statusEl.textContent = t("syncWorking");
 
   try {
+    if (!popupsOk) throw new Error("popups-blocked-by-browser");
     if (syncUser) {
       await withTimeout(signOutFromSync(), SYNC_SIGNIN_TIMEOUT_MS, "timeout");
       showToast(t("syncSignedOutToast"));

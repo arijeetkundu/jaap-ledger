@@ -1607,6 +1607,32 @@ async function freshLoad(page, { clearStorage = false } = {}) {
     });
     assert("a sign-in that never settles is turned into a failure, not a hang", timedOut === "timeout");
 
+    // v3.3.1 reported a bare "timeout", which proved the attempt never
+    // settled but not which step hung — and "the SDK never loaded" and "the
+    // popup never came back" have completely different fixes. Each stage now
+    // fails under its own name.
+    const staged = await syncPage.evaluate(async () => {
+      const label = async (l) => {
+        try { await withTimeout(new Promise(() => {}), 60, l); return "resolved"; }
+        catch (e) { return describeSyncError(e); }
+      };
+      return { sdk: await label("sdk-load-timeout"), popup: await label("popup-timeout") };
+    });
+    assert("a stalled SDK load is named as such", staged.sdk === "sdk-load-timeout");
+    assert("a stalled popup is named separately", staged.popup === "popup-timeout");
+
+    // Firebase did not report auth/popup-blocked on the installed PWA — it
+    // hung — so popup availability is asked directly instead of inferred.
+    // Headless Chrome allows popups, so this asserts the probe answers at all
+    // and cleans up after itself rather than leaving a window open.
+    const probe = await syncPage.evaluate(() => {
+      const before = typeof popupsAreAvailable;
+      const answer = popupsAreAvailable();
+      return { isFunction: before === "function", answer: typeof answer === "boolean" };
+    });
+    assert("popup availability is probed directly, not inferred", probe.isFunction);
+    assert("the probe returns a definite yes or no", probe.answer);
+
     // And the error code reaches the screen, since a phone has no console.
     const detail = await syncPage.evaluate(() => {
       const el = document.getElementById("sync-status");
