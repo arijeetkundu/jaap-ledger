@@ -1760,6 +1760,186 @@ async function freshLoad(page, { clearStorage = false } = {}) {
       acrossLanguages.bn.btn === "সাইন আউট করুন"
     );
 
+    // ── Push and pull ────────────────────────────────────────────────
+    // The whole model: a save pushes, opening the app pulls. Firestore is
+    // stubbed rather than reached, for the same reason the auth SDK is —
+    // the suite must run with no internet and must not write to a real
+    // project. What is being tested is this app's logic, not Google's.
+    await syncPage.evaluate(() => {
+      window.__remote = null;   // what the fake Firestore holds
+      window.__pushes = [];     // every payload this device uploaded
+      window.__gets = 0;
+
+      window.loadFirestore = () => Promise.resolve({
+        db: {},
+        store: {
+          doc: (_db, ...segments) => ({ path: segments.join("/") }),
+          setDoc: (ref, payload) => {
+            window.__pushes.push({ path: ref.path, payload });
+            window.__remote = JSON.parse(JSON.stringify(payload));
+            return Promise.resolve();
+          },
+          getDoc: () => {
+            window.__gets += 1;
+            return Promise.resolve({
+              exists: () => window.__remote !== null,
+              data: () => JSON.parse(JSON.stringify(window.__remote)),
+            });
+          },
+        },
+      });
+    });
+
+    // Nothing may leave the device for someone who has not signed in — the
+    // same promise the dormant-launch assertions above make, but for the
+    // path that now runs after every single save.
+    const signedOutSave = await syncPage.evaluate(async () => {
+      syncUser = null;
+      window.__pushes = [];
+      await saveLedger(ledgerData);
+      await new Promise(r => setTimeout(r, 200));
+      return window.__pushes.length;
+    });
+    assert("a save uploads nothing when nobody is signed in", signedOutSave === 0);
+
+    const firstSync = await syncPage.evaluate(async () => {
+      syncUser = { uid: "sadhak-1", email: "sadhak@example.com" };
+      window.__remote = null;
+      window.__pushes = [];
+      await syncNow();
+      await new Promise(r => setTimeout(r, 200));
+      return {
+        pushes: window.__pushes.length,
+        path: window.__pushes[0]?.path,
+        version: window.__remote?.version,
+        hasEntries: Array.isArray(window.__remote?.entries),
+      };
+    });
+    assert("the first device to sync seeds the stored ledger", firstSync.pushes >= 1);
+    assert("it is stored per sadhak, under their own uid", firstSync.path === "users/sadhak-1/ledger/current");
+    assert("and in the same format Export and Drive backup already use", firstSync.version === 2 && firstSync.hasEntries);
+
+    // A save pushes. This is hooked into saveLedger() — the sole writer of
+    // the ledger store — so every save path is covered by construction
+    // rather than by remembering to call it in each one.
+    const savePushes = await syncPage.evaluate(async () => {
+      window.__pushes = [];
+      const entry = ledgerData.find(e => e.date === todayISO) || ledgerData[0];
+      entry.jaap = 1188;
+      stampEntryEdited(entry);
+      await saveLedger(ledgerData);
+      await new Promise(r => setTimeout(r, 300));
+      const pushed = window.__remote.entries.find(e => e.date === entry.date);
+      return { pushes: window.__pushes.length, jaap: pushed?.jaap, stamped: typeof pushed?.updatedAt === "string" };
+    });
+    assert("saving pushes the ledger", savePushes.pushes === 1);
+    assert("and the pushed ledger carries the saved count", savePushes.jaap === 1188);
+    assert("the edit stamp travels with it, so the later edit can win", savePushes.stamped);
+
+    // Opening the app pulls. A day logged on the other device arrives here.
+    const pulled = await syncPage.evaluate(async () => {
+      const otherDay = "2020-03-11";
+      window.__remote = {
+        version: 2,
+        entries: [{ date: otherDay, jaap: 5400, notes: "logged elsewhere", updatedAt: "2020-03-11T10:00:00.000Z" }],
+        sankalpa: null,
+      };
+      window.__pushes = [];
+      await syncNow();
+      await new Promise(r => setTimeout(r, 300));
+      return {
+        present: ledgerData.some(e => e.date === otherDay && e.jaap === 5400),
+        notes: ledgerData.find(e => e.date === otherDay)?.notes,
+        // The pulled ledger held one day; the last week must still exist
+        // afterwards, or the Today Card would have no entry to render.
+        hasToday: ledgerData.some(e => e.date === todayISO),
+        echoes: window.__pushes.length,
+        toast: document.querySelector(".toast, #toast")?.textContent || "",
+      };
+    });
+    assert("opening the app pulls the other device's day", pulled.present);
+    assert("with its notes intact", pulled.notes === "logged elsewhere");
+    assert("and the recent days are backfilled, so Today still renders", pulled.hasToday);
+    assert("the sadhak is told their ledger changed", pulled.toast.includes("other device"));
+    // Applying a pull writes to IndexedDB, which is where the push hook
+    // lives — without the guard, every launch would bounce the freshly
+    // pulled ledger straight back up again.
+    assert("applying a pull does not echo back to the store", pulled.echoes === 0);
+
+    // Most opens follow no edit anywhere, so the common case must be silent.
+    const unchanged = await syncPage.evaluate(async () => {
+      window.__remote = buildLedgerExportPayload(await getSankalpa());
+      return await applyPulledLedger(JSON.parse(JSON.stringify(window.__remote)));
+    });
+    assert("pulling an unchanged ledger changes nothing and says nothing", unchanged === false);
+
+    // A pulled ledger is foreign data arriving over a network — the fourth
+    // door into ledgerData, and the only one not opened by the user. It goes
+    // through the same guard as Import and Restore.
+    const rejected = await syncPage.evaluate(async () => {
+      const before = ledgerData.length;
+      const applied = await applyPulledLedger({
+        version: 2,
+        entries: [{ date: "2021-01-01", jaap: 108, notes: null }], // notes must be a string
+        sankalpa: null,
+      });
+      return { applied, unchanged: ledgerData.length === before };
+    });
+    assert("a malformed synced ledger is refused", rejected.applied === false);
+    assert("and the local ledger is left exactly as it was", rejected.unchanged);
+
+    // The offline case. A save with no network cannot push, so it is flagged;
+    // the next open must send it up BEFORE pulling, or the pull would
+    // overwrite practice that was never uploaded.
+    const offlineSave = await syncPage.evaluate(async () => {
+      const day = "2020-04-02";
+      ledgerData.push({ date: day, jaap: 2160, notes: "logged offline", updatedAt: "2020-04-02T09:00:00.000Z" });
+      setPendingSyncPush(true);
+      // The stored ledger meanwhile knows nothing about that day.
+      window.__remote = { version: 2, entries: [{ date: "2020-04-01", jaap: 108, notes: "" }], sankalpa: null };
+      window.__pushes = [];
+
+      await syncNow();
+      await new Promise(r => setTimeout(r, 300));
+      return {
+        survivedLocally: ledgerData.some(e => e.date === day && e.jaap === 2160),
+        reachedTheStore: (window.__remote.entries || []).some(e => e.date === day),
+        pending: hasPendingSyncPush(),
+      };
+    });
+    assert("a save made offline is not overwritten by the next pull", offlineSave.survivedLocally);
+    assert("it is uploaded before that pull happens", offlineSave.reachedTheStore);
+    assert("and the device stops considering itself behind", offlineSave.pending === false);
+
+    // A failed push must never cost the sadhak their save — the write already
+    // succeeded in IndexedDB, which is the source of truth.
+    const pushFailure = await syncPage.evaluate(async () => {
+      const original = window.loadFirestore;
+      window.loadFirestore = () => Promise.reject(new Error("offline"));
+      const entry = ledgerData.find(e => e.date === todayISO);
+      entry.jaap = 2700;
+      await saveLedger(ledgerData);
+      await new Promise(r => setTimeout(r, 300));
+      window.loadFirestore = original;
+      return { saved: ledgerData.find(e => e.date === todayISO).jaap === 2700, pending: hasPendingSyncPush() };
+    });
+    assert("a save whose upload fails still saves locally", pushFailure.saved);
+    assert("and is remembered as owed to the store", pushFailure.pending === true);
+
+    // Sync failures reach the screen for the same reason sign-in failures do:
+    // there is no console on a phone.
+    const syncFailureShown = await syncPage.evaluate(async () => {
+      const original = window.loadFirestore;
+      window.loadFirestore = () => Promise.reject(Object.assign(new Error("x"), { code: "permission-denied" }));
+      setPendingSyncPush(false);
+      await syncNow();
+      window.loadFirestore = original;
+      setPendingSyncPush(false);
+      syncUser = null;
+      return document.getElementById("sync-status").textContent.trim();
+    });
+    assert("a failed sync says so, with its reason", syncFailureShown.includes("permission-denied"));
+
     await syncContext.close();
   }
 

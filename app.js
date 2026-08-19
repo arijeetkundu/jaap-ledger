@@ -1130,7 +1130,14 @@ async function saveLedger(data) {
 
     store.put(data, "entries");
 
-    tx.oncomplete = () => resolve();
+    tx.oncomplete = () => {
+      // Sync's single push point. Fires only on a genuinely committed write,
+      // so a failed save is never uploaded, and it is not awaited — see
+      // pushLedgerAfterSave(). Declared later in the file, which is fine: by
+      // the time any write completes, the whole script has run.
+      pushLedgerAfterSave();
+      resolve();
+    };
     tx.onerror = () => reject(tx.error);
     // A transaction can also abort without onerror firing (most commonly
     // QuotaExceededError) — without this the promise would hang forever and
@@ -1425,9 +1432,15 @@ function handleDateRollover() {
 }
 
 document.addEventListener("visibilitychange", () => {
-  if (document.visibilityState === "visible" && getTodayISO() !== todayISO) {
-    handleDateRollover();
-  }
+  if (document.visibilityState !== "visible") return;
+
+  if (getTodayISO() !== todayISO) handleDateRollover();
+
+  // "Opening the app" is mostly this, not a cold launch: an installed PWA is
+  // resumed far more often than it is started, so a device left on the home
+  // screen for a day would otherwise never see the other device's entries.
+  // A no-op for anyone not signed in.
+  syncNow();
 });
 
 // visibilitychange only fires on a background<->foreground *transition* —
@@ -3254,7 +3267,13 @@ function buildLedgerExportPayload(sankalpa) {
     entries: ledgerData.map(e => ({
       date: e.date,
       jaap: e.jaap ?? null,
-      notes: e.notes || ""
+      notes: e.notes || "",
+      // Carried only when it exists, so entries written before stamping was
+      // added stay byte-for-byte what they were and no `updatedAt: undefined`
+      // appears in an exported file. Sync needs the stamp to travel with the
+      // data; a Drive backup benefits too, since restoring one onto a new
+      // device would otherwise present every entry as never-edited.
+      ...(typeof e.updatedAt === "string" ? { updatedAt: e.updatedAt } : {})
     })),
     sankalpa: sanitizeSankalpaForExport(sankalpa)
   };
@@ -3880,6 +3899,9 @@ async function restoreSyncSession() {
       });
     });
     renderSyncStatus();
+    // Opening the app is the "pull" half of the model, and this is where an
+    // already-signed-in launch learns it has a session at all.
+    if (syncUser) await syncNow();
   } catch (err) {
     // Offline, or the CDN is unreachable. The app is fully usable without
     // sync, so this must never surface as an error.
@@ -3949,4 +3971,204 @@ document.getElementById("sync-signin-btn")?.addEventListener("click", async () =
     // Unconditional, so the control can never again be left dead.
     if (btn) btn.disabled = false;
   }
+
+  // A fresh sign-in is the first chance this device has had to see the other
+  // device's ledger, so pull immediately rather than waiting for the next
+  // launch. Not awaited: the button must free up as soon as sign-in lands.
+  if (syncUser) syncNow();
 });
+
+// ---------- Sumiran-Lite: Sync push & pull ----------
+//
+// The model, deliberately kept to one sentence: a save pushes the ledger to
+// Firestore, and opening the app pulls it back down.
+//
+// One document per sadhak — users/{uid}/ledger/current — holding exactly the
+// payload buildLedgerExportPayload() already produces. That reuse is the point:
+// export, Drive backup and sync all speak one format, so parseImportedLedgerFile()
+// and areLedgerEntriesValid() already know how to read and vet what comes back,
+// and a pulled document is validated by the same guard that protects Import and
+// Restore. Entries are a few dozen bytes each, so years of practice sit well
+// inside Firestore's 1MB document limit.
+//
+// The *lite* Firestore build is used on purpose: it does one-shot get/set and
+// nothing else. The full build's value is realtime listeners and offline
+// persistence, neither of which this model wants — offline is already handled,
+// by IndexedDB, which is the app's source of truth.
+
+let firestorePromise = null;
+let firestoreReady = null;
+
+// True while a pulled ledger is being written to IndexedDB. saveLedger() pushes
+// on every write, so without this the act of applying a pull would immediately
+// push the same data back — an echo on every launch.
+let syncApplyingRemote = false;
+
+// A push that never reached Firestore. Persisted, because the case it exists
+// for is a save made offline: the app is very likely closed before the network
+// returns, so a flag living only in memory would forget precisely when it
+// mattered. The next open pushes before it pulls, so the unsynced save is
+// uploaded rather than overwritten.
+function hasPendingSyncPush() {
+  return readStoredPreference("syncPushPending") === "true";
+}
+
+function setPendingSyncPush(pending) {
+  writeStoredPreference("syncPushPending", pending ? "true" : "false");
+}
+
+const SYNC_IO_TIMEOUT_MS = 20000;
+
+// Loads the Firestore SDK on top of the already-resolved auth SDK. Unlike
+// sign-in, nothing here opens a window, so awaiting is safe — there is no user
+// gesture to spend.
+function loadFirestore() {
+  if (firestorePromise) return firestorePromise;
+
+  firestorePromise = (async () => {
+    const { app } = await loadFirebaseAuth();
+    const store = await import(`${FIREBASE_SDK_BASE}/firebase-firestore-lite.js`);
+    firestoreReady = { store, db: store.getFirestore(app) };
+    return firestoreReady;
+  })().catch((err) => {
+    firestorePromise = null; // so the next attempt genuinely retries
+    throw err;
+  });
+
+  return firestorePromise;
+}
+
+function syncLedgerDoc({ store, db }, uid) {
+  return store.doc(db, "users", uid, "ledger", "current");
+}
+
+// Uploads the whole ledger. Whole rather than incremental because the payload
+// is small, one write is atomic, and an incremental protocol would need change
+// tracking that nothing else in this app has any use for.
+async function pushLedgerToSync() {
+  if (!syncUser) return false;
+
+  const ready = await withTimeout(loadFirestore(), SYNC_IO_TIMEOUT_MS, "sync-sdk-timeout");
+  const payload = buildLedgerExportPayload(await getSankalpa());
+
+  await withTimeout(
+    ready.store.setDoc(syncLedgerDoc(ready, syncUser.uid), payload),
+    SYNC_IO_TIMEOUT_MS,
+    "sync-push-timeout"
+  );
+
+  setPendingSyncPush(false);
+  return true;
+}
+
+// Fetches the stored ledger and hands back the parsed payload, or null when
+// this sadhak has never synced from any device. A null is NOT an error: it is
+// the first-run case, and the caller answers it by pushing.
+async function pullLedgerFromSync() {
+  if (!syncUser) return null;
+
+  const ready = await withTimeout(loadFirestore(), SYNC_IO_TIMEOUT_MS, "sync-sdk-timeout");
+  const snapshot = await withTimeout(
+    ready.store.getDoc(syncLedgerDoc(ready, syncUser.uid)),
+    SYNC_IO_TIMEOUT_MS,
+    "sync-pull-timeout"
+  );
+
+  return snapshot.exists() ? snapshot.data() : null;
+}
+
+// Replaces the local ledger with a pulled one. Returns whether anything
+// actually changed, so an unchanged pull — the common case, since most opens
+// follow no edit anywhere — stays completely silent.
+//
+// Validation is not optional here. This is a fourth door into ledgerData
+// alongside Import, Restore and the backup-recovery branch of
+// loadLedgerFromDB(), and it is the only one whose data arrives over a network,
+// so it goes through the same areLedgerEntriesValid() guard they do.
+async function applyPulledLedger(payload) {
+  if (!appReady) return false;
+
+  const parsed = parseImportedLedgerFile(payload);
+  if (!parsed || !areLedgerEntriesValid(parsed.entries)) {
+    console.warn("Ignoring a synced ledger that failed validation.");
+    return false;
+  }
+
+  const localPayload = buildLedgerExportPayload(await getSankalpa());
+  if (JSON.stringify(localPayload) === JSON.stringify(payload)) return false;
+
+  const previous = ledgerData;
+  ledgerData = parsed.entries;
+  // The pulled ledger was written by a device that may not have been opened
+  // today, so it can be missing the last few days entirely.
+  ensureRecentEntriesExist(7);
+
+  syncApplyingRemote = true;
+  try {
+    await saveLedger(ledgerData);
+    await saveAutomaticBackup(ledgerData);
+  } catch (err) {
+    // Same discipline as every other save path: leave nothing in memory that
+    // is not on disk, or every total on screen reflects a value that vanishes
+    // on the next launch.
+    ledgerData = previous;
+    throw err;
+  } finally {
+    syncApplyingRemote = false;
+  }
+
+  // Only written when the file actually carries one, so syncing from a device
+  // that predates the vow cannot silently erase it — the same rule Import and
+  // restoreFromBackup() follow.
+  if (parsed.sankalpa) {
+    try {
+      await saveSankalpa(parsed.sankalpa);
+    } catch (err) {
+      console.warn("Synced ledger applied, but its Sankalpa could not be saved:", err);
+    }
+  }
+
+  todayDraft = null; // the pulled day may differ from what is half-typed
+  renderToday();
+  return true;
+}
+
+// The whole feature, in the order that matters: a save that never reached
+// Firestore goes up FIRST, so pulling cannot overwrite it.
+async function syncNow() {
+  if (!syncUser) return;
+
+  try {
+    if (hasPendingSyncPush()) await pushLedgerToSync();
+
+    const remote = await pullLedgerFromSync();
+    if (remote === null) {
+      // Nothing stored yet — this device is the first. Seed it.
+      await pushLedgerToSync();
+      return;
+    }
+
+    if (await applyPulledLedger(remote)) showToast(t("syncPulledToast"));
+  } catch (err) {
+    console.warn("Sync failed:", err);
+    const statusEl = document.getElementById("sync-status");
+    if (statusEl) statusEl.textContent = t("syncFailedDetail", { detail: describeSyncError(err) });
+  }
+}
+
+// Called from saveLedger(), the sole writer of the ledger store — which makes
+// it the one place every save path already converges on, rather than five
+// call sites that a sixth save path could silently fail to join.
+//
+// Deliberately not awaited by the caller: a save must feel instant and must
+// work with no network at all, so the upload rides along behind it. A failure
+// is therefore recorded rather than surfaced — the sadhak's write already
+// succeeded where it counts, in IndexedDB.
+function pushLedgerAfterSave() {
+  if (!syncUser || syncApplyingRemote) return;
+
+  pushLedgerToSync().catch((err) => {
+    console.warn("Could not push this save to sync:", err);
+    setPendingSyncPush(true);
+  });
+}

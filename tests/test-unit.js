@@ -552,6 +552,23 @@ function assert(label, condition) {
     !("id" in exportPayload.sankalpa)
   );
 
+  // The edit stamp has to reach the other device, or every synced entry would
+  // look never-edited and the newer of two edits could not be identified.
+  // It must stay OPTIONAL though: an entry written before stamping existed —
+  // which is everything in the backups already sitting in the user's Drive —
+  // has none, and inventing one would make an old file look freshly edited.
+  const exportStamps = await page.evaluate(() => {
+    ledgerData = [
+      { date: "2026-01-01", jaap: 108, notes: "", updatedAt: "2026-01-01T04:00:00.000Z" },
+      { date: "2026-01-02", jaap: 216, notes: "" },
+      { date: "2026-01-03", jaap: 324, notes: "", updatedAt: 12345 }, // not a string
+    ];
+    return buildLedgerExportPayload(null);
+  });
+  assert("export payload carries an entry's edit stamp", exportStamps.entries[0].updatedAt === "2026-01-01T04:00:00.000Z");
+  assert("an unstamped entry exports without the field, not with undefined", !("updatedAt" in exportStamps.entries[1]));
+  assert("a malformed stamp is dropped rather than exported", !("updatedAt" in exportStamps.entries[2]));
+
   const exportNoSankalpa = await page.evaluate(() => buildLedgerExportPayload(null));
   assert("a missing Sankalpa exports as null, not undefined", exportNoSankalpa.sankalpa === null);
   const exportBlankSankalpa = await page.evaluate(() => buildLedgerExportPayload({ text: "   ", context: "", date: "" }));

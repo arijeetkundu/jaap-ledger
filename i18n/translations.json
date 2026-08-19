@@ -249,6 +249,16 @@
     "hi": "साइन इन पूर्ण नहीं हुआ ({detail})।",
     "bn": "সাইন ইন সম্পূর্ণ হয়নি ({detail})।"
   },
+  "syncPulledToast": {
+    "en": "Ledger updated from your other device.",
+    "hi": "आपके दूसरे उपकरण से लेखा अद्यतन हुआ।",
+    "bn": "আপনার অন্য ডিভাইস থেকে খতিয়ান হালনাগাদ হয়েছে।"
+  },
+  "syncFailedDetail": {
+    "en": "Sync did not complete ({detail}).",
+    "hi": "सिंक पूर्ण नहीं हुआ ({detail})।",
+    "bn": "সিঙ্ক সম্পূর্ণ হয়নি ({detail})।"
+  },
   "splashHanumanAlt": {
     "en": "Hanuman meditating",
     "hi": "ध्यान करते हनुमान जी",
