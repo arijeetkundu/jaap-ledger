@@ -4077,6 +4077,30 @@ async function pullLedgerFromSync() {
   return snapshot.exists() ? snapshot.data() : null;
 }
 
+// A stable fingerprint of a ledger's CONTENT, immune to how the two sides
+// happen to be spelled. Comparing JSON.stringify() of the payloads directly
+// does not work, and shipped a real bug: Firestore returns a document's keys
+// in alphabetical order, not the order the app wrote them, so every pull
+// looked different from the identical local ledger — and the app re-applied
+// and re-announced "updated from your other device" on every single return to
+// the foreground.
+//
+// Arrays rather than objects at every level, so nothing depends on key order,
+// and sorted by date, so nothing depends on row order either.
+function ledgerSignature(entries, sankalpa) {
+  return JSON.stringify({
+    entries: entries
+      .map(e => [
+        e.date,
+        e.jaap ?? null,
+        e.notes || "",
+        typeof e.updatedAt === "string" ? e.updatedAt : ""
+      ])
+      .sort((a, b) => (a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0)),
+    sankalpa: sankalpa ? [sankalpa.text, sankalpa.context || "", sankalpa.date || ""] : null
+  });
+}
+
 // Replaces the local ledger with a pulled one. Returns whether anything
 // actually changed, so an unchanged pull — the common case, since most opens
 // follow no edit anywhere — stays completely silent.
@@ -4094,14 +4118,29 @@ async function applyPulledLedger(payload) {
     return false;
   }
 
-  const localPayload = buildLedgerExportPayload(await getSankalpa());
-  if (JSON.stringify(localPayload) === JSON.stringify(payload)) return false;
-
+  // The comparison happens AFTER backfilling, not before, and that ordering
+  // is load-bearing. The pulled ledger was written by a device that may not
+  // have been opened today, so it can be missing the last few days entirely —
+  // which means the local ledger legitimately holds placeholder days the
+  // stored one does not, forever. Comparing the raw pull against local would
+  // therefore report a difference on every open for the rest of time. What
+  // matters is whether the ledger this pull would PRODUCE differs from the one
+  // already here.
+  //
+  // A Sankalpa is excluded from both sides when the pull carries none, for the
+  // same reason it isn't written in that case: a device that predates the vow
+  // must not look like a change, nor erase it.
+  const remoteSankalpa = parsed.sankalpa;
   const previous = ledgerData;
+  const previousSignature = ledgerSignature(previous, remoteSankalpa ? await getSankalpa() : null);
+
   ledgerData = parsed.entries;
-  // The pulled ledger was written by a device that may not have been opened
-  // today, so it can be missing the last few days entirely.
   ensureRecentEntriesExist(7);
+
+  if (ledgerSignature(ledgerData, remoteSankalpa) === previousSignature) {
+    ledgerData = previous; // nothing to do, and nothing to say
+    return false;
+  }
 
   syncApplyingRemote = true;
   try {

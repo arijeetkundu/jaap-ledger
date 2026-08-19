@@ -1866,12 +1866,53 @@ async function freshLoad(page, { clearStorage = false } = {}) {
     // pulled ledger straight back up again.
     assert("applying a pull does not echo back to the store", pulled.echoes === 0);
 
-    // Most opens follow no edit anywhere, so the common case must be silent.
-    const unchanged = await syncPage.evaluate(async () => {
-      window.__remote = buildLedgerExportPayload(await getSankalpa());
-      return await applyPulledLedger(JSON.parse(JSON.stringify(window.__remote)));
+    // Most opens follow no edit anywhere, so the common case must be silent —
+    // and this is where the first version was wrong in a way the phone found
+    // immediately. It compared JSON.stringify() of the two payloads, but
+    // Firestore hands a document's keys back in ALPHABETICAL order rather than
+    // the order they were written, so an identical ledger compared unequal and
+    // the app announced "updated from your other device" on every single
+    // return to the foreground. Reproduce that faithfully: re-spell the
+    // payload the way Firestore would.
+    const alphabetise = (v) => {
+      if (Array.isArray(v)) return v.map(alphabetise);
+      if (v && typeof v === "object") {
+        return Object.keys(v).sort().reduce((acc, k) => { acc[k] = alphabetise(v[k]); return acc; }, {});
+      }
+      return v;
+    };
+    const unchangedReordered = await syncPage.evaluate(async (remote) => {
+      return await applyPulledLedger(remote);
+    }, alphabetise(await syncPage.evaluate(async () => buildLedgerExportPayload(await getSankalpa()))));
+    assert(
+      "an unchanged ledger stays silent even though Firestore reorders its keys",
+      unchangedReordered === false
+    );
+
+    // The second cause, which would have kept the toast coming even with key
+    // order fixed. A pull backfills the last seven days, so the local ledger
+    // legitimately ends up holding placeholder days the stored one has never
+    // heard of — permanently. Comparing the raw pull against local would
+    // report a difference on every open forever.
+    const unchangedAfterBackfill = await syncPage.evaluate(async () => {
+      // A stored ledger from a device last opened well before today: real
+      // practice, but nothing for the recent days.
+      const stored = {
+        entries: ledgerData
+          .filter(e => e.jaap !== null && e.jaap !== undefined)
+          .map(e => ({ date: e.date, jaap: e.jaap, notes: e.notes || "" })),
+        sankalpa: null,
+        version: 2,
+      };
+      const first = await applyPulledLedger(JSON.parse(JSON.stringify(stored)));
+      const second = await applyPulledLedger(JSON.parse(JSON.stringify(stored)));
+      const third = await applyPulledLedger(JSON.parse(JSON.stringify(stored)));
+      return { first, second, third };
     });
-    assert("pulling an unchanged ledger changes nothing and says nothing", unchanged === false);
+    assert(
+      "re-pulling the same ledger settles after the first apply, rather than announcing itself forever",
+      unchangedAfterBackfill.second === false && unchangedAfterBackfill.third === false
+    );
 
     // A pulled ledger is foreign data arriving over a network — the fourth
     // door into ledgerData, and the only one not opened by the user. It goes
