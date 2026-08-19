@@ -574,6 +574,60 @@ function assert(label, condition) {
   const exportBlankSankalpa = await page.evaluate(() => buildLedgerExportPayload({ text: "   ", context: "", date: "" }));
   assert("a blank-text Sankalpa is treated as absent", exportBlankSankalpa.sankalpa === null);
 
+  // ── getLifetimeAverage / formatRate ─────────────────────────────────
+  console.log("\n=== Lifetime average ===");
+  const avg = await page.evaluate(() => {
+    const run = (entries) => getLifetimeAverage(entries);
+    return {
+      // Days with no practice must not drag the average down — dividing by the
+      // calendar would recast rest days as a shortfall, and the app backfills
+      // empty placeholder days anyway.
+      skipsEmptyDays: run([
+        { date: "2026-01-01", jaap: 1080, notes: "" },
+        { date: "2026-01-02", jaap: null, notes: "" },
+        { date: "2026-01-03", jaap: 0, notes: "" },
+        { date: "2026-01-04", jaap: 2160, notes: "" },
+      ]),
+      empty: run([]),
+      allNull: run([{ date: "2026-01-01", jaap: null, notes: "" }]),
+    };
+  });
+  assert("the average divides by days practised, not days elapsed", avg.skipsEmptyDays.perDay === 1620);
+  assert("and reports how many days that was", avg.skipsEmptyDays.days === 2);
+  assert("an empty ledger has no average rather than zero", avg.empty === null);
+  assert("a ledger of only empty days has no average either", avg.allNull === null);
+
+  // formatTotal() floors, which is right for a total and wrong for a rate:
+  // a pace under 108 jaap/day floored to malas reads "0 mala/day" beside a
+  // confident completion date. That was live in the pace lines.
+  const rates = await page.evaluate(() => {
+    const sample = (mala) => {
+      malaViewEnabled = mala;
+      return {
+        exact: formatRate(5400),
+        rounded: formatRate(5432),
+        roundsUp: formatRate(500),
+        nearlyOneMala: formatRate(100),
+        belowHalfAMala: formatRate(40),
+      };
+    };
+    const jaap = sample(false);
+    const malaView = sample(true);
+    malaViewEnabled = false;
+    return { jaap, malaView };
+  });
+  assert("in jaap view a rate is just the rounded count", rates.jaap.exact === "5,400" && rates.jaap.belowHalfAMala === "40");
+  assert("in Mala View an exact multiple reads as whole malas", rates.malaView.exact === "50 mala");
+  assert("a rate is rounded to the nearest mala, not floored", rates.malaView.roundsUp === "5 mala");
+  assert("so a rate is never understated the way flooring understated it", rates.malaView.rounded === "50 mala");
+  // Nearest, in both directions: 100 jaap is 0.93 of a mala, so it belongs at
+  // 1, not 0. Flooring is what used to report it as none.
+  assert("a rate just short of a mala rounds up to one, not down to none", rates.malaView.nearlyOneMala === "1 mala");
+  // Nobody tells a partial mala — it is 108 beads, completed or not — so once
+  // rounding would reach zero the fallback is jaap, never "0 mala" and never
+  // a fraction.
+  assert("a rate below half a mala falls back to jaap rather than reading 0 mala", rates.malaView.belowHalfAMala === "40");
+
   // ── formatSyncTimestamp ──────────────────────────────────────────────
   console.log("\n=== formatSyncTimestamp ===");
   const syncStamps = await page.evaluate(() => {

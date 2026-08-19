@@ -554,6 +554,57 @@ function formatTotal(n) {
   return malaViewEnabled ? formatAsMala(n) : formatIndianNumber(n);
 }
 
+// For RATES — a daily average, a predicted pace — as opposed to counts.
+//
+// formatTotal() floors via jaapToMala(), which is right for a total (losing up
+// to 107 jaap off a crore is invisible) and wrong for a rate, which is small:
+// a pace of 100 jaap/day floored to malas is "0 mala/day", printed next to a
+// confident completion date. That was live in the pace lines before this.
+//
+// Rounds instead, and falls back to jaap when even a rounded value would be
+// zero. Deliberately does NOT emit a fractional mala: nobody tells a partial
+// mala — it is 108 beads, completed or not — so "0.5 mala" would be a unit
+// that does not exist. Never reuse this for a count, where rounding UP would
+// claim beads that were never told.
+function formatRate(jaapPerDay) {
+  if (!malaViewEnabled) return formatIndianNumber(Math.round(jaapPerDay));
+
+  const malas = Math.round(jaapPerDay / MALA_SIZE);
+  return malas >= 1
+    ? `${formatIndianNumber(malas)} ${t("commonMalaUnit")}`
+    : formatIndianNumber(Math.round(jaapPerDay));
+}
+
+// Total practice divided by the days actually practised — not by every day
+// since the first entry. Dividing by the calendar would quietly recast every
+// rest day as a shortfall, which is the performance framing this app has
+// deliberately kept out; and since ensureRecentEntriesExist() backfills empty
+// placeholder days, the calendar denominator would also read low for reasons
+// that have nothing to do with practice.
+//
+// Returns null when there is nothing to average, so the heading simply shows
+// no figure rather than "0".
+function getLifetimeAverage(entries = ledgerData) {
+  const practised = entries.filter(e => e && typeof e.jaap === "number" && e.jaap > 0);
+  if (practised.length === 0) return null;
+
+  const total = practised.reduce((sum, e) => sum + e.jaap, 0);
+  return { perDay: total / practised.length, days: practised.length };
+}
+
+// Written into the static #ledger-heading, which lives OUTSIDE #ledger-list
+// and therefore survives renderLedgerList()'s innerHTML clear — so it is
+// updated here explicitly rather than as a side effect of that rebuild.
+function renderLifetimeAverage() {
+  const el = document.getElementById("ledger-lifetime-avg");
+  if (!el) return;
+
+  const avg = getLifetimeAverage();
+  el.textContent = avg
+    ? t("ledgerLifetimeAvg", { value: formatRate(avg.perDay) })
+    : "";
+}
+
 // Add/subtract calendar days from an ISO date, local time
 function addDaysISO(dateISO, delta) {
   const [y, m, d] = dateISO.split("-").map(Number);
@@ -1655,6 +1706,7 @@ function renderToday() {
   const milestoneHistory = getMilestoneHistory(ledgerData);
   renderTodayCard(entry);
   renderReflectionSummary(milestoneHistory);
+  renderLifetimeAverage();
   renderLedgerList(milestoneHistory);
 }
 
@@ -1706,13 +1758,13 @@ function renderReflectionSummary(milestoneHistory) {
     ${pred30 ? `
       <div class="reflection-line prediction-line">
         <strong>${t("reflectionPace30Day")}</strong> ${formatDate(pred30.predictedDate)}
-        <span class="prediction-pace">(${formatTotal(Math.round(pred30.dailyPace))}${t("commonPerDaySuffix")})</span>
+        <span class="prediction-pace">(${formatRate(pred30.dailyPace)}${t("commonPerDaySuffix")})</span>
       </div>
     ` : ""}
     ${predYTD ? `
       <div class="reflection-line prediction-line">
         <strong>${t("reflectionPaceYTD")}</strong> ${formatDate(predYTD.predictedDate)}
-        <span class="prediction-pace">(${formatTotal(Math.round(predYTD.dailyPace))}${t("commonPerDaySuffix")})</span>
+        <span class="prediction-pace">(${formatRate(predYTD.dailyPace)}${t("commonPerDaySuffix")})</span>
       </div>
     ` : ""}
   </div>

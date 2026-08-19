@@ -67,7 +67,15 @@
        switch, so a heading placed inside would vanish on the first
        re-render. Static markup also means applyStaticTranslations() drives
        it, which keeps this readable English if translations.json fails. -->
-  <h2 id="ledger-heading" data-i18n="ledgerHeading">Ledger</h2>
+  <!-- The word carries data-i18n, NOT the <h2> itself. applyStaticTranslations()
+       assigns el.textContent on every [data-i18n] element, which would wipe the
+       average out of the heading on each language switch. -->
+  <h2 id="ledger-heading">
+    <span data-i18n="ledgerHeading">Ledger</span>
+    <!-- Filled by renderLifetimeAverage(); stays empty until there is practice
+         to average, so a new sadhak sees the heading alone. -->
+    <span id="ledger-lifetime-avg"></span>
+  </h2>
 
   <!-- Ledger List -->
   <section id="ledger-list">
@@ -220,7 +228,7 @@
          every release, alongside the git tag — see CLAUDE.md's release
          checklist. Only the tagline translates. -->
     <p class="app-version-line">
-      <span id="app-version">Sumiran Lite v3.3.0</span>
+      <span id="app-version">Sumiran Lite v3.3.1</span>
       <span aria-hidden="true"> · </span>
       <span data-i18n="settingsTagline">Built for Sadhaks everywhere</span>
     </p>

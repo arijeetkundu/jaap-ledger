@@ -689,6 +689,11 @@
     "hi": "(+{days} दिन)",
     "bn": "(+{days} দিন)"
   },
+  "ledgerLifetimeAvg": {
+    "en": "avg {value}/day",
+    "hi": "औसत {value}/दिन",
+    "bn": "গড় {value}/দিন"
+  },
   "commonPerDaySuffix": {
     "en": "/day",
     "hi": "/दिन",

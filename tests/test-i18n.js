@@ -212,6 +212,51 @@ async function newFreshPage(browser) {
     await context.close();
   }
 
+  // ── Lifetime average survives a language switch ─────────────────────
+  // The average lives INSIDE #ledger-heading, which is static markup. If the
+  // heading itself carried data-i18n, applyStaticTranslations() would assign
+  // el.textContent and wipe the average out on every switch — so the word has
+  // its own span and the average is a sibling.
+  console.log("\n=== Lifetime average survives a language switch ===");
+  {
+    const { context, page, errors } = await newFreshPage(browser);
+    await page.click('#lang-picker-options .lang-option[data-lang="en"]');
+    await new Promise((r) => setTimeout(r, 300));
+
+    const seen = await page.evaluate(async () => {
+      ledgerData = [
+        { date: "2026-01-01", jaap: 1080, notes: "" },
+        { date: "2026-01-02", jaap: null, notes: "" },
+        { date: "2026-01-03", jaap: 2160, notes: "" },
+      ];
+      renderToday();
+      // Read defensively: if the heading ever carries data-i18n itself again,
+      // this must report a failed assertion rather than throw on a null and
+      // take the whole suite down with a stack trace instead of a reason.
+      const read = () => ({
+        avg: document.getElementById("ledger-lifetime-avg")?.textContent.trim() ?? "(missing)",
+        heading: document.querySelector("#ledger-heading [data-i18n]")?.textContent.trim() ?? "(missing)",
+      });
+      const en = read();
+      applyAppLanguage("hi");
+      await new Promise((r) => setTimeout(r, 150));
+      const hi = read();
+      applyAppLanguage("bn");
+      await new Promise((r) => setTimeout(r, 150));
+      const bn = read();
+      return { en, hi, bn };
+    });
+
+    assert("the average renders beside the Ledger heading", seen.en.avg === "avg 1,620/day");
+    assert("the heading word is still translated", seen.hi.heading !== "Ledger" && seen.bn.heading !== "Ledger");
+    assert("the average is not wiped out by the Hindi switch", seen.hi.avg.includes("1,620"));
+    assert("nor by the Bangla switch", seen.bn.avg.includes("1,620"));
+    assert("and its own label follows the language", seen.hi.avg !== seen.en.avg && seen.bn.avg !== seen.en.avg);
+
+    allErrors.push(...errors);
+    await context.close();
+  }
+
   // ── Sankalpa page (open at time of switch) re-renders too ───────────
   console.log("\n=== Switching language re-renders an already-open Sankalpa page ===");
   {

@@ -238,11 +238,35 @@ p {
   color: var(--maroon);
 }
 
+/* The hairline runs BETWEEN the word and the average, not after both — the
+   pseudo-element is a flex item here, so `order` places it. Without this it
+   would render last, pushing the average left of its own rule. */
 #ledger-heading::after {
   content: "";
   flex: 1;
   height: 1px;
   background: rgba(122, 31, 43, 0.18);
+  order: 1;
+}
+
+/* Quiet by design: this is a fact about the ledger below, not a target. It
+   stays smaller and lighter-weight than the heading it shares a line with, but
+   in full --ink rather than --ink-muted: at 0.75rem the muted brown sat close
+   to the cream ground and read as greyed-out, which is the convention for a
+   disabled control. Contrast comes from the colour; the deference comes from
+   the size and weight. */
+#ledger-lifetime-avg {
+  order: 2;
+  flex-shrink: 0;
+  font-family: var(--font-body);
+  font-size: 0.88rem;
+  font-weight: 500;
+  color: var(--ink);
+  letter-spacing: 0.01em;
+}
+
+#ledger-lifetime-avg:empty {
+  display: none;
 }
 
 /* Ledger list */
