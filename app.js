@@ -1317,6 +1317,7 @@ function updateBackgroundSwatchButtons() {
     renderSplashSlotUI();
     updateLanguagePickerSelection();
     renderDataSafetyStatus();
+    renderSyncStatus();
 
     // The splash screen's own <img alt> was set synchronously by the
     // chooseSplashImage() IIFE at the very top of this file, long before
@@ -1364,6 +1365,12 @@ appReady = true;
     }
 
     focusTodayInputIfRequested();
+
+    // Deliberately NOT awaited: this may fetch the Firebase SDK over the
+    // network, and the app must be usable the instant the ledger has
+    // rendered. It is also a no-op for anyone who has never signed in, so
+    // the common case costs nothing at all.
+    restoreSyncSession();
 
   } catch (err) {
     console.error("Initialization failed:", err);
@@ -3689,3 +3696,139 @@ if ("serviceWorker" in navigator) {
 }
 
 
+
+// ---------- Sumiran-Lite: Sync Across Devices (Firebase) ----------
+//
+// The app's SECOND network dependency, after Google Drive backup — and, like
+// it, entirely dormant until a sadhak signs in. Nothing here loads, runs or
+// reaches the network on a normal launch.
+//
+// This slice deliberately does sign-in ONLY. No ledger data moves yet: the
+// point is to prove the sign-in survives an installed iOS PWA before push,
+// pull and merge are built on top of it, because signInWithPopup is known to
+// be unreliable in Safari standalone and that would change the design.
+//
+// The config below is NOT a secret, despite `apiKey`. It identifies the
+// project; it authorises nothing. It ships in every client that loads the app
+// and Google documents it as public. What actually protects the ledger is the
+// Firestore security rule (a request must carry a signed-in uid matching the
+// document path) and the authorized-domain list — both server-side, neither
+// bypassable by editing this file. Sumiran keeps the same values in Vite env
+// vars, which only looks more private: Vite inlines them into the bundle.
+const FIREBASE_CONFIG = {
+  apiKey: "AIzaSyBuDaio69MbWQ_Nkt1ezP20WlIQsI90O_U",
+  authDomain: "sumiran-lite-83668.firebaseapp.com",
+  projectId: "sumiran-lite-83668",
+  storageBucket: "sumiran-lite-83668.firebasestorage.app",
+  messagingSenderId: "407718825196",
+  appId: "1:407718825196:web:f0481811df6aac192529c9",
+};
+
+const FIREBASE_SDK_VERSION = "12.4.0";
+const FIREBASE_SDK_BASE = `https://www.gstatic.com/firebasejs/${FIREBASE_SDK_VERSION}`;
+
+let firebaseAuthPromise = null;
+let syncUser = null;
+
+// Lazily pulls in the Firebase SDK, mirroring loadGoogleIdentityScript().
+// Two reasons this must stay lazy rather than a <script> in index.html:
+// the auth module alone is ~159KB, and sw.js deliberately never caches
+// cross-origin requests — so a bundle loaded up front would be fetched from
+// the network on every launch and would fail outright when offline, breaking
+// the app's central promise for a feature most launches never use.
+//
+// app.js is a classic script, but dynamic import() works in one, which is
+// what lets an ES-module SDK be used here at all.
+function loadFirebaseAuth() {
+  if (firebaseAuthPromise) return firebaseAuthPromise;
+
+  firebaseAuthPromise = (async () => {
+    const [{ initializeApp }, auth] = await Promise.all([
+      import(`${FIREBASE_SDK_BASE}/firebase-app.js`),
+      import(`${FIREBASE_SDK_BASE}/firebase-auth.js`),
+    ]);
+    const app = initializeApp(FIREBASE_CONFIG);
+    return { app, auth, instance: auth.getAuth(app) };
+  })().catch((err) => {
+    firebaseAuthPromise = null; // so the next attempt genuinely retries
+    throw err;
+  });
+
+  return firebaseAuthPromise;
+}
+
+function renderSyncStatus() {
+  const statusEl = document.getElementById("sync-status");
+  const btn = document.getElementById("sync-signin-btn");
+  if (!statusEl || !btn) return;
+
+  if (syncUser) {
+    statusEl.textContent = t("syncSignedInAs", { email: syncUser.email || "" });
+    btn.textContent = t("syncSignOutBtn");
+  } else {
+    statusEl.textContent = t("syncSignedOut");
+    btn.textContent = t("syncSignInBtn");
+  }
+}
+
+async function signInForSync() {
+  const { auth, instance } = await loadFirebaseAuth();
+  const provider = new auth.GoogleAuthProvider();
+  const result = await auth.signInWithPopup(instance, provider);
+  syncUser = result.user;
+  renderSyncStatus();
+}
+
+async function signOutFromSync() {
+  const { auth, instance } = await loadFirebaseAuth();
+  await auth.signOut(instance);
+  syncUser = null;
+  renderSyncStatus();
+}
+
+// Restores an existing session without any user action — but ONLY if one
+// already exists. Firebase persists the session in IndexedDB, so a sadhak who
+// signed in yesterday is still signed in today. Deliberately gated on a flag
+// we set ourselves at sign-in: without it, this would pull ~159KB of SDK over
+// the network on every launch of an app whose whole point is working offline.
+async function restoreSyncSession() {
+  if (readStoredPreference("syncEverSignedIn") !== "true") return;
+  try {
+    const { auth, instance } = await loadFirebaseAuth();
+    await new Promise((resolve) => {
+      const stop = auth.onAuthStateChanged(instance, (user) => {
+        syncUser = user;
+        stop();
+        resolve();
+      });
+    });
+    renderSyncStatus();
+  } catch (err) {
+    // Offline, or the CDN is unreachable. The app is fully usable without
+    // sync, so this must never surface as an error.
+    console.warn("Could not restore the sync session:", err);
+  }
+}
+
+document.getElementById("sync-signin-btn")?.addEventListener("click", async () => {
+  const btn = document.getElementById("sync-signin-btn");
+  if (btn) btn.disabled = true;
+  try {
+    if (syncUser) {
+      await signOutFromSync();
+      showToast(t("syncSignedOutToast"));
+    } else {
+      await signInForSync();
+      writeStoredPreference("syncEverSignedIn", "true");
+      showToast(t("syncSignedInToast"));
+    }
+  } catch (err) {
+    // Covers the cancelled popup, a popup blocked by the browser (the iOS
+    // standalone-PWA case this slice exists to test), and an unreachable CDN.
+    console.error("Sync sign-in failed:", err);
+    showToast(t("syncSignInFailed"));
+  } finally {
+    if (btn) btn.disabled = false;
+    renderSyncStatus();
+  }
+});

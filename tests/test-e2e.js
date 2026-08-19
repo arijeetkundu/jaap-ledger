@@ -1501,9 +1501,86 @@ async function freshLoad(page, { clearStorage = false } = {}) {
     await strandContext.close();
   }
 
+  // ── Sync: dormant until asked for ────────────────────────────────────
+  // The app's second network dependency. What matters is not that sign-in
+  // works — that needs a real Google account and cannot run headless — but
+  // that its mere existence costs a normal launch nothing, since the app's
+  // central promise is working offline.
+  console.log("\n=== Sync stays dormant until used ===");
+  {
+    const syncContext = await browser.createBrowserContext();
+    const syncPage = await syncContext.newPage();
+    await syncPage.setViewport({ width: 390, height: 844 });
+    await seedAppState(syncPage);
+
+    const crossOrigin = [];
+    syncPage.on("request", (req) => {
+      if (new URL(req.url()).origin !== new URL(BASE).origin) crossOrigin.push(req.url());
+    });
+
+    await syncPage.goto(BASE, { waitUntil: "networkidle0", timeout: 15000 });
+    await new Promise(r => setTimeout(r, SPLASH_WAIT_MS));
+
+    assert(
+      "a normal launch makes no cross-origin request at all",
+      crossOrigin.length === 0
+    );
+    assert(
+      "the Firebase SDK is not loaded until sign-in is actually requested",
+      await syncPage.evaluate(() => firebaseAuthPromise === null)
+    );
+
+    await syncPage.click("#maintenance-toggle");
+    await syncPage.waitForSelector("#maintenance-drawer.open");
+    await new Promise(r => setTimeout(r, 400));
+
+    const syncUi = await syncPage.evaluate(() => ({
+      btn: document.getElementById("sync-signin-btn")?.textContent.trim(),
+      status: document.getElementById("sync-status")?.textContent.trim(),
+    }));
+    assert("Settings offers a sign-in control", syncUi.btn === "Sign in with Google");
+    assert(
+      "and states plainly that nothing is being synced yet",
+      !!syncUi.status && syncUi.status.includes("Not signed in")
+    );
+
+    // A sadhak who has never signed in must not pay for the feature on
+    // launch — restoreSyncSession() is gated on a flag, so it returns
+    // without touching the network.
+    assert(
+      "restoring a session is a no-op for someone who never signed in",
+      await syncPage.evaluate(async () => {
+        await restoreSyncSession();
+        return firebaseAuthPromise === null;
+      })
+    );
+
+    // Signing in when the SDK cannot be fetched (offline, blocked CDN) must
+    // report and leave the app entirely usable, never half-initialised.
+    const offlineFailure = await syncPage.evaluate(async () => {
+      window.loadFirebaseAuth = () => Promise.reject(new Error("offline"));
+      document.getElementById("sync-signin-btn").click();
+      await new Promise(r => setTimeout(r, 400));
+      return {
+        toast: document.querySelector(".toast, #toast")?.textContent || "",
+        stillUsable: !!document.getElementById("today-jaap"),
+        buttonReenabled: document.getElementById("sync-signin-btn").disabled === false,
+      };
+    });
+    assert("a sign-in that cannot reach the network is reported", offlineFailure.toast.includes("Could not sign in"));
+    assert("the app remains fully usable after a failed sign-in", offlineFailure.stillUsable);
+    assert("the sign-in button is re-enabled rather than left stuck", offlineFailure.buttonReenabled);
+
+    await syncContext.close();
+  }
+
   // ── Console errors ───────────────────────────────────────────────────
   console.log("\n=== Console errors ===");
-  assert("no JS errors on page across the whole run", pageErrors.length === 0);
+  // The deliberate offline sign-in failure above logs its own console.error;
+  // that is the app reporting correctly, not a defect.
+  const unexpectedErrors = pageErrors.filter(e => !e.includes("Sync sign-in failed"));
+  assert("no JS errors on page across the whole run", unexpectedErrors.length === 0);
+  if (unexpectedErrors.length > 0) console.log("  errors:", unexpectedErrors);
   if (pageErrors.length > 0) console.log("  errors:", pageErrors);
 
   await browser.close();

@@ -141,6 +141,14 @@
 
     <p class="maintenance-status" id="storage-status"></p>
 
+    <h3 data-i18n="syncHeading">Sync Across Devices</h3>
+    <p class="maintenance-hint" data-i18n="syncHint">Sign in to keep your ledger the same on every device you practise with. Your data goes only to your own account.</p>
+    <button id="sync-signin-btn" class="maintenance-btn" data-i18n="syncSignInBtn">
+      Sign in with Google
+    </button>
+    <!-- Filled by renderSyncStatus() — dynamic text, so no data-i18n. -->
+    <p class="maintenance-status" id="sync-status"></p>
+
     <h3 data-i18n="langSettingsHeading">Language</h3>
     <div id="lang-settings-wrap" class="lang-settings-wrap">
       <button type="button" class="lang-settings-btn" data-lang="en" aria-pressed="false">English</button>
