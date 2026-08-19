@@ -237,7 +237,7 @@
   "syncSignInFailed": {
     "en": "Could not sign in. Your practice data is unaffected.",
     "hi": "साइन इन नहीं हो सका। आपका डेटा अपरिवर्तित है।",
-    "bn": "সাইন ইন করা যায়নি। আপনার তথ্য अপরিবর্তিত।"
+    "bn": "সাইন ইন করা যায়নি। আপনার তথ্য অপরিবর্তিত।"
   },
   "syncWorking": {
     "en": "Working…",
@@ -249,6 +249,11 @@
     "hi": "साइन इन पूर्ण नहीं हुआ ({detail})।",
     "bn": "সাইন ইন সম্পূর্ণ হয়নি ({detail})।"
   },
+  "syncLastSynced": {
+    "en": "Last synced: {when}",
+    "hi": "अंतिम समन्वय: {when}",
+    "bn": "সর্বশেষ সমন্বয়: {when}"
+  },
   "syncPulledToast": {
     "en": "Ledger updated from your other device.",
     "hi": "आपके दूसरे उपकरण से लेखा अद्यतन हुआ।",
@@ -256,8 +261,8 @@
   },
   "syncFailedDetail": {
     "en": "Sync did not complete ({detail}).",
-    "hi": "सिंक पूर्ण नहीं हुआ ({detail})।",
-    "bn": "সিঙ্ক সম্পূর্ণ হয়নি ({detail})।"
+    "hi": "समन्वय पूर्ण नहीं हुआ ({detail})।",
+    "bn": "সমন্বয় সম্পূর্ণ হয়নি ({detail})।"
   },
   "splashHanumanAlt": {
     "en": "Hanuman meditating",

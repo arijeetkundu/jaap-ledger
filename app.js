@@ -3821,9 +3821,49 @@ function prepareSyncSdk() {
     .catch(() => renderSyncStatus());
 }
 
+// "DD/MM/YYYY, HH:MM:SS AM/PM" in the device's own local time, which is the
+// only clock a sadhak can check this against. Returns "" for anything
+// unparseable rather than "NaN/NaN/NaN", matching formatDate()'s contract —
+// this renders inside Settings, and a throw here would take the drawer down.
+function formatSyncTimestamp(iso) {
+  // The type check is not redundant with the NaN check below: new Date(null)
+  // is epoch zero, not an invalid date, so an unset preference would have
+  // rendered "01/01/1970" as confidently as a real sync.
+  if (typeof iso !== "string" || iso === "") return "";
+
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "";
+
+  const pad = (n) => String(n).padStart(2, "0");
+  const suffix = d.getHours() >= 12 ? "PM" : "AM";
+  const hour12 = d.getHours() % 12 || 12;
+
+  return `${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()}, ` +
+         `${pad(hour12)}:${pad(d.getMinutes())}:${pad(d.getSeconds())} ${suffix}`;
+}
+
+// Written ONLY where a sync genuinely completed — never on an attempt, never
+// on a failure. Same discipline as lastDriveBackupAt, and for the same reason:
+// a line that says "last synced" while nothing synced is worse than no line,
+// because it is the one thing a sadhak would check before trusting that their
+// practice is safe on another device.
+function markSyncCompleted() {
+  writeStoredPreference("lastSyncAt", new Date().toISOString());
+  renderSyncStatus();
+}
+
 function renderSyncStatus() {
   const statusEl = document.getElementById("sync-status");
   const btn = document.getElementById("sync-signin-btn");
+  const lastEl = document.getElementById("sync-last-synced");
+
+  if (lastEl) {
+    const when = formatSyncTimestamp(readStoredPreference("lastSyncAt"));
+    // Stays empty until something has actually synced, rather than showing
+    // "Last synced: never" to someone who has not opted in at all.
+    lastEl.textContent = when ? t("syncLastSynced", { when }) : "";
+  }
+
   if (!statusEl || !btn) return;
 
   if (syncUser) {
@@ -4058,6 +4098,7 @@ async function pushLedgerToSync() {
   );
 
   setPendingSyncPush(false);
+  markSyncCompleted();
   return true;
 }
 
@@ -4196,7 +4237,13 @@ async function syncNow() {
       return;
     }
 
-    if (await applyPulledLedger(remote)) showToast(t("syncPulledToast"));
+    const changed = await applyPulledLedger(remote);
+    // Marked after the pull has been read AND applied, so the stamp means the
+    // device is genuinely up to date — not merely that a request succeeded.
+    // An unchanged pull still counts: it confirms this device matches the
+    // store, which is exactly what the line is asked to attest.
+    markSyncCompleted();
+    if (changed) showToast(t("syncPulledToast"));
   } catch (err) {
     console.warn("Sync failed:", err);
     const statusEl = document.getElementById("sync-status");

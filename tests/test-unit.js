@@ -574,6 +574,38 @@ function assert(label, condition) {
   const exportBlankSankalpa = await page.evaluate(() => buildLedgerExportPayload({ text: "   ", context: "", date: "" }));
   assert("a blank-text Sankalpa is treated as absent", exportBlankSankalpa.sankalpa === null);
 
+  // ── formatSyncTimestamp ──────────────────────────────────────────────
+  console.log("\n=== formatSyncTimestamp ===");
+  const syncStamps = await page.evaluate(() => {
+    // Built from local-time components so the expectation matches whatever
+    // zone the machine running the tests happens to be in.
+    const at = (y, mo, d, h, mi, s) => new Date(y, mo - 1, d, h, mi, s).toISOString();
+    return {
+      morning: formatSyncTimestamp(at(2026, 8, 19, 9, 5, 3)),
+      afternoon: formatSyncTimestamp(at(2026, 12, 1, 14, 30, 45)),
+      midnight: formatSyncTimestamp(at(2026, 1, 9, 0, 0, 0)),
+      noon: formatSyncTimestamp(at(2026, 1, 9, 12, 0, 0)),
+      garbage: formatSyncTimestamp("not a date"),
+      // new Date(null) is epoch zero rather than an invalid date, so without
+      // an explicit type check an unset preference renders "01/01/1970".
+      missing: formatSyncTimestamp(null),
+      undef: formatSyncTimestamp(undefined),
+      empty: formatSyncTimestamp(""),
+      zero: formatSyncTimestamp(0),
+    };
+  });
+  assert("a morning sync reads DD/MM/YYYY with a zero-padded 12-hour clock", syncStamps.morning === "19/08/2026, 09:05:03 AM");
+  assert("an afternoon sync converts to 12-hour and says PM", syncStamps.afternoon === "01/12/2026, 02:30:45 PM");
+  // Both ends of the 12-hour clock, where a naive `h % 12` shows "00".
+  assert("midnight reads 12 AM, not 00 AM", syncStamps.midnight === "09/01/2026, 12:00:00 AM");
+  assert("noon reads 12 PM, not 00 PM", syncStamps.noon === "09/01/2026, 12:00:00 PM");
+  // This renders inside Settings, so a throw would take the drawer down.
+  assert("an unparseable stamp renders empty rather than NaN/NaN/NaN", syncStamps.garbage === "");
+  assert(
+    "an unset stamp renders empty rather than 01/01/1970",
+    syncStamps.missing === "" && syncStamps.undef === "" && syncStamps.empty === "" && syncStamps.zero === ""
+  );
+
   // ── parseImportedLedgerFile (legacy + current formats) ───────────────
   console.log("\n=== parseImportedLedgerFile ===");
   // Every export produced before v2 was a bare JSON array. If that stopped

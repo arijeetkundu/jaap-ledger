@@ -149,6 +149,9 @@
          language switch, which looked exactly like being signed out. The
          baked-in English below is the pre-translation fallback, matching how
          drive-backup-status is handled. -->
+    <!-- Filled by renderSyncStatus(); empty until a sync has genuinely
+         completed, so it can never claim one that did not happen. -->
+    <p class="maintenance-status" id="sync-last-synced"></p>
     <button id="sync-signin-btn" class="maintenance-btn">
       Sign in with Google
     </button>

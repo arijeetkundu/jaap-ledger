@@ -1996,6 +1996,39 @@ async function freshLoad(page, { clearStorage = false } = {}) {
     assert("a save whose upload fails still saves locally", pushFailure.saved);
     assert("and is remembered as owed to the store", pushFailure.pending === true);
 
+    // The "Last synced" line is the thing a sadhak would check before trusting
+    // their practice is safe on another device, so it must never run ahead of
+    // reality — written only where a sync genuinely completed, never on an
+    // attempt and never on a failure.
+    const lastSynced = await syncPage.evaluate(async () => {
+      const read = () => document.getElementById("sync-last-synced").textContent.trim();
+
+      writeStoredPreference("lastSyncAt", "");
+      renderSyncStatus();
+      const beforeAnySync = read();
+
+      // A sync that fails outright must leave the line exactly as it was.
+      const original = window.loadFirestore;
+      window.loadFirestore = () => Promise.reject(new Error("offline"));
+      setPendingSyncPush(false);
+      await syncNow();
+      const afterFailure = read();
+      window.loadFirestore = original;
+
+      window.__remote = { version: 2, entries: [{ date: "2020-05-05", jaap: 108, notes: "" }], sankalpa: null };
+      await syncNow();
+      await new Promise(r => setTimeout(r, 200));
+      const afterSuccess = read();
+
+      return { beforeAnySync, afterFailure, afterSuccess };
+    });
+    assert("the line is empty before anything has synced, not 'never'", lastSynced.beforeAnySync === "");
+    assert("a failed sync does not stamp a time it never achieved", lastSynced.afterFailure === "");
+    assert(
+      "a completed sync stamps the local date and time",
+      /^Last synced: \d{2}\/\d{2}\/\d{4}, \d{2}:\d{2}:\d{2} (AM|PM)$/.test(lastSynced.afterSuccess)
+    );
+
     // Sync failures reach the screen for the same reason sign-in failures do:
     // there is no console on a phone.
     const syncFailureShown = await syncPage.evaluate(async () => {
