@@ -1571,6 +1571,46 @@ async function freshLoad(page, { clearStorage = false } = {}) {
     assert("the app remains fully usable after a failed sign-in", offlineFailure.stillUsable);
     assert("the sign-in button is re-enabled rather than left stuck", offlineFailure.buttonReenabled);
 
+    // Both the status line and the button are rendered from t() rather than
+    // data-i18n, because their text depends on the signed-in state. That put
+    // them outside applyStaticTranslations() and they were left behind on a
+    // language switch: the status kept whatever language it was last rendered
+    // in, and the button — which DID carry data-i18n — was reset to "Sign in
+    // with Google" while still signed in, reading as an expired session.
+    // A real sign-in can't run headless, so fake the user object.
+    const acrossLanguages = await syncPage.evaluate(async () => {
+      syncUser = { email: "sadhak@example.com" };
+      const seen = {};
+      for (const lang of ["hi", "bn", "en"]) {
+        applyAppLanguage(lang);
+        await new Promise(r => setTimeout(r, 120));
+        seen[lang] = {
+          status: document.getElementById("sync-status").textContent.trim(),
+          btn: document.getElementById("sync-signin-btn").textContent.trim(),
+        };
+      }
+      syncUser = null;
+      applyAppLanguage("en");
+      return seen;
+    });
+
+    assert(
+      "the status line follows the chosen language, not the one it was rendered in",
+      acrossLanguages.hi.status.includes("साइन इन") &&
+      acrossLanguages.bn.status.includes("সাইন ইন") &&
+      acrossLanguages.en.status.includes("Signed in as")
+    );
+    assert(
+      "the signed-in email survives every language switch",
+      ["hi", "bn", "en"].every(l => acrossLanguages[l].status.includes("sadhak@example.com"))
+    );
+    assert(
+      "the button keeps saying Sign out while signed in, in each language",
+      acrossLanguages.en.btn === "Sign out" &&
+      acrossLanguages.hi.btn === "साइन आउट करें" &&
+      acrossLanguages.bn.btn === "সাইন আউট করুন"
+    );
+
     await syncContext.close();
   }
 

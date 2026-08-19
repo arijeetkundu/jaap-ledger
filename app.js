@@ -244,6 +244,13 @@ function applyAppLanguage(lang) {
   renderSplashSlotUI();
   renderToday();
   renderDataSafetyStatus();
+  // Both the sync status line and the sign-in button are rendered from t()
+  // rather than data-i18n, because their text depends on whether anyone is
+  // signed in. Without this call they kept whichever language was active when
+  // renderSyncStatus() last ran — so the status could sit in Bangla under an
+  // otherwise English UI, and the button reverted to "Sign in with Google"
+  // while still signed in, which read as the session having expired.
+  renderSyncStatus();
   if (document.getElementById("sankalpa-page")?.classList.contains("open")) {
     renderSankalpaPageSafely();
   }
